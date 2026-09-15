@@ -4,6 +4,15 @@ Updated: 2026-09-15
 
 This tracker is updated as implementation blocks are completed. It separates what is working in this repository from source material and project inputs that still need owner verification.
 
+## Online release
+
+- **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
+- **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
+- **Deployment preview URL:** https://bd683260.interactive-portfolio-ai-guide.pages.dev
+- **Published commit:** `62989b0` plus the deployment documentation update
+- **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
+- **Custom domain:** not connected yet. Recommended first choice: `andreitekht...com` using the exact spelling selected by the owner; alternative: `.dev`. Domain purchase requires an explicit final domain/TLD choice.
+
 ## Completed in the first implementation slice
 
 - **Repository:** created public GitHub repository [Androkzn/interactive-portfolio-ai-guide](https://github.com/Androkzn/interactive-portfolio-ai-guide).

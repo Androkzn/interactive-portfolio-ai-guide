@@ -2,6 +2,8 @@
 
 The first implementation slice of Andrei Tekhtelev's interactive portfolio. It is a static Next.js experience with local, seeded demos and a curated guide fallback. The guide is intentionally independent from the demo runtime and does not require a paid AI service.
 
+Live preview: [interactive-portfolio-ai-guide.pages.dev](https://interactive-portfolio-ai-guide.pages.dev/)
+
 ## Run locally
 
 ```bash
