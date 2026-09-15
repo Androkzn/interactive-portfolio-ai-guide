@@ -1,0 +1,59 @@
+{
+  "corpusVersion": "0.1.0",
+  "reviewStatus": "first-slice",
+  "positioning": {
+    "headline": "Build systems around models, not demos around prompts.",
+    "principles": [
+      "Change a real process before adding AI.",
+      "Use evaluations and monitoring to define quality.",
+      "Keep domain experts responsible for generated output.",
+      "Treat model cost and failure modes as architecture inputs."
+    ],
+    "antiPattern": "Prompt engineering is a technique inside an engineering system, not the product identity."
+  },
+  "projects": [
+    {
+      "id": "symply-house",
+      "name": "Symply House",
+      "challenge": "The connected source supports iPhone, iPad, Android and Web. The portfolio preview runs the Web build while keeping native runtimes distinct.",
+      "boundary": "The portfolio demo uses synthetic local state. It does not call production services or claim that a browser is an iOS or Android runtime.",
+      "sources": ["symply-house.platform-matrix", "symply-house.source-repository", "symply-house.demo-boundary"]
+    },
+    {
+      "id": "swiper",
+      "name": "Swiper",
+      "challenge": "The public manifest is awaiting owner verification.",
+      "boundary": "This is a reconstruction with synthetic data, not a claim about an original source build.",
+      "sources": ["swiper.manifest-draft"]
+    },
+    {
+      "id": "brij",
+      "name": "Brij",
+      "challenge": "The public manifest is awaiting owner verification.",
+      "boundary": "Production endpoints and outbound actions are disabled in the preview.",
+      "sources": ["brij.manifest-draft"]
+    },
+    {
+      "id": "wifi-map",
+      "name": "WiFi Map",
+      "challenge": "The pilot explores a map-first utility with deterministic local data.",
+      "boundary": "No device location, network scan or external API is used by the preview.",
+      "sources": ["wifi-map.pilot"]
+    },
+    {
+      "id": "one-dialer",
+      "name": "One Dialer",
+      "challenge": "The communication surface ends at a simulated confirmation.",
+      "boundary": "Contacts are synthetic and no device permission or real call is requested.",
+      "sources": ["one-dialer.manifest-draft"]
+    },
+    {
+      "id": "pixalere",
+      "name": "Pixalere",
+      "challenge": "The public manifest is awaiting owner verification.",
+      "boundary": "The workflow is fictional and contains no patient information or clinical advice.",
+      "sources": ["pixalere.manifest-draft"]
+    }
+  ],
+  "globalSources": ["portfolio.ai-review-chain", "portfolio.public-boundary"]
+}

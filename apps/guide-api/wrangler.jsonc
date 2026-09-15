@@ -1,0 +1,26 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "andrei-portfolio-guide",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-15",
+  "ai": { "binding": "AI" },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "ALLOWED_ORIGINS": "http://localhost:3000,https://interactive-portfolio-ai-guide.pages.dev",
+    "GENERATIVE_GUIDE_ENABLED": "false"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  },
+  "env": {
+    "staging": {
+      "name": "andrei-portfolio-guide-staging",
+      "vars": { "ENVIRONMENT": "staging" }
+    },
+    "production": {
+      "name": "andrei-portfolio-guide-production",
+      "vars": { "ENVIRONMENT": "production" }
+    }
+  }
+}
