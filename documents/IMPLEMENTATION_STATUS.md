@@ -8,8 +8,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** https://bd683260.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `aee0078`; repository head is `863c8ba` (documentation-only change after deployment).
+- **Deployment preview URL:** https://ab6f86c2.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `2ea5f52`.
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
 - **Custom domain:** not connected yet. Owner selected the `.dev` zone. Recommended first choice: `andrei-tekhtelev.dev`; alternative: `andreitekhtelev.dev`. Availability must be confirmed in Cloudflare Registrar before purchase.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
