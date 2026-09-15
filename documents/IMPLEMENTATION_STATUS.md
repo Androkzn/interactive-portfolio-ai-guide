@@ -11,7 +11,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Deployment preview URL:** https://bd683260.interactive-portfolio-ai-guide.pages.dev
 - **Site build source commit:** `aee0078`; repository head is `863c8ba` (documentation-only change after deployment).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
-- **Custom domain:** not connected yet. Recommended first choice: `andreitekht...com` using the exact spelling selected by the owner; alternative: `.dev`. Domain purchase requires an explicit final domain/TLD choice.
+- **Custom domain:** not connected yet. Owner selected the `.dev` zone. Recommended first choice: `andrei-tekhtelev.dev`; alternative: `andreitekhtelev.dev`. Availability must be confirmed in Cloudflare Registrar before purchase.
+- **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
 ## Completed in the first implementation slice
 
