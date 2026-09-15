@@ -9,7 +9,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
 - **Deployment preview URL:** https://bd683260.interactive-portfolio-ai-guide.pages.dev
-- **Published commit:** `aee0078`
+- **Site build source commit:** `aee0078`; repository head is `863c8ba` (documentation-only change after deployment).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
 - **Custom domain:** not connected yet. Recommended first choice: `andreitekht...com` using the exact spelling selected by the owner; alternative: `.dev`. Domain purchase requires an explicit final domain/TLD choice.
 
