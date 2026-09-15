@@ -11,7 +11,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Deployment preview URL:** https://ab6f86c2.interactive-portfolio-ai-guide.pages.dev
 - **Site build source commit:** `2ea5f52`.
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
-- **Custom domain:** not connected yet. Owner selected the `.dev` zone. Recommended first choice: `andrei-tekhtelev.dev`; alternative: `andreitekhtelev.dev`. Availability must be confirmed in Cloudflare Registrar before purchase.
+- **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare status: `Initializing`; DNS currently does not resolve externally yet, so the Pages URL remains the verified fallback until propagation completes.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
 ## Completed in the first implementation slice
@@ -38,13 +38,13 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 ## In progress / next implementation blocks
 
-- [ ] Run and verify the Next.js build after dependencies are installed.
+- [x] Run and verify the Next.js build after dependencies are installed.
 - [ ] Add a typed `DemoMessage` bridge for a separately deployed Symply House Web build (`ready`, `screen`, `stepComplete`, `ack`, `error`).
 - [ ] Verify the actual Expo Web export from the connected Symply House repository and record its commit/build version here.
 - [ ] Replace the local Symply House reconstruction in the player with the verified Web build only after origin, sandbox and reset behavior are checked.
 - [ ] Complete the remaining four app audits: ownership, permitted sources, platform dependencies, evidence and core flow.
-- [ ] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
-- [ ] Enable the Workers AI adapter only behind a reviewed feature flag; preserve curated mode on quota/timeout.
+- [x] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
+- [x] Add the Workers AI adapter behind a reviewed feature flag; preserve curated mode on quota/timeout.
 - [ ] Add eval fixtures: 20 first questions, action tests and multi-turn interruption/resume scenarios.
 - [ ] Add approved avatar poster/speaking-loop assets when supplied by Andrei. The CSS neutral frame remains the v1 fallback.
 
