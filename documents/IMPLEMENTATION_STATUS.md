@@ -11,7 +11,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Deployment preview URL:** https://ab6f86c2.interactive-portfolio-ai-guide.pages.dev
 - **Site build source commit:** `2ea5f52`.
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
-- **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare status: `Initializing`; DNS currently does not resolve externally yet, so the Pages URL remains the verified fallback until propagation completes.
+- **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Verifying`; the root CNAME is present in the Cloudflare DNS zone and public resolver `1.1.1.1` returns Cloudflare addresses. HTTPS returns `200` when resolved through the public address; the local default resolver still has a negative-cache result, so the Pages URL remains the verified fallback during propagation.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
 ## Completed in the first implementation slice
@@ -43,6 +43,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - [ ] Verify the actual Expo Web export from the connected Symply House repository and record its commit/build version here.
 - [ ] Replace the local Symply House reconstruction in the player with the verified Web build only after origin, sandbox and reset behavior are checked.
 - [ ] Complete the remaining four app audits: ownership, permitted sources, platform dependencies, evidence and core flow.
+- [ ] Re-check `andreitekhtelev.dev` until Cloudflare Pages changes from `Verifying` to `Active` and the default resolver returns it without an override.
 - [x] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
 - [x] Add the Workers AI adapter behind a reviewed feature flag; preserve curated mode on quota/timeout.
 - [ ] Add eval fixtures: 20 first questions, action tests and multi-turn interruption/resume scenarios.
