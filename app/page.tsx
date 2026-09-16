@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Code2, ExternalLink, Layers3, MessageCircle, Moon, Pause, Play, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles, Sun, Volume2 } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Bot, ChevronRight, Code2, ExternalLink, Layers3, MessageCircle, Monitor, Moon, Pause, Play, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles, Sun, Tablet, Volume2 } from "lucide-react";
 import { DevicePreview, GuideMode, Project, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
 import { acceptsPreviewMessage, deviceWidths } from "@/lib/preview";
 
@@ -10,6 +10,11 @@ type Theme = "light" | "dark";
 const contactUrl = "https://www.linkedin.com/in/andreitekhtelev/";
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Desktop" };
+const deviceFrameAssets: Partial<Record<DevicePreview, { src: string; model: string }>> = {
+  iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.png", model: "iPhone 16 Pro" },
+  ipad: { src: "/images/device-frames/ipad-pro-11-space-gray.png", model: "iPad Pro 11-inch" },
+  android: { src: "/images/device-frames/pixel-7-pro-obsidian.png", model: "Google Pixel 7 Pro" },
+};
 const preferredMaleVoiceNames = [
   "microsoft ryan online (natural)",
   "microsoft liam online (natural)",
@@ -72,6 +77,14 @@ function ProjectLogo({ id }: { id: Project["id"] }) {
   return <img className={`project-logo project-logo-${id}`} src={projectLogoSources[id]} alt="" aria-hidden="true" />;
 }
 
+function PreviewDeviceIcon({ device }: { device: DevicePreview }) {
+  const icon = device === "iphone" ? <Smartphone size={18} />
+    : device === "ipad" ? <Tablet size={18} />
+      : device === "android" ? <Bot size={18} />
+        : <Monitor size={18} />;
+  return <span className="preview-device-icon" aria-hidden="true">{icon}</span>;
+}
+
 function makeGuideReply(question: string, project: Project, mode: GuideMode, tourStep: number) {
   const lower = question.toLowerCase();
   if (lower.includes("personally") || lower.includes("own") || lower.includes("вклад")) {
@@ -124,25 +137,23 @@ function GuideReply({ message }: { message: Message }) {
 
 function Avatar({ active }: { active: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
   useEffect(() => {
     const element = video.current;
     if (!element) return;
-    if (active && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (active) {
       element.currentTime = 0;
-      void element.play().catch(() => setPlaying(false));
+      void element.play().catch(() => undefined);
     } else {
       element.pause();
       element.currentTime = 0;
-      setPlaying(false);
     }
     return () => element.pause();
   }, [active]);
-  return <div className={`avatar-shell ${active && playing ? "is-animating" : ""}`}>
+  return <div className={`avatar-shell ${active ? "is-playing" : ""}`}>
     <img className="avatar-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Portrait of Andrei Tekhtelev" />
-    <video className="avatar-video" ref={video} muted loop playsInline preload="auto" poster="/images/andrei-tekhtelev-avatar.png" aria-hidden="true" onPlaying={() => setPlaying(true)} onPause={() => setPlaying(false)}>
-      <source src="/video/andrei-talking-lips-web.webm" type="video/webm" />
-      <source src="/video/andrei-talking-lips-web-60fps.mp4" type="video/mp4" />
+    <video className="avatar-video" ref={video} muted loop playsInline preload="auto" poster="/images/andrei-tekhtelev-avatar.png" aria-hidden="true">
+      <source src="/video/andrei-talking-lips-web.webm?v=talking-video-1" type="video/webm" />
+      <source src="/video/andrei-talking-lips-web-60fps.mp4?v=talking-video-1" type="video/mp4" />
     </video>
   </div>;
 }
@@ -195,6 +206,12 @@ function ConnectedSourcePreview({ project, device }: { project: Project; device:
     if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
   };
   if (!url) return <p>Live preview unavailable.</p>;
+  const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
+    setLoaded(true); setSlow(false);
+    frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, new URL(url).origin);
+  }} onError={() => { setLoaded(false); setSlow(true); }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
+    sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-same-origin allow-scripts" />;
+  const frameAsset = deviceFrameAssets[device];
   return <div className="connected-preview">
     <div className="connected-preview-bar">
       <span><i className={loaded ? "status-dot ready" : "status-dot"} />{loaded ? "Live app loaded" : "Loading live app"}</span>
@@ -202,19 +219,20 @@ function ConnectedSourcePreview({ project, device }: { project: Project; device:
     </div>
     <div className="device-stage">
       {!loaded && <div className="load-notice" role="status">{slow ? "Taking longer than expected. Try reloading or open the app in a new tab." : "Opening the real application…"}</div>}
+      <div className="app-theme-controls" role="group" aria-label="Live app appearance">
+        <span>App theme</span>
+        <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
+        <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
+      </div>
       <div className={`device-shell device-shell-${device}`} style={{ width: deviceWidths[device] }}>
-        <div className="device-chrome"><span>{device === "desktop" ? "● ● ●" : "9:41"}</span><span>{deviceNames[device]} preview</span><span>◒</span></div>
-        <div className="app-theme-controls" role="group" aria-label="Live app appearance">
-          <span>App theme</span>
-          <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
-          <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
-        </div>
-        <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
-          setLoaded(true); setSlow(false);
-          frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, new URL(url).origin);
-        }} onError={() => { setLoaded(false); setSlow(true); }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
-          sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-same-origin allow-scripts" />
-        <div className="device-navigation"><span /></div>
+        {device === "desktop" ? <div className="device-screen">
+          <div className="device-chrome device-chrome-desktop"><span className="device-window-dots" aria-hidden="true"><i /><i /><i /></span><span className="device-desktop-title">{project.name}</span><span className="device-desktop-menu" aria-hidden="true">•••</span></div>
+          {liveFrame}
+        </div> : <>
+          <div className="device-live-screen">{liveFrame}</div>
+          <img className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
+          <span className="sr-only">Previewed in a {frameAsset?.model} frame.</span>
+        </>}
       </div>
     </div>
     <div className="preview-footer"><span>{project.id === "hoc-v2" ? "Public data · explore without an account" : "Real account · real data · sign-in required"}</span><button onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button></div>
@@ -232,7 +250,11 @@ function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () 
   const nextId = useRef(1);
   const thread = useRef<HTMLDivElement>(null);
   const speech = useRef<SpeechSynthesisUtterance | null>(null);
-  const stop = () => { window.speechSynthesis?.cancel(); setSpeaking(false); };
+  const stop = () => {
+    window.speechSynthesis?.cancel();
+    speech.current = null;
+    setSpeaking(false);
+  };
   useEffect(() => {
     if (!("speechSynthesis" in window)) return;
     const refreshVoices = () => {
@@ -243,7 +265,7 @@ function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () 
     window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
     const hidden = () => { if (document.hidden) { window.speechSynthesis?.cancel(); setSpeaking(false); } };
     document.addEventListener("visibilitychange", hidden);
-    return () => { window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices); document.removeEventListener("visibilitychange", hidden); window.speechSynthesis.cancel(); };
+    return () => { window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices); document.removeEventListener("visibilitychange", hidden); window.speechSynthesis.cancel(); speech.current = null; };
   }, []);
   useEffect(() => {
     const element = thread.current;
@@ -276,14 +298,22 @@ function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () 
       utterance.lang = "en-CA";
     }
     utterance.rate = 0.98;
-    utterance.onend = utterance.onerror = () => setSpeaking(false);
+    const finish = () => {
+      // SpeechSynthesis can dispatch a late event for an utterance that was
+      // cancelled just before a new one started. Only the active utterance
+      // is allowed to stop the synchronized video.
+      if (speech.current !== utterance) return;
+      speech.current = null;
+      setSpeaking(false);
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
     speech.current = utterance;
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
   const prompts = [<Code2 key="code" size={15} />, <Layers3 key="layers" size={15} />, <ShieldCheck key="shield" size={15} />, <Play key="play" size={15} />];
   return <aside className="guide-panel" id="guide" aria-label="Andrei’s project guide">
-    <div className="guide-heading"><div className="section-eyebrow"><Sparkles size={14} /> Your backstage pass</div><span className="curated-badge">Curated guide</span></div>
     <h2>Good work invites<br /><em>better questions.</em></h2>
     <div className="guide-avatar-row"><Avatar active={speaking} /><div className="guide-bio"><strong>Meet Andrei’s guide.</strong><p>Product decisions, technical boundaries and what to try next.</p><button className="voice-button" disabled={!voiceAvailable} onClick={speak} aria-pressed={speaking}>{speaking ? <Pause size={14} /> : <Volume2 size={14} />}{speaking ? "Stop reading" : "Read answer aloud"}</button><small>Male voice · best quality available on this device</small></div></div>
     <div className="guide-context"><span className="status-dot ready" />Exploring <strong>{project.name}</strong></div>
@@ -348,9 +378,9 @@ export default function Home() {
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
     <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER</span><nav className="header-actions"><a href="#architecture">The thinking</a><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Contact Andrei on LinkedIn" title="Contact Andrei on LinkedIn"><ArrowUpRight size={22} /></a></nav></header>
     <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">I build tools for everyday decisions—from managing a home and a budget to understanding Parliament.</p><a className="explore-link" href="#workspace">Try the work <ArrowDown size={17} /></a></div><div className="hero-stats"><span className="section-eyebrow">A few ways in</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>3 real products. Yours to explore.</small></span><ArrowUpRight size={18} /></button><button onClick={() => { setDevice("ipad"); explore(); }}><span className="stat-symbol" aria-hidden="true"><Code2 size={26} /></span><span><strong>Source platforms</strong><small>iPhone · iPad · Android · Web</small></span><ArrowUpRight size={18} /></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Inspect the engineering decisions.</small></span><ArrowUpRight size={18} /></a><p>Web previews below. Device frames resize the Web app; they are not native emulators.</p></div></section>
-    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick a product. <em>Make it yours.</em></h2></div><span className="lab-hint">01 Choose · 02 Try · 03 Ask</span></div>
-      <nav className="project-rail" aria-label="Choose a live project">{projects.map((item, index) => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => setActiveId(item.id)}><span className="rail-number">0{index + 1}</span><span><span className={`project-title project-title-${item.id}`}><span className="project-logo" aria-hidden="true"><ProjectLogo id={item.id} /></span><strong>{item.name}</strong></span><small>{item.id === "hoc-v2" ? "Civic data · no account needed" : item.id === "symply-house" ? "Home management · sign in" : "Personal finance · sign in"}</small></span><ArrowUpRight size={19} /></button>)}</nav>
-      <div className="workspace"><section className="workbench" aria-label="Live application preview"><div className="workbench-head"><div><span className="section-eyebrow">Web Device Lab</span><h3>{project.name}</h3></div>{project.sourceRepository && <a className="source-link" href={project.sourceRepository} target="_blank" rel="noreferrer"><Code2 size={16} />Source <ArrowUpRight size={13} /></a>}</div><p className="runtime-note">{project.id === "hoc-v2" ? "Explore real parliamentary information. Public browsing is open—no account needed." : "Connected to the deployed product API. Use your own account; actions affect your real data."}</p><div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button key={value} aria-pressed={device === value} onClick={() => setDevice(value)}><span className={`device-icon ${value}`} />{deviceNames[value]}</button>)}</div><ConnectedSourcePreview key={project.id} project={project} device={device} /><p className="workbench-foot"><ShieldCheck size={14} />No shared credentials. If sign-in is restricted inside the frame, use “Open live app”.</p></section><GuidePanel project={project} onCoreFlow={() => document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus()} /></div>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick a product. <em>Make it yours.</em></h2></div></div>
+      <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => setActiveId(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span><ArrowUpRight size={19} /></button>)}</nav>
+      <div className="workspace"><section className="workbench" aria-label="Live application preview"><div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button key={value} aria-pressed={device === value} onClick={() => setDevice(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div><ConnectedSourcePreview key={project.id} project={project} device={device} /></section><GuidePanel project={project} onCoreFlow={() => document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus()} /></div>
     </section>
     <Architecture />
     <section className="case-study"><div><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2></div><div className="case-grid"><article><Code2 size={22} /><h3>Inspect the source</h3><p>Every published project links to its repository. Follow a decision beyond the interface.</p></article><article><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Let’s talk about the details.</p><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Discuss a role with Andrei on LinkedIn" title="Discuss a role with Andrei"><ArrowUpRight size={22} /></a></article></div></section>
