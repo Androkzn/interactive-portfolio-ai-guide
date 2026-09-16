@@ -8,9 +8,11 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** https://c5e1153c.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `1f93716` (personal guide avatar release).
-- **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
+- **Deployment preview URL:** https://772205f3.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `8cdb764` (connected Symply House Web preview release).
+- **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
+- **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
+- **Connected source commit:** `9e1c739df` (`feat(web): add safe public Home preview`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions.
 - **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Active` with `SSL enabled`; the root CNAME is present in the Cloudflare DNS zone, public resolvers return Cloudflare addresses, and HTTPS returns `200`. The local default resolver on the development machine still has a negative-cache result and may require a DNS cache/network refresh.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
@@ -20,13 +22,14 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Static shell:** Next.js App Router with `output: export`, responsive layout, and no required runtime server.
 - **Portfolio workspace:** one active demo player with `idle → active → complete`, seeded local state and reset.
 - **Project manifests:** five candidate manifests remain explicit drafts; a sixth connected project, Symply House, is marked as the featured source build.
-- **Symply House connection:** source repository linked to [Androkzn/symply-house](https://github.com/Androkzn/symply-house); source platform matrix recorded as iPhone, iPad, Android and Web. The portfolio itself runs the Web preview and does not claim native runtime inside the browser.
+- **Symply House connection:** source repository linked to [Androkzn/symply-house](https://github.com/Androkzn/symply-house); source platform matrix recorded as iPhone, iPad, Android and Web. The portfolio now embeds the connected Web build in a sandboxed player and does not claim native runtime inside the browser.
 - **Viewports:** phone, tablet and desktop web-preview modes are selectable and labeled with their dimensions.
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
 - **Speech fallback:** browser `speechSynthesis` is opt-in with Stop, mute, visibility cancellation and text-first behavior.
 - **Personal avatar:** approved portrait is stored at `public/images/andrei-tekhtelev-avatar.png` and displayed in the guide panel; the CSS frame remains the no-asset fallback.
 - **Transparency:** every demo is labeled as local/synthetic; the connected source and pending manifest boundaries are visible in the UI.
+- **Connected Home preview:** the separate Expo Web deployment uses an explicit `EXPO_PUBLIC_PUBLIC_PREVIEW=1` review mode, local seeded data, platform adapters for native-only modules and no production auth/write access. Full implementation notes live in [SYMPLY_HOUSE_WEB_INTEGRATION.md](./SYMPLY_HOUSE_WEB_INTEGRATION.md).
 - **Accessibility baseline:** semantic controls, live guide thread, visible focus-compatible controls and reduced-motion CSS fallback.
 - **Backend contract:** typed `GuideTurnRequest`, `GuideTurnResponse` and allowlisted `GuideAction` contracts shared by the Worker and its tests.
 - **Guide API first slice:** Cloudflare Worker boundary with origin allowlist, input size/schema validation, curated grounding, prompt-injection refusal, no-store responses, structured logs and explicit curated mode.
@@ -40,9 +43,9 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## In progress / next implementation blocks
 
 - [x] Run and verify the Next.js build after dependencies are installed.
-- [ ] Add a typed `DemoMessage` bridge for a separately deployed Symply House Web build (`ready`, `screen`, `stepComplete`, `ack`, `error`).
-- [ ] Verify the actual Expo Web export from the connected Symply House repository and record its commit/build version here.
-- [ ] Replace the local Symply House reconstruction in the player with the verified Web build only after origin, sandbox and reset behavior are checked.
+- [ ] Add a typed `DemoMessage` bridge for a separately deployed Symply House Web build (`ready`, `screen`, `stepComplete`, `ack`, `error`). The current iframe uses the browser load event; the richer event contract remains a follow-up.
+- [x] Verify the actual Expo Web export from the connected Symply House repository and record its commit/build version here.
+- [x] Replace the local Symply House reconstruction in the player with the verified Web build; origin, sandbox, local reset behavior and direct browser rendering were checked.
 - [ ] Complete the remaining four app audits: ownership, permitted sources, platform dependencies, evidence and core flow.
 - [x] Re-check `andreitekhtelev.dev` until Cloudflare Pages changes from `Verifying` to `Active` and public DNS/HTTPS verification succeeds.
 - [x] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
@@ -55,11 +58,11 @@ This tracker is updated as implementation blocks are completed. It separates wha
 | Requirement block | Current evidence | Status |
 | --- | --- | --- |
 | BR-04 / C1 / C4 | Manifest-driven project workspace and case content | Partial: five candidate sources still pending |
-| BR-05 / A2 | Four-platform Symply House matrix plus explicit web-preview labels | Partial: actual web export verification pending |
+| BR-05 / A2 | Four-platform Symply House matrix, connected Expo Web build and explicit web-preview labels | Implemented for Web preview; native targets remain source/build evidence |
 | BR-06 / C5 | Synthetic local seed, reset, no production effects | Implemented for local preview |
 | BR-07 / F2 | Static shell and curated guide do not require AI quota | Implemented for first slice |
 | BR-10 / D1–D6 | Project-aware local guide, mode state and interruption-safe new turns | First slice implemented; Worker grounding pending |
-| BR-11 / B4 | Guide can request/open a project in the shared player | First slice simulated locally; typed bridge pending |
+| BR-11 / B4 | Guide can request/open a project in the shared player | Implemented for the connected player; typed cross-frame event bridge pending |
 | BR-12 / E2–E4 | Manual speech, Stop, mute, text fallback and visibility cancellation | First slice implemented |
 | BR-14 / F3 | Responsive layout, reduced-motion CSS, semantic buttons | First slice implemented; device QA pending |
 | TRD §4 / D1–D5 | `apps/guide-api` typed request/response, origin guard, safe action union | First slice implemented; Turnstile and live AI pending |
@@ -72,6 +75,6 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## Owner inputs still required
 
 - Confirm the final five-project list and the permission status of each candidate.
-- Confirm the Symply House Web build commit/version and the approved demo scenario/reset contract.
+- Confirm the remaining native release artifacts and the richer cross-frame `DemoMessage` event contract; the public Web review mode and local reset contract are implemented at source commit `9e1c739df`.
 - Provide approved personal contribution, challenge and evidence material for each published case.
 - Provide neutral poster and speaking-loop assets if the CSS avatar should be replaced.
