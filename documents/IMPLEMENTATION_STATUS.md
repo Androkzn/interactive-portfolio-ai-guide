@@ -9,7 +9,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
 - **Deployment preview URL:** https://ab6f86c2.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `2ea5f52`.
+- **Site build source commit:** `1f93716` (personal guide avatar release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML.
 - **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Active` with `SSL enabled`; the root CNAME is present in the Cloudflare DNS zone, public resolvers return Cloudflare addresses, and HTTPS returns `200`. The local default resolver on the development machine still has a negative-cache result and may require a DNS cache/network refresh.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
