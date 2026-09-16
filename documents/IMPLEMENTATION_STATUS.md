@@ -19,8 +19,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Repository:** created public GitHub repository [Androkzn/interactive-portfolio-ai-guide](https://github.com/Androkzn/interactive-portfolio-ai-guide).
 - **Static shell:** Next.js App Router with `output: export`, responsive layout, and no required runtime server.
 - **Portfolio workspace:** one active demo player with `idle → active → complete`, seeded local state and reset.
-- **Approved project set:** exactly two projects are now published: [Androkzn/hocv2](https://github.com/Androkzn/hocv2), sourced from `/Users/andreitekhtelev/Desktop/DEVELOPMENT/HoC-v2/`, and [Androkzn/symply-budget](https://github.com/Androkzn/symply-budget), sourced from `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Symply Budget/`.
-- **Project cleanup:** the former Symply House, Swiper, Brij, WiFi Map, One Dialer and Pixalere entries, corpus records, guide fallback and connected bridge files were removed from the portfolio application. Their external source folders were intentionally preserved.
+- **Approved project set:** exactly three projects are now published: [Androkzn/hocv2](https://github.com/Androkzn/hocv2), sourced from `/Users/andreitekhtelev/Desktop/DEVELOPMENT/HoC-v2/`; [Androkzn/symply-budget](https://github.com/Androkzn/symply-budget), sourced from `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Symply Budget/`; and [Androkzn/symply-house](https://github.com/Androkzn/symply-house), sourced from `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Simply Ecosystem-house/`.
+- **Project cleanup:** the former Swiper, Brij, WiFi Map, One Dialer and Pixalere entries, corpus records, guide fallback and connected bridge files were removed from the portfolio application. Their external source folders were intentionally preserved.
 - **Device Lab:** iPhone, iPad, Android and Desktop shells remain selectable and labeled with their dimensions; each mode runs a project-specific synthetic, resettable preview. These shells are visual Web previews, not native binaries.
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
@@ -40,8 +40,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## In progress / next implementation blocks
 
 - [x] Run and verify the Next.js build after dependencies are installed.
-- [x] Replace the previous six-project catalog with the two owner-selected source projects and record their repositories, source paths and platform evidence.
-- [x] Make the two synthetic Device Lab flows project-specific through reviewed checkpoints rather than generic placeholder cards.
+- [x] Replace the previous catalog with the three owner-selected source projects and record their repositories, source paths and platform evidence.
+- [x] Make the three synthetic Device Lab flows project-specific through reviewed checkpoints rather than generic placeholder cards.
 - [ ] Add a secure remote-native preview runner for real iOS Simulator and Android Emulator sessions; browser shells must remain labeled as Web until that runner exists.
 - [x] Re-check `andreitekhtelev.dev` until Cloudflare Pages changes from `Verifying` to `Active` and public DNS/HTTPS verification succeeds.
 - [x] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
@@ -53,7 +53,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 | Requirement block | Current evidence | Status |
 | --- | --- | --- |
-| BR-04 / C1 / C4 | Manifest-driven project workspace and case content | Implemented for exactly two approved projects |
+| BR-04 / C1 / C4 | Manifest-driven project workspace and case content | Implemented for exactly three approved projects |
 | BR-05 / A2 | Multi-platform source evidence and explicit Web/native preview labels | Implemented for HoC v2; Symply Budget native matrix recorded; real native streaming remains pending |
 | BR-06 / C5 | Synthetic local seed, reset, no production effects | Implemented for local preview |
 | BR-07 / F2 | Static shell and curated guide do not require AI quota | Implemented for first slice |

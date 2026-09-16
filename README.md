@@ -19,6 +19,6 @@ npm run build
 
 ## Published projects
 
-The portfolio currently contains only [House of Commons Citizen Companion](https://github.com/Androkzn/hocv2) and [Symply Budget](https://github.com/Androkzn/symply-budget). Their Device Lab previews are seeded and local. They show the interaction contract inside the site; native iOS and Android binaries are not misrepresented as browser runtimes.
+The portfolio currently contains [House of Commons Citizen Companion](https://github.com/Androkzn/hocv2), [Symply Budget](https://github.com/Androkzn/symply-budget) and [Symply House](https://github.com/Androkzn/symply-house). Their Device Lab previews are seeded and local. They show the interaction contract inside the site; native iOS and Android binaries are not misrepresented as browser runtimes.
 
 See [`documents/IMPLEMENTATION_STATUS.md`](documents/IMPLEMENTATION_STATUS.md) for requirement traceability, completed blocks and the next verification gates.

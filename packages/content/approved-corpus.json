@@ -1,6 +1,6 @@
 {
-  "corpusVersion": "0.2.0",
-  "reviewStatus": "two-project-corpus",
+  "corpusVersion": "0.3.0",
+  "reviewStatus": "three-project-corpus",
   "positioning": {
     "headline": "Build systems around models, not demos around prompts.",
     "principles": [
@@ -25,6 +25,13 @@
       "challenge": "Design a trustworthy local-first budgeting system around native capabilities, sync boundaries and sensitive financial data.",
       "boundary": "The portfolio preview is synthetic and read-only. It does not expose accounts, financial records, credentials or production services.",
       "sources": ["symply-budget.source-repository", "symply-budget.platform-matrix", "symply-budget.demo-boundary"]
+    },
+    {
+      "id": "symply-house",
+      "name": "Symply House",
+      "challenge": "Turn shared household context into calm, actionable routines across iPhone, iPad, Android and Web.",
+      "boundary": "The portfolio preview uses deterministic local data. It does not expose accounts, notifications or production writes, and does not claim to run a native binary in the browser.",
+      "sources": ["symply-house.source-repository", "symply-house.platform-matrix", "symply-house.demo-boundary"]
     }
   ],
   "globalSources": ["portfolio.ai-review-chain", "portfolio.public-boundary", "portfolio.native-preview-boundary"]

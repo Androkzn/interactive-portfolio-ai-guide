@@ -74,6 +74,32 @@ export const projects: Project[] = [
       { label: "Preview boundary", type: "boundary", detail: "Synthetic local state only; no banking, payment, identity or backend write is available." },
     ],
   },
+  {
+    id: "symply-house",
+    number: "02",
+    name: "Symply House",
+    eyebrow: "Source project · home management",
+    summary: "A cross-platform home-management product that turns household context into calm, actionable routines.",
+    discipline: "Product platform",
+    color: "#ff9d66",
+    accent: "orange",
+    originalPlatforms: ["iPhone", "iPad", "Android", "Web"],
+    runtimeLabel: "Expo Web source · synthetic portfolio preview",
+    status: "source verified",
+    sourceRepository: "https://github.com/Androkzn/symply-house",
+    scenario: { title: "Review a home task", description: "Walk through a seeded household task from context to a clear next action.", action: "Start home flow" },
+    checkpoints: [
+      { title: "Context before chores", detail: "Make the next household action legible without turning the home surface into a noisy task list." },
+      { title: "Shared responsibility", detail: "Represent ownership and timing as product state that can survive multiple people and platforms." },
+      { title: "Safe completion", detail: "Finish with a local, reversible action; production accounts and household data stay outside the preview." },
+    ],
+    challenge: { title: "Keep a shared home calm and useful", body: "The source project spans iPhone, iPad, Android and Web surfaces with household workflows and native integrations. The portfolio preview uses deterministic local data and does not expose accounts, notifications or production writes." },
+    evidence: [
+      { label: "Source repository", type: "verified", detail: "Androkzn/symply-house · public source project." },
+      { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Web, based on the connected Expo source." },
+      { label: "Preview boundary", type: "boundary", detail: "Synthetic local state only; no household account, notification or production write is used." },
+    ],
+  },
 ];
 
 export const quickPrompts = [
