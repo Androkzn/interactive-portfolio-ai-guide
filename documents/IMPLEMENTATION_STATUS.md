@@ -8,8 +8,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** https://8ee63dec.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `5babbcc` (native device viewport polish release).
+- **Deployment preview URL:** https://73abd003.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `d2e2ccc` (connected in-site Device Lab and typed preview bridge release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
 - **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
 - **Connected source commit:** `60cca35b5` (`feat(web): add secure portfolio preview bridge`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions and reports typed lifecycle events to the host.
