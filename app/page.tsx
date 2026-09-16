@@ -41,12 +41,7 @@ function Avatar({ speaking, hidden, onToggleHidden }: { speaking: boolean; hidde
   return (
     <div className={`avatar-shell ${speaking ? "is-speaking" : ""}`}>
       <button className="avatar-toggle" onClick={onToggleHidden} aria-label="Hide guide avatar"><X size={14} /></button>
-      <div className="avatar-glow" />
-      <div className="avatar-face" aria-hidden="true">
-        <div className="avatar-hair" /><div className="avatar-ear left" /><div className="avatar-ear right" />
-        <div className="avatar-eye left" /><div className="avatar-eye right" /><div className="avatar-nose" />
-        <div className="avatar-mouth"><span /></div><div className="avatar-neck" />
-      </div>
+      <img className="avatar-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" />
       <div className="avatar-caption"><span className="live-line" />{speaking ? "Speaking" : "Ready when you are"}</div>
     </div>
   );

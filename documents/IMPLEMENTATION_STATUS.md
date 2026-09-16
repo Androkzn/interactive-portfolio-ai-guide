@@ -25,6 +25,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
 - **Speech fallback:** browser `speechSynthesis` is opt-in with Stop, mute, visibility cancellation and text-first behavior.
+- **Personal avatar:** approved portrait is stored at `public/images/andrei-tekhtelev-avatar.png` and displayed in the guide panel; the CSS frame remains the no-asset fallback.
 - **Transparency:** every demo is labeled as local/synthetic; the connected source and pending manifest boundaries are visible in the UI.
 - **Accessibility baseline:** semantic controls, live guide thread, visible focus-compatible controls and reduced-motion CSS fallback.
 - **Backend contract:** typed `GuideTurnRequest`, `GuideTurnResponse` and allowlisted `GuideAction` contracts shared by the Worker and its tests.
@@ -47,7 +48,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - [x] Add the Worker Guide API with server-side challenge validation, strict content grounding and curated fallback.
 - [x] Add the Workers AI adapter behind a reviewed feature flag; preserve curated mode on quota/timeout.
 - [ ] Add eval fixtures: 20 first questions, action tests and multi-turn interruption/resume scenarios.
-- [ ] Add approved avatar poster/speaking-loop assets when supplied by Andrei. The CSS neutral frame remains the v1 fallback.
+- [x] Add approved portrait avatar asset supplied by Andrei. Speaking state remains device-generated voice plus a restrained status animation.
 
 ## Requirement traceability
 
