@@ -69,3 +69,6 @@ button,a,input { font:inherit; } button { border:0; cursor:pointer; color:inheri
 @media (max-width:680px) { .architecture-section { padding:90px 24px 70px; }.architecture-heading { display:block; margin-bottom:40px; }.architecture-heading h2 { font-size:47px; }.architecture-heading > p { margin-top:25px; }.architecture-flow { grid-template-columns:1fr; gap:0; }.architecture-step { min-height:170px; padding-right:0; }.architecture-foot { display:block; }.architecture-foot span,.architecture-foot a { margin-bottom:10px; }.architecture-foot a { margin-left:0; } }
 
 .architecture-heading { align-items:flex-end; }
+.device-shell-iphone .connected-preview-frame { height:844px; }
+.device-shell-ipad .connected-preview-frame { height:1024px; }
+.device-shell-android .connected-preview-frame { height:915px; }

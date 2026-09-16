@@ -61,7 +61,7 @@ function ConnectedHousePreview({ device }: { device: DevicePreview }) {
       <div className={`device-shell device-shell-${device}`}>
         {device !== "desktop" && <div className="device-chrome"><span>9:41</span><span className="device-chrome-title">{device === "android" ? "Symply House" : "Symply"}</span><span className="device-chrome-icons">● ◒</span></div>}
         <div className="device-screen">
-          <iframe className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="lazy" onLoad={() => setLoaded(true)} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
+          <iframe className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="lazy" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
         </div>
         {device !== "desktop" && <div className="device-navigation"><span /></div>}
       </div>
