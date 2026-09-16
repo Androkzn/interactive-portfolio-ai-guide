@@ -1,218 +1,360 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowUpRight, Check, ChevronRight, CircleHelp, ExternalLink, FileText, Gauge,
-  Layers3, Maximize2, MessageCircle, Pause, Play, RotateCcw, Send, ShieldCheck,
-  Sparkles, Volume2, VolumeX, X,
-} from "lucide-react";
-import { DevicePreview, GuideMode, Project, Viewport, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
-import { ackMessage, hostReadyMessage, parseDemoMessage, SYMPLY_HOUSE_WEB_ORIGIN } from "@/lib/demo-bridge";
+import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Code2, ExternalLink, Layers3, MessageCircle, Moon, Pause, Play, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles, Sun, Volume2 } from "lucide-react";
+import { DevicePreview, GuideMode, Project, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
+import { acceptsPreviewMessage, deviceWidths } from "@/lib/preview";
 
-type Message = { role: "guide" | "visitor"; text: string; projectId?: string; evidence?: string };
+type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
+type Theme = "light" | "dark";
+const contactUrl = "https://www.linkedin.com/in/andreitekhtelev/";
+const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
+const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Desktop" };
+const preferredMaleVoiceNames = [
+  "microsoft ryan online (natural)",
+  "microsoft liam online (natural)",
+  "microsoft guy online (natural)",
+  "microsoft andrew online (natural)",
+  "microsoft brian online (natural)",
+  "google uk english male",
+  "google us english",
+  "alex",
+  "daniel",
+  "fred",
+  "tom",
+  "microsoft david",
+  "microsoft mark",
+  "arthur",
+  "oliver",
+  "james",
+  "thomas",
+  "eddy",
+];
+const maleVoiceHints = ["alex", "daniel", "fred", "tom", "david", "mark", "guy", "ryan", "liam", "brian", "andrew", "arthur", "oliver", "james", "thomas", "eddy", "male", "man"];
+const femaleVoiceHints = ["samantha", "karen", "victoria", "susan", "hazel", "moira", "fiona", "zira", "aria", "jenny", "sara", "ava", "salli", "joanna", "ivy", "kimberly", "kendra", "nicole", "tessa", "allison", "emily", "libby", "serena", "kate", "catherine", "amelie", "marie", "monica", "paulina", "luciana", "helena", "anna", "emma", "olivia", "sophie", "yuna"];
 
-const deviceSizes: Record<DevicePreview, string> = { iphone: "390 × 844", ipad: "768 × 1024", android: "412 × 915", desktop: "1280 × 800" };
-const SYMPLY_HOUSE_WEB_PREVIEW = "https://symply-house-web.pages.dev/?embed=portfolio-v1&build=caf3b0595";
+function selectBestMaleVoice(voices: SpeechSynthesisVoice[]) {
+  const isEnglish = (voice: SpeechSynthesisVoice) => voice.lang.toLowerCase().startsWith("en");
+  const isFemale = (voice: SpeechSynthesisVoice) => {
+    const name = `${voice.name} ${voice.voiceURI}`.toLowerCase();
+    return femaleVoiceHints.some(hint => name.includes(hint));
+  };
+  const isLikelyMale = (voice: SpeechSynthesisVoice) => {
+    const name = `${voice.name} ${voice.voiceURI}`.toLowerCase();
+    return preferredMaleVoiceNames.some(preferred => name.includes(preferred)) || maleVoiceHints.some(hint => name.includes(hint));
+  };
+  const candidates = voices.filter(voice => !isFemale(voice) && isLikelyMale(voice) && isEnglish(voice));
+  const fallbackCandidates = voices.filter(voice => !isFemale(voice) && isEnglish(voice));
+  const pool = candidates.length > 0 ? candidates : fallbackCandidates.length > 0 ? fallbackCandidates : voices;
+  if (pool.length === 0) return undefined;
+  return [...pool].sort((left, right) => {
+    const score = (voice: SpeechSynthesisVoice) => {
+      const name = `${voice.name} ${voice.voiceURI}`.toLowerCase();
+      const preference = preferredMaleVoiceNames.findIndex(preferred => name.includes(preferred));
+      const language = voice.lang.toLowerCase();
+      return (preference >= 0 ? 1000 - preference * 25 : 0)
+        + (name.includes("natural") || name.includes("neural") ? 220 : 0)
+        + (name.includes("enhanced") || name.includes("premium") ? 180 : 0)
+        + (voice.localService ? 0 : 80)
+        + (language === "en-ca" ? 60 : language === "en-us" ? 50 : language === "en-gb" ? 40 : 20);
+    };
+    return score(right) - score(left);
+  })[0];
+}
+
+const projectLogoSources: Record<Project["id"], string> = {
+  "symply-house": "/images/apps/symply-house.png",
+  "hoc-v2": "/images/apps/house-of-commons.png",
+  "symply-budget": "/images/apps/symply-budget.png",
+};
+
+function ProjectLogo({ id }: { id: Project["id"] }) {
+  return <img className={`project-logo project-logo-${id}`} src={projectLogoSources[id]} alt="" aria-hidden="true" />;
+}
+
 function makeGuideReply(question: string, project: Project, mode: GuideMode, tourStep: number) {
   const lower = question.toLowerCase();
-  if (lower.includes("personally") || lower.includes("personally own") || lower.includes("сделал") || lower.includes("вклад")) {
-    return `For ${project.name}, the public manifest does not yet state a personal contribution, so I won’t invent one. What I can show now is the reviewed source boundary, the seeded core flow and the engineering decisions that are safe to claim.`;
+  if (lower.includes("personally") || lower.includes("own") || lower.includes("вклад")) {
+    return `**What I can substantiate**\n\nThe public manifest for ${project.name} does not yet specify personal contribution. I won’t invent one.\n\n- Explore the deployed Web application.\n- Inspect the linked source repository.\n- Treat ownership and impact claims as pending evidence.`;
   }
-  if (lower.includes("hard") || lower.includes("сложн") || lower.includes("challenge")) {
-    return `${project.challenge.title}. ${project.challenge.body} The important engineering decision here is to make the limitation visible instead of filling it with an impressive but unsupported story.`;
+  if (lower.includes("hard") || lower.includes("challenge") || lower.includes("сложн")) {
+    return `**${project.challenge.title}**\n\n${project.challenge.body}\n\nThis is the documented boundary—not a claim about an unverified outcome.`;
   }
-  if (lower.includes("ai") || lower.includes("искусствен") || lower.includes("verify") || lower.includes("провер")) {
-    return `AI is treated as an accelerator for drafts and alternatives, not as an authority. In this first slice, the human check is the approved manifest, a deterministic scenario and a resettable boundary. No speed metric or project claim is published without a source.`;
+  if (lower.includes("ai") || lower.includes("verify") || lower.includes("провер")) {
+    return "**AI assists; evidence decides.**\n\n- Prepared answers stay within the approved project material.\n- The apps run independently of this guide.\n- Unsupported contribution or impact claims stay unpublished.\n\nThis panel uses curated responses, not a live model. Explore the architecture below for the intended contract.";
   }
-  if (lower.includes("show") || lower.includes("open") || lower.includes("покаж") || lower.includes("демо")) {
-    return `Opening ${project.name} in the demo player. It is a ${project.runtimeLabel.toLowerCase()}; the public Web build is isolated from production effects and the native binaries remain a separate runtime.`;
+  if (lower.includes("show") || lower.includes("flow") || lower.includes("покаж")) {
+    return project.id === "hoc-v2"
+      ? "**Try the public civic flow**\n\n- Browse parliamentary information in the live app.\n- Open a representative or activity to inspect its details.\n- Use the original sources to verify what you read.\n\nPublic browsing does not require an account."
+      : `**Try ${project.name}**\n\n- Sign in using your existing product account.\n- Explore the live product with your own data.\n- Open the app in a separate tab if your browser restricts embedded sign-in.\n\nThis is a real app: account actions affect your account. No shared credentials or simulated balance are injected.`;
   }
-  if (mode === "tour") {
-    return `${tourSteps[tourStep].detail} We’re currently looking at ${project.name}; you can try it, inspect the challenge, or interrupt the tour with a question.`;
-  }
-  return `I can help you inspect ${project.name}: try its seeded flow, open the challenge card, or ask about the boundary. I’ll keep this answer tied to approved materials and call out what is still pending.`;
+  if (mode === "tour") return `**${tourSteps[tourStep].title}**\n\n${tourSteps[tourStep].detail}`;
+  return `**Explore ${project.name}**\n\nI have prepared answers about the source boundary, documented challenge and core flow. Choose a question below or inspect the source. For a deeper conversation, get in touch with Andrei.\n\nI don’t have a verified answer to every free-form question.`;
 }
 
-function StatusPill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "success" | "warning" }) {
-  return <span className={`status-pill ${tone}`}><span className="status-dot" />{children}</span>;
+function FormattedText({ text }: { text: string }) {
+  return <>{text.split("\n\n").map((block, i) => {
+    if (block.startsWith("- ")) return <ul key={i}>{block.split("\n").map((line, j) => <li key={j}>{line.replace(/^- /, "")}</li>)}</ul>;
+    if (block.startsWith("**") && block.endsWith("**")) return <p key={i}><strong>{block.slice(2, -2)}</strong></p>;
+    return <p key={i}>{block}</p>;
+  })}</>;
 }
 
-function Avatar({ speaking, hidden, onToggleHidden }: { speaking: boolean; hidden: boolean; onToggleHidden: () => void }) {
-  if (hidden) return <button className="avatar-hidden" onClick={onToggleHidden} aria-label="Show guide avatar"><Sparkles size={20} /><span>Show guide</span></button>;
-  return (
-    <div className={`avatar-shell ${speaking ? "is-speaking" : ""}`}>
-      <button className="avatar-toggle" onClick={onToggleHidden} aria-label="Hide guide avatar"><X size={14} /></button>
-      <img className="avatar-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" />
-      <div className="avatar-caption"><span className="live-line" />{speaking ? "Speaking" : "Ready when you are"}</div>
-    </div>
-  );
-}
-
-function ConnectedHousePreview({ device }: { device: DevicePreview }) {
-  const [loaded, setLoaded] = useState(false);
-  const [bridgeScreen, setBridgeScreen] = useState<"home" | "tasks" | "spaces">("home");
-  const [bridgeReady, setBridgeReady] = useState(false);
-  const [lastBridgeEvent, setLastBridgeEvent] = useState("waiting for app handshake");
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const frameWidth = device === "iphone" ? 390 : device === "ipad" ? 768 : device === "android" ? 412 : undefined;
-
+function GuideReply({ message }: { message: Message }) {
+  const [visible, setVisible] = useState(message.animate ? 0 : message.text.length);
   useEffect(() => {
-    const handleMessage = (event: MessageEvent<unknown>) => {
-      if (event.origin !== SYMPLY_HOUSE_WEB_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
-      const message = parseDemoMessage(event.data);
-      if (!message) return;
-      if (message.type === "ready") {
-        setBridgeReady(true);
-        setBridgeScreen(message.payload.screen);
-        setLastBridgeEvent("handshake acknowledged");
-      } else if (message.type === "screen") {
-        setBridgeScreen(message.payload.screen);
-        setLastBridgeEvent(`screen: ${message.payload.screen}`);
-      } else if (message.type === "stepComplete") {
-        setLastBridgeEvent("task completion received");
-      } else {
-        setLastBridgeEvent(`app error: ${message.payload.code}`);
-      }
-      (event.source as Window | null)?.postMessage(ackMessage(message.type), event.origin);
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
+    if (!message.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVisible(message.text.length);
+      return;
+    }
+    const increment = Math.max(4, Math.ceil(message.text.length / 45));
+    const timer = window.setInterval(() => setVisible(value => {
+      if (value + increment >= message.text.length) window.clearInterval(timer);
+      return Math.min(value + increment, message.text.length);
+    }), 24);
+    return () => window.clearInterval(timer);
+  }, [message]);
+  const done = visible >= message.text.length;
+  return <div className="reply-body">
+    <div aria-hidden={!done}><FormattedText text={message.text.slice(0, visible)} /></div>
+    {!done && <span className="typing-indicator" role="status" aria-label="Revealing prepared answer"><i /><i /><i /></span>}
+    <span className="sr-only" role="status">{done && message.animate ? message.text.replaceAll("**", "") : ""}</span>
+  </div>;
+}
 
-  const sendHostReady = () => {
-    iframeRef.current?.contentWindow?.postMessage(hostReadyMessage(), SYMPLY_HOUSE_WEB_ORIGIN);
-  };
-
-  return (
-    <div className={`connected-preview connected-preview-${device}`}>
-      <div className="connected-preview-bar">
-        <span><span className={`connected-preview-dot ${bridgeReady ? "ready" : ""}`} />Device Lab · {device === "desktop" ? "Desktop Web" : device} · {bridgeReady ? `bridge ready · ${bridgeScreen}` : "connecting"}</span>
-        <a href={SYMPLY_HOUSE_WEB_PREVIEW} target="_blank" rel="noreferrer">Open full preview <ExternalLink size={12} /></a>
-      </div>
-      {!loaded && <div className="connected-preview-loading">Loading the connected source build…</div>}
-      <div className={`device-shell device-shell-${device}`}>
-        {device !== "desktop" && <div className="device-chrome"><span>9:41</span><span className="device-chrome-title">{device === "android" ? "Symply House" : "Symply"}</span><span className="device-chrome-icons">● ◒</span></div>}
-        <div className="device-screen">
-            <iframe ref={iframeRef} className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="eager" referrerPolicy="no-referrer" onLoad={() => { setLoaded(true); sendHostReady(); }} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
-        </div>
-        {device !== "desktop" && <div className="device-navigation"><span /></div>}
-      </div>
-      <div className="connected-preview-event" aria-live="polite"><span className={loaded ? "ready" : ""} />{lastBridgeEvent}</div>
-    </div>
-  );
+function Avatar({ active }: { active: boolean }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    const element = video.current;
+    if (!element) return;
+    if (active && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      element.currentTime = 0;
+      void element.play().catch(() => setPlaying(false));
+    } else {
+      element.pause();
+      element.currentTime = 0;
+      setPlaying(false);
+    }
+    return () => element.pause();
+  }, [active]);
+  return <div className={`avatar-shell ${active && playing ? "is-animating" : ""}`}>
+    <img className="avatar-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Portrait of Andrei Tekhtelev" />
+    <video className="avatar-video" ref={video} muted loop playsInline preload="auto" poster="/images/andrei-tekhtelev-avatar.png" aria-hidden="true" onPlaying={() => setPlaying(true)} onPause={() => setPlaying(false)}>
+      <source src="/video/andrei-talking-lips-web.webm" type="video/webm" />
+      <source src="/video/andrei-talking-lips-web-60fps.mp4" type="video/mp4" />
+    </video>
+  </div>;
 }
 
 function ConnectedSourcePreview({ project, device }: { project: Project; device: DevicePreview }) {
+  const frame = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const frameWidth = device === "iphone" ? 390 : device === "ipad" ? 768 : device === "android" ? 412 : undefined;
-  if (!project.webPreviewUrl) return null;
-  return (
-    <div className={`connected-preview connected-preview-${device}`}>
-      <div className="connected-preview-bar">
-        <span><span className={`connected-preview-dot ${loaded && !failed ? "ready" : ""}`} />Device Lab · {device === "desktop" ? "Desktop Web" : device} · {failed ? "source unavailable" : loaded ? "source connected" : "connecting"}</span>
-        <a href={project.webPreviewUrl} target="_blank" rel="noreferrer">Open full preview <ExternalLink size={12} /></a>
-      </div>
-      {!loaded && !failed && <div className="connected-preview-loading">Loading the connected source build…</div>}
-      {failed ? (
-        <div className="connected-preview-error" role="alert">The public Web build could not be loaded. Open the full preview to inspect the source runtime.</div>
-      ) : (
-        <div className={`device-shell device-shell-${device}`}>
-          {device !== "desktop" && <div className="device-chrome"><span>9:41</span><span className="device-chrome-title">{project.name}</span><span className="device-chrome-icons">● ◒</span></div>}
-          <div className="device-screen">
-            <iframe className="connected-preview-frame" title={`${project.name} connected Web preview`} src={project.webPreviewUrl} loading="eager" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
-          </div>
-          {device !== "desktop" && <div className="device-navigation"><span /></div>}
+  const [slow, setSlow] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [theme, setTheme] = useState<Theme>("light");
+  const [appliedTheme, setAppliedTheme] = useState<Theme | null>(null);
+  const [themeReady, setThemeReady] = useState(false);
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
+  const url = project.webPreviewUrl;
+  useEffect(() => {
+    if (!url) return;
+    const origin = new URL(url).origin;
+    let retries = 0;
+    const requestTheme = () => frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
+    const handshake = window.setInterval(() => {
+      requestTheme();
+      if (++retries >= 45) window.clearInterval(handshake);
+    }, 1000);
+    const receive = (event: MessageEvent) => {
+      if (!acceptsPreviewMessage(event, frame.current?.contentWindow, origin)) return;
+      if (event.data.type === "portfolio:theme-ready") {
+        setThemeReady(true);
+        setLoaded(true); setSlow(false);
+        frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
+      }
+      if (event.data.type === "portfolio:theme-applied" && (event.data.theme === "light" || event.data.theme === "dark")) {
+        setThemeReady(true);
+        setAppliedTheme(event.data.theme);
+        setLoaded(true); setSlow(false);
+        window.clearInterval(handshake);
+      }
+    };
+    window.addEventListener("message", receive);
+    requestTheme();
+    return () => { window.removeEventListener("message", receive); window.clearInterval(handshake); };
+  }, [url, attempt]);
+  useEffect(() => {
+    setLoaded(false); setSlow(false); setThemeReady(false); setAppliedTheme(null);
+    const timer = window.setTimeout(() => setSlow(true), 18000);
+    return () => window.clearTimeout(timer);
+  }, [url, attempt]);
+  const changeTheme = (next: Theme) => {
+    setTheme(next);
+    if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
+  };
+  if (!url) return <p>Live preview unavailable.</p>;
+  return <div className="connected-preview">
+    <div className="connected-preview-bar">
+      <span><i className={loaded ? "status-dot ready" : "status-dot"} />{loaded ? "Live app loaded" : "Loading live app"}</span>
+      <a href={url} target="_blank" rel="noreferrer">Open live app <ExternalLink size={13} /></a>
+    </div>
+    <div className="device-stage">
+      {!loaded && <div className="load-notice" role="status">{slow ? "Taking longer than expected. Try reloading or open the app in a new tab." : "Opening the real application…"}</div>}
+      <div className={`device-shell device-shell-${device}`} style={{ width: deviceWidths[device] }}>
+        <div className="device-chrome"><span>{device === "desktop" ? "● ● ●" : "9:41"}</span><span>{deviceNames[device]} preview</span><span>◒</span></div>
+        <div className="app-theme-controls" role="group" aria-label="Live app appearance">
+          <span>App theme</span>
+          <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
+          <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
         </div>
-      )}
-      <div className="connected-preview-event" aria-live="polite"><span className={loaded && !failed ? "ready" : ""} />{failed ? "connection failed" : loaded ? "source build loaded" : "waiting for source build"}</div>
-    </div>
-  );
-}
-
-function DemoCanvas({ project, device, completed, onComplete }: { project: Project; device: DevicePreview; completed: boolean; onComplete: () => void }) {
-  if (project.id === "symply-house") return <ConnectedHousePreview device={device} />;
-  if (project.webPreviewUrl) return <ConnectedSourcePreview project={project} device={device} />;
-  const syntheticViewport: Viewport = device === "ipad" ? "tablet" : device === "desktop" ? "desktop" : "phone";
-  return <SyntheticDemoCanvas project={project} viewport={syntheticViewport} completed={completed} onComplete={onComplete} />;
-}
-
-function SyntheticDemoCanvas({ project, viewport, completed, onComplete }: { project: Project; viewport: Viewport; completed: boolean; onComplete: () => void }) {
-  const [selected, setSelected] = useState(0);
-  const [saved, setSaved] = useState<string[]>([]);
-  const [stage, setStage] = useState<"idle" | "active" | "done">(completed ? "done" : "idle");
-  const items = project.checkpoints;
-  const start = () => setStage("active");
-  const reset = () => { setSelected(0); setSaved([]); setStage("idle"); };
-  useEffect(() => { setSelected(0); setSaved([]); setStage(completed ? "done" : "idle"); }, [project.id, viewport, completed]);
-  return (
-    <div className={`demo-frame viewport-${viewport}`} style={{ "--project-accent": project.color } as React.CSSProperties}>
-      <div className="demo-topbar"><div className="demo-brand"><span className="demo-mark" />{project.name}<span className="demo-badge">DEMO</span></div><div className="demo-signal"><span /> local seed · no external calls</div></div>
-      <div className="demo-content">
-        <div className="demo-kicker">{project.discipline} <span>·</span> synthetic workspace</div>
-        <h3>{project.scenario.title}</h3>
-        <p>{project.scenario.description}</p>
-        {stage === "idle" && <button className="demo-primary" onClick={start}><Play size={15} fill="currentColor" />{project.scenario.action}</button>}
-        {stage === "active" && <div className="demo-interaction">
-          <div className="demo-progress"><span style={{ width: `${((selected + 1) / items.length) * 100}%`, background: project.color }} /><small>step {selected + 1} of {items.length}</small></div>
-          <div className="demo-card"><div className="card-index">0{selected + 1}</div><div><span className="card-label">CHECKPOINT</span><strong>{items[selected].title}</strong><p>{items[selected].detail}</p></div><Check className="card-check" size={18} /></div>
-          <div className="demo-actions"><button className="demo-secondary" onClick={() => { setSaved([...saved, items[selected].title]); if (selected === items.length - 1) { setStage("done"); onComplete(); } else setSelected(selected + 1); }}>{selected === items.length - 1 ? "Complete flow" : "Continue"}<ChevronRight size={15} /></button><span>{saved.length} saved</span></div>
-        </div>}
-        {stage === "done" && <div className="demo-done"><Check size={16} /> Scenario complete · resettable seed</div>}
+        <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
+          setLoaded(true); setSlow(false);
+          frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, new URL(url).origin);
+        }} onError={() => { setLoaded(false); setSlow(true); }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
+          sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-same-origin allow-scripts" />
+        <div className="device-navigation"><span /></div>
       </div>
-      <div className="demo-footer"><span>Reconstruction · Web preview</span><button onClick={reset}><RotateCcw size={13} /> Reset demo</button></div>
     </div>
-  );
+    <div className="preview-footer"><span>{project.id === "hoc-v2" ? "Public data · explore without an account" : "Real account · real data · sign-in required"}</span><button onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button></div>
+  </div>;
 }
 
-function GuidePanel({ project, mode, setMode, messages, onAsk, onSpeak, speaking, muted, setMuted, onStop, tourStep, onNextTour, avatarHidden, onToggleAvatar }: { project: Project; mode: GuideMode; setMode: (mode: GuideMode) => void; messages: Message[]; onAsk: (text: string) => void; onSpeak: () => void; speaking: boolean; muted: boolean; setMuted: (muted: boolean) => void; onStop: () => void; tourStep: number; onNextTour: () => void; avatarHidden: boolean; onToggleAvatar: () => void }) {
+function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () => void }) {
+  const [mode, setMode] = useState<GuideMode>("explore");
+  const [tourStep, setTourStep] = useState(0);
   const [input, setInput] = useState("");
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (!input.trim()) return; onAsk(input.trim()); setInput(""); };
-  return (
-    <aside className="guide-panel">
-      <div className="guide-heading"><div><div className="section-eyebrow"><span className="eyebrow-dot" />Personal guide</div><h2>Let’s make the<br /><em>work</em> legible.</h2></div><StatusPill tone="success">curated mode</StatusPill></div>
-      <div className="guide-avatar-row"><Avatar speaking={speaking} hidden={avatarHidden} onToggleHidden={onToggleAvatar} /><div className="guide-bio"><span className="guide-name">Andrei’s AI guide</span><p>Grounded in approved materials. Ask about a decision, a constraint or what to try next.</p><div className="guide-controls"><button onClick={speaking ? onStop : onSpeak} aria-label={speaking ? "Stop speaking" : "Speak latest answer"}>{speaking ? <Pause size={14} /> : <Volume2 size={14} />}{speaking ? "Stop" : "Speak"}</button><button className={muted ? "muted" : ""} onClick={() => setMuted(!muted)} aria-label={muted ? "Turn speech on" : "Mute speech"}>{muted ? <VolumeX size={14} /> : <Volume2 size={14} />}{muted ? "Muted" : "Sound on"}</button></div></div></div>
-      <div className="guide-modes" role="tablist" aria-label="Guide mode"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")} role="tab">Explore</button><button className={mode === "tour" ? "active" : ""} onClick={() => setMode("tour")} role="tab">Tour</button><button className={mode === "interview" ? "active" : ""} onClick={() => setMode("interview")} role="tab">Interview</button></div>
-      <div className="guide-thread" aria-live="polite">{messages.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><div className="message-marker">{message.role === "guide" ? <Sparkles size={12} /> : "A"}</div><div><p>{message.text}</p>{message.evidence && <button className="message-link"><FileText size={13} />{message.evidence}<ArrowUpRight size={12} /></button>}</div></div>)}{mode === "tour" && <div className="tour-next"><div className="tour-count">0{tourStep + 1} / 03</div><div><strong>{tourSteps[tourStep].title}</strong><p>{tourSteps[tourStep].detail}</p></div><button onClick={onNextTour} aria-label="Next tour step"><ChevronRight size={17} /></button></div>}</div>
-      <div className="quick-prompts">{quickPrompts.slice(0, 3).map(prompt => <button key={prompt} onClick={() => onAsk(prompt)}>{prompt}<ChevronRight size={13} /></button>)}</div>
-      <form className="chat-form" onSubmit={submit}><input value={input} onChange={event => setInput(event.target.value)} placeholder="Ask a technical question…" aria-label="Ask a technical question" /><button type="submit" aria-label="Send question"><Send size={16} /></button></form>
-      <div className="guide-disclaimer"><ShieldCheck size={13} /> AI guide · approved materials only <span>·</span> voice is device-generated</div>
-    </aside>
-  );
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "guide", text: "**The work, explained.**\n\nTry a real app on the left. Then ask about the decisions behind it. I’ll separate documented facts from what still needs evidence." }]);
+  const nextId = useRef(1);
+  const thread = useRef<HTMLDivElement>(null);
+  const speech = useRef<SpeechSynthesisUtterance | null>(null);
+  const stop = () => { window.speechSynthesis?.cancel(); setSpeaking(false); };
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const refreshVoices = () => {
+      setVoices(window.speechSynthesis.getVoices());
+      setVoiceAvailable(true);
+    };
+    refreshVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
+    const hidden = () => { if (document.hidden) { window.speechSynthesis?.cancel(); setSpeaking(false); } };
+    document.addEventListener("visibilitychange", hidden);
+    return () => { window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices); document.removeEventListener("visibilitychange", hidden); window.speechSynthesis.cancel(); };
+  }, []);
+  useEffect(() => {
+    const element = thread.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+    let follow = true;
+    const onScroll = () => { follow = element.scrollHeight - element.scrollTop - element.clientHeight < 80; };
+    const observer = new ResizeObserver(() => { if (follow) element.scrollTop = element.scrollHeight; });
+    if (element.lastElementChild) observer.observe(element.lastElementChild);
+    element.addEventListener("scroll", onScroll, { passive: true });
+    return () => { observer.disconnect(); element.removeEventListener("scroll", onScroll); };
+  }, [messages, mode]);
+  const ask = (text: string) => {
+    stop();
+    if (text === quickPrompts[3]) onCoreFlow();
+    const visitorId = nextId.current++;
+    const replyId = nextId.current++;
+    setMessages(current => [...current.slice(-6), { id: visitorId, role: "visitor", text }, { id: replyId, role: "guide", text: makeGuideReply(text, project, mode, tourStep), animate: true }]);
+  };
+  const speak = () => {
+    if (speaking) { stop(); return; }
+    const latest = [...messages].reverse().find(message => message.role === "guide");
+    if (!latest || !voiceAvailable) return;
+    const utterance = new SpeechSynthesisUtterance(latest.text.replaceAll("**", "").replaceAll("\n- ", ". "));
+    const voice = selectBestMaleVoice(voices.length > 0 ? voices : window.speechSynthesis.getVoices());
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-CA";
+    }
+    utterance.rate = 0.98;
+    utterance.onend = utterance.onerror = () => setSpeaking(false);
+    speech.current = utterance;
+    setSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+  const prompts = [<Code2 key="code" size={15} />, <Layers3 key="layers" size={15} />, <ShieldCheck key="shield" size={15} />, <Play key="play" size={15} />];
+  return <aside className="guide-panel" id="guide" aria-label="Andrei’s project guide">
+    <div className="guide-heading"><div className="section-eyebrow"><Sparkles size={14} /> Your backstage pass</div><span className="curated-badge">Curated guide</span></div>
+    <h2>Good work invites<br /><em>better questions.</em></h2>
+    <div className="guide-avatar-row"><Avatar active={speaking} /><div className="guide-bio"><strong>Meet Andrei’s guide.</strong><p>Product decisions, technical boundaries and what to try next.</p><button className="voice-button" disabled={!voiceAvailable} onClick={speak} aria-pressed={speaking}>{speaking ? <Pause size={14} /> : <Volume2 size={14} />}{speaking ? "Stop reading" : "Read answer aloud"}</button><small>Male voice · best quality available on this device</small></div></div>
+    <div className="guide-context"><span className="status-dot ready" />Exploring <strong>{project.name}</strong></div>
+    <div className="guide-modes" role="group" aria-label="Guide mode">{(["explore", "tour", "interview"] as GuideMode[]).map(value => <button key={value} aria-pressed={mode === value} onClick={() => setMode(value)}>{value}</button>)}</div>
+    {mode === "interview" && <p className="mode-hint">Start with ownership, constraints or verification. Claims stay tied to reviewed material.</p>}
+    {mode === "tour" && <div className="tour-card"><span className="section-eyebrow">Stop {tourStep + 1} / {tourSteps.length}</span><strong>{tourSteps[tourStep].title}</strong><p>{tourSteps[tourStep].detail}</p><button onClick={() => setTourStep(value => (value + 1) % tourSteps.length)}>{tourStep === tourSteps.length - 1 ? "Restart tour" : "Next stop"}<ArrowRight size={14} /></button></div>}
+    <div ref={thread} className="guide-thread" tabIndex={0} aria-label="Guide conversation">{messages.map(message => <div key={message.id} className={`message ${message.role}`}><span className="message-marker">{message.role === "guide" ? <Sparkles size={13} /> : <MessageCircle size={13} />}</span><div>{message.role === "guide" ? <GuideReply message={message} /> : <p>{message.text}</p>}</div></div>)}</div>
+    <div className="quick-prompts"><span className="section-eyebrow">Take a closer look</span>{quickPrompts.map((prompt, index) => <button key={prompt} onClick={() => ask(prompt)}>{prompts[index]}<span>{prompt}</span><ChevronRight size={14} /></button>)}</div>
+    <form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about this project…" aria-label="Ask about this project" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form>
+    <div className="guide-disclaimer"><ShieldCheck size={15} /><span>Prepared answers · approved sources · no invented claims</span></div>
+  </aside>;
 }
 
-function ProjectRail({ activeId, onSelect }: { activeId: string; onSelect: (id: string) => void }) {
-  return <nav className="project-rail" aria-label="Projects">{projects.map(project => <button key={project.id} className={activeId === project.id ? "active" : ""} onClick={() => onSelect(project.id)}><span className="rail-number">{project.number}</span><span className="rail-name">{project.name}</span><span className="rail-arrow"><ChevronRight size={14} /></span></button>)}</nav>;
+const steps = [
+  { name: "Ground", code: "sourceIds[]", body: "Find approved evidence for the question and the selected project.", input: "A question + the current project", output: "Relevant source IDs, or an explicit evidence gap" },
+  { name: "Decide", code: "GuideAction", body: "Bound the answer. Propose a typed action only when the contract allows it.", input: "Evidence and permitted actions", output: "A supported answer + an optional validated action" },
+  { name: "Act", code: "requestId + ack", body: "Wait for the interface to confirm a state change before claiming success.", input: "A validated action with a request ID", output: "An acknowledgement from the UI—not an assumption" },
+  { name: "Evaluate", code: "offline evals", body: "Check facts, fallback behaviour and resistance to unsupported instructions.", input: "Repeatable fixtures and expected boundaries", output: "Pass/fail evidence for the contract" },
+];
+function Architecture() {
+  const [selected, setSelected] = useState(0);
+  return <section className="architecture-section" id="architecture">
+    <div className="architecture-heading"><div><div className="section-eyebrow"><ShieldCheck size={15} />Agentic architecture</div><h2>Capability.<br /><em>With boundaries.</em></h2></div><div><p>A useful AI system needs more than a prompt. Follow the contract from a question to a verified outcome.</p><span className="architecture-label">Interactive design walkthrough · not a live execution trace</span></div></div>
+    <div className="architecture-flow">{steps.map((step, index) => <button key={step.name} className={`architecture-step ${selected === index ? "selected" : ""}`} aria-pressed={selected === index} aria-controls="architecture-detail" onClick={() => setSelected(index)}><span className="step-top"><span>0{index + 1}</span><ArrowRight size={18} /></span><strong>{step.name}</strong><p>{step.body}</p><code>{step.code}</code></button>)}</div>
+    <div className="architecture-detail" id="architecture-detail" data-step={selected} aria-live="polite" aria-atomic="true">
+      <span className="detail-caret" aria-hidden="true" />
+      <div key={selected} className="architecture-detail-content">
+        <div><span className="section-eyebrow">Selected step / 0{selected + 1}</span><strong>{steps[selected].name}</strong></div>
+        <div><span>INPUT</span><p>{steps[selected].input}</p></div>
+        <ArrowRight size={20} aria-hidden="true" />
+        <div><span>OUTPUT</span><p>{steps[selected].output}</p></div>
+      </div>
+    </div>
+    <div className="architecture-foot"><span><ShieldCheck size={15} />Evidence before claims</span><span><Layers3 size={15} />Apps independent of the guide</span><a href="https://github.com/Androkzn/interactive-portfolio-ai-guide/tree/main/skills" target="_blank" rel="noreferrer">Inspect the contracts <ArrowUpRight size={15} /></a></div>
+  </section>;
 }
 
 export default function Home() {
-  const [activeId, setActiveId] = useState("symply-house");
-  const [device, setDevice] = useState<DevicePreview>("desktop");
-  const [mode, setMode] = useState<GuideMode>("explore");
-  const [tourStep, setTourStep] = useState(0);
-  const [completed, setCompleted] = useState<Record<string, boolean>>({});
-  const [muted, setMuted] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [avatarHidden, setAvatarHidden] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([{ role: "guide", text: "Welcome. Pick a project to explore, or ask me to walk you through a technical decision. I’ll be clear about what is verified and what is still pending." }]);
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [activeId, setActiveId] = useState("hoc-v2");
+  const [device, setDevice] = useState<DevicePreview>("iphone");
+  const [progress, setProgress] = useState(0);
+  const [showContact, setShowContact] = useState(false);
   const project = projectById(activeId);
-
-  useEffect(() => { if (typeof document === "undefined") return; const stop = () => { window.speechSynthesis?.cancel(); setSpeaking(false); }; document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); }); return () => stop(); }, []);
-  const speak = () => { if (muted || typeof window === "undefined" || !("speechSynthesis" in window)) return; window.speechSynthesis.cancel(); const latest = [...messages].reverse().find(m => m.role === "guide"); if (!latest) return; const utterance = new SpeechSynthesisUtterance(latest.text); utterance.lang = "en-CA"; utterance.onstart = () => setSpeaking(true); utterance.onend = () => setSpeaking(false); utterance.onerror = () => setSpeaking(false); speechRef.current = utterance; window.speechSynthesis.speak(utterance); };
-  const stopSpeaking = () => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); speechRef.current = null; setSpeaking(false); };
-  const ask = (text: string) => { stopSpeaking(); setMessages(current => [...current, { role: "visitor", text }, { role: "guide", text: makeGuideReply(text, project, mode, tourStep), projectId: project.id }]); };
-  const selectProject = (id: string) => { stopSpeaking(); setActiveId(id); setMessages(current => [...current, { role: "guide", text: `Now looking at ${projectById(id).name}. Try the seeded flow, or ask me about its boundary and what still needs verification.`, projectId: id }]); };
-  const nextTour = () => { setMode("tour"); setTourStep(step => Math.min(step + 1, tourSteps.length - 1)); };
-  return (
-    <main className="site-shell">
-      <header className="site-header"><a className="wordmark" href="#top" aria-label="Andrei Tekhtelev home"><span className="wordmark-mark">AT</span><span>ANDREI<br /><b>TEKHTELEV</b></span></a><div className="header-center"><span className="header-status"><span className="status-dot" />Interactive portfolio <span>·</span> v0.1</span></div><div className="header-actions"><a href="#architecture">Architecture</a><button className="header-contact" onClick={() => ask("How can I contact you?")}>Get in touch <ArrowUpRight size={15} /></button></div></header>
-      <div className="intro" id="top"><div><p className="display-kicker">FULL-STACK ENGINEER <span>×</span> AI PRACTITIONER</p><h1>Work that holds<br /><em>up to questions.</em></h1></div><div className="intro-note"><p>This is not a gallery of screenshots. It’s a place to try the work, inspect the trade-offs and ask why.</p><a href="#workspace">Start exploring <ChevronRight size={15} /></a></div></div>
-      <div className="workspace" id="workspace"><section className="workbench"><div className="workbench-head"><div><div className="section-eyebrow"><Layers3 size={14} /> Project workspace</div><h2>{project.name}<span>/ {project.discipline}</span></h2></div><div className="workspace-actions"><StatusPill tone={project.status === "source verified" || project.status === "pilot" ? "success" : "warning"}>{project.status}</StatusPill>{project.sourceRepository ? <a className="icon-btn" href={project.sourceRepository} target="_blank" rel="noreferrer" aria-label="Open source repository"><ExternalLink size={15} /></a> : <button className="icon-btn" aria-label="Open project separately"><Maximize2 size={15} /></button>}</div></div><div className="runtime-note"><Gauge size={14} /><span><b>{project.runtimeLabel}</b> · source platforms: {project.originalPlatforms.join(" · ")}</span><button title="Why this label?" aria-label="Why this label?"><CircleHelp size={14} /></button></div><div className="viewport-switcher"><span>Web Device Lab</span>{(["iphone", "ipad", "android", "desktop"] as DevicePreview[]).map(size => <button key={size} className={device === size ? "active" : ""} onClick={() => setDevice(size)}><span className={`device-icon ${size}`} />{size === "iphone" ? "iPhone" : size === "ipad" ? "iPad" : size === "android" ? "Android" : "Desktop"}<small>{deviceSizes[size]}</small></button>)}</div><DemoCanvas project={project} device={device} completed={!!completed[project.id]} onComplete={() => setCompleted(current => ({ ...current, [project.id]: true }))}/><div className="workbench-foot"><span><span className="keyboard-key">⌘</span> Click a project to switch</span><span className="workspace-note">{project.webPreviewUrl ? "Connected source Web build · sandboxed iframe · no production effects" : "Synthetic seeded preview · no production effects"}</span></div></section><GuidePanel project={project} mode={mode} setMode={setMode} messages={messages} onAsk={ask} onSpeak={speak} speaking={speaking} muted={muted} setMuted={setMuted} onStop={stopSpeaking} tourStep={tourStep} onNextTour={nextTour} avatarHidden={avatarHidden} onToggleAvatar={() => setAvatarHidden(hidden => !hidden)}/></div>
-      <ProjectRail activeId={activeId} onSelect={selectProject}/>
-      <section className="architecture-section" id="architecture"><div className="architecture-heading"><div><div className="section-eyebrow"><Sparkles size={14} /> Agentic architecture</div><h2>Capability with<br /><em>guardrails.</em></h2></div><p>AI accelerates the conversation; contracts, evidence and human review decide what the system is allowed to say or do. The point is not a prompt. It is a measurable engineering system.</p></div><div className="architecture-flow"><div className="architecture-step"><span>01</span><strong>Ground</strong><p>Resolve the question against the approved corpus and current project context.</p><code>sourceIds[]</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>02</span><strong>Decide</strong><p>Return one bounded answer and, only when valid, one typed action.</p><code>GuideAction</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>03</span><strong>Act</strong><p>Let the UI confirm the project, viewport or evidence state before reporting success.</p><code>requestId + ack</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>04</span><strong>Evaluate</strong><p>Run deterministic fixtures for facts, injection resistance, fallback and follow-ups.</p><code>offline evals</code></div></div><div className="architecture-foot"><span><Check size={14}/> Model replaceable</span><span><Check size={14}/> Demos remain usable without AI</span><span><Check size={14}/> Domain review owns quality</span><a href="https://github.com/Androkzn/interactive-portfolio-ai-guide/tree/main/skills" target="_blank" rel="noreferrer">Read the skills <ExternalLink size={13}/></a></div></section>
-      <section className="case-study" id="about"><div className="case-intro"><div className="section-eyebrow">How to read this portfolio</div><h2>Every claim should<br /><em>earn trust.</em></h2><p>The build makes the architecture visible: the demos are separate from the guide, the guide is grounded in reviewed content, and uncertainty is shown in the interface.</p></div><div className="case-grid"><div className="case-card"><span className="case-index">01</span><ShieldCheck size={21}/><h3>Truth over polish</h3><p>Only the three approved source projects are published; contribution and evidence claims remain bounded by reviewed material.</p></div><div className="case-card"><span className="case-index">02</span><MessageCircle size={21}/><h3>Questions become navigation</h3><p>A guide turn can point to a project, scenario or evidence card without taking control away from the visitor.</p></div><div className="case-card"><span className="case-index">03</span><RotateCcw size={21}/><h3>Safe by default</h3><p>Every demo is seeded, local and resettable. No payments, financial records, contacts or production writes.</p></div></div></section>
-      <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Built as an experiment in making engineering legible.</span><a href="#top">Back to top <ArrowUpRight size={13}/></a></footer>
-    </main>
-  );
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        setProgress(max > 0 ? window.scrollY / max : 0);
+        setShowContact(window.scrollY > window.innerHeight * 1.2);
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, []);
+  const explore = (id = activeId) => { setActiveId(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
+  return <main className="site-shell" id="top">
+    <a className="skip-link" href="#workspace">Skip to the live projects</a>
+    <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
+    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER</span><nav className="header-actions"><a href="#architecture">The thinking</a><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Contact Andrei on LinkedIn" title="Contact Andrei on LinkedIn"><ArrowUpRight size={22} /></a></nav></header>
+    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">I build tools for everyday decisions—from managing a home and a budget to understanding Parliament.</p><a className="explore-link" href="#workspace">Try the work <ArrowDown size={17} /></a></div><div className="hero-stats"><span className="section-eyebrow">A few ways in</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>3 real products. Yours to explore.</small></span><ArrowUpRight size={18} /></button><button onClick={() => { setDevice("ipad"); explore(); }}><span className="stat-symbol" aria-hidden="true"><Code2 size={26} /></span><span><strong>Source platforms</strong><small>iPhone · iPad · Android · Web</small></span><ArrowUpRight size={18} /></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Inspect the engineering decisions.</small></span><ArrowUpRight size={18} /></a><p>Web previews below. Device frames resize the Web app; they are not native emulators.</p></div></section>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick a product. <em>Make it yours.</em></h2></div><span className="lab-hint">01 Choose · 02 Try · 03 Ask</span></div>
+      <nav className="project-rail" aria-label="Choose a live project">{projects.map((item, index) => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => setActiveId(item.id)}><span className="rail-number">0{index + 1}</span><span><span className={`project-title project-title-${item.id}`}><span className="project-logo" aria-hidden="true"><ProjectLogo id={item.id} /></span><strong>{item.name}</strong></span><small>{item.id === "hoc-v2" ? "Civic data · no account needed" : item.id === "symply-house" ? "Home management · sign in" : "Personal finance · sign in"}</small></span><ArrowUpRight size={19} /></button>)}</nav>
+      <div className="workspace"><section className="workbench" aria-label="Live application preview"><div className="workbench-head"><div><span className="section-eyebrow">Web Device Lab</span><h3>{project.name}</h3></div>{project.sourceRepository && <a className="source-link" href={project.sourceRepository} target="_blank" rel="noreferrer"><Code2 size={16} />Source <ArrowUpRight size={13} /></a>}</div><p className="runtime-note">{project.id === "hoc-v2" ? "Explore real parliamentary information. Public browsing is open—no account needed." : "Connected to the deployed product API. Use your own account; actions affect your real data."}</p><div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button key={value} aria-pressed={device === value} onClick={() => setDevice(value)}><span className={`device-icon ${value}`} />{deviceNames[value]}</button>)}</div><ConnectedSourcePreview key={project.id} project={project} device={device} /><p className="workbench-foot"><ShieldCheck size={14} />No shared credentials. If sign-in is restricted inside the frame, use “Open live app”.</p></section><GuidePanel project={project} onCoreFlow={() => document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus()} /></div>
+    </section>
+    <Architecture />
+    <section className="case-study"><div><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2></div><div className="case-grid"><article><Code2 size={22} /><h3>Inspect the source</h3><p>Every published project links to its repository. Follow a decision beyond the interface.</p></article><article><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Let’s talk about the details.</p><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Discuss a role with Andrei on LinkedIn" title="Discuss a role with Andrei"><ArrowUpRight size={22} /></a></article></div></section>
+    <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span><a href="#top">Back to top <ArrowUpRight size={14} /></a></footer>
+    <a className={`sticky-contact ${showContact ? "visible" : ""}`} href={contactUrl} target="_blank" rel="noreferrer" tabIndex={showContact ? 0 : -1} aria-hidden={!showContact}><span className="status-dot ready" />Let’s build something <ArrowUpRight size={17} /></a>
+  </main>;
 }
