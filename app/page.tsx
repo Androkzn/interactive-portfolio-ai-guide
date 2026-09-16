@@ -12,7 +12,7 @@ import { ackMessage, hostReadyMessage, parseDemoMessage, SYMPLY_HOUSE_WEB_ORIGIN
 type Message = { role: "guide" | "visitor"; text: string; projectId?: string; evidence?: string };
 
 const deviceSizes: Record<DevicePreview, string> = { iphone: "390 × 844", ipad: "768 × 1024", android: "412 × 915", desktop: "1280 × 800" };
-const SYMPLY_HOUSE_WEB_PREVIEW = "https://symply-house-web.pages.dev/?embed=portfolio-v1";
+const SYMPLY_HOUSE_WEB_PREVIEW = "https://symply-house-web.pages.dev/?embed=portfolio-v1&build=caf3b0595";
 
 function makeGuideReply(question: string, project: Project, mode: GuideMode, tourStep: number) {
   const lower = question.toLowerCase();
