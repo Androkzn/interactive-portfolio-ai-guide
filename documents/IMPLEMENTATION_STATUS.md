@@ -9,7 +9,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
 - **Deployment preview URL:** https://772205f3.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `8cdb764` (connected Symply House Web preview release).
+- **Site build source commit:** `5e64e9b` (connected Symply House Web preview release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
 - **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
 - **Connected source commit:** `9e1c739df` (`feat(web): add safe public Home preview`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions.
