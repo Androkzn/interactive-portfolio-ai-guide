@@ -8,9 +8,9 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** last verified release remains `https://c78a1171.interactive-portfolio-ai-guide.pages.dev`.
-- **Site build source commit:** the two-project catalog change is pending the next Pages deployment.
-- **Verification:** previous release returned HTTP `200`; the next release must repeat static smoke, project-count and Device Lab checks.
+- **Deployment preview URL:** https://c9d390c0.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `31b6686` (`feat: focus portfolio on hoc and symply budget`).
+- **Verification:** preview and custom domain return HTTP `200`; cache-busted production smoke shows exactly the two approved project names and no removed project names. Static smoke and all local quality gates pass.
 - **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Active` with `SSL enabled`; the root CNAME is present in the Cloudflare DNS zone, public resolvers return Cloudflare addresses, and HTTPS returns `200`. The local default resolver on the development machine still has a negative-cache result and may require a DNS cache/network refresh.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
