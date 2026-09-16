@@ -8,6 +8,7 @@ The portfolio embeds the connected Expo Web build of [Symply House](https://gith
 
 - Portfolio: `https://andreitekhtelev.dev/`
 - Connected Web preview: `https://symply-house-web.pages.dev/?embed=portfolio-v1`
+- In-site Device Lab: `iPhone` · `iPad` · `Android` · `Desktop` modes inside the portfolio workspace
 - Cloudflare Pages project: `symply-house-web`
 - Source commit: `9e1c739df` (`feat(web): add safe public Home preview`)
 
@@ -15,7 +16,7 @@ The portfolio embeds the connected Expo Web build of [Symply House](https://gith
 
 The preview opens directly into a deterministic Home surface. Overview, Tasks and Spaces tabs are interactive, and task completion is local to the browser session. The disclosure in the app makes the boundary explicit: no account, microphone, or production write access is used.
 
-The portfolio also offers a separate full-preview link and responsive phone/tablet/desktop viewport controls. Native targets remain part of the same Expo source repository: iPhone, iPad, Android and Web. Native builds are not represented as if they run inside an iframe.
+The portfolio also offers a separate full-preview link and an in-site Device Lab with iPhone, iPad, Android and Desktop shells. Native targets remain part of the same Expo source repository: iPhone, iPad, Android and Web. The browser runs the connected Web build inside these platform-sized shells; it does not claim to execute the closed native iOS/Android runtimes.
 
 ## Web compatibility boundary
 

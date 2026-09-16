@@ -8,8 +8,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** https://772205f3.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `5e64e9b` (connected Symply House Web preview release).
+- **Deployment preview URL:** https://afd92650.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `e86f8c9` (in-site native device lab release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
 - **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
 - **Connected source commit:** `9e1c739df` (`feat(web): add safe public Home preview`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions.
@@ -22,8 +22,8 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Static shell:** Next.js App Router with `output: export`, responsive layout, and no required runtime server.
 - **Portfolio workspace:** one active demo player with `idle → active → complete`, seeded local state and reset.
 - **Project manifests:** five candidate manifests remain explicit drafts; a sixth connected project, Symply House, is marked as the featured source build.
-- **Symply House connection:** source repository linked to [Androkzn/symply-house](https://github.com/Androkzn/symply-house); source platform matrix recorded as iPhone, iPad, Android and Web. The portfolio now embeds the connected Web build in a sandboxed player and does not claim native runtime inside the browser.
-- **Viewports:** phone, tablet and desktop web-preview modes are selectable and labeled with their dimensions.
+- **Symply House connection:** source repository linked to [Androkzn/symply-house](https://github.com/Androkzn/symply-house); source platform matrix recorded as iPhone, iPad, Android and Web. The portfolio now embeds the connected Web build in a sandboxed player and presents it through an in-site Device Lab without claiming native runtime inside the browser.
+- **Device Lab:** iPhone, iPad, Android and Desktop shells are selectable and labeled with their dimensions; each mode runs the connected Web build inside the site.
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
 - **Speech fallback:** browser `speechSynthesis` is opt-in with Stop, mute, visibility cancellation and text-first behavior.
