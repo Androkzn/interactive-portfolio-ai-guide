@@ -13,5 +13,5 @@ export const approvedProjects: Record<string, GuideProject> = Object.fromEntries
 ) as Record<string, GuideProject>;
 
 export function resolveProject(projectId: string) {
-  return approvedProjects[projectId] ?? approvedProjects["symply-house"];
+  return approvedProjects[projectId] ?? approvedProjects["hoc-v2"];
 }

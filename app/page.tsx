@@ -1,23 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight, Check, ChevronRight, CircleHelp, ExternalLink, FileText, Gauge,
   Layers3, Maximize2, MessageCircle, Pause, Play, RotateCcw, Send, ShieldCheck,
   Sparkles, Volume2, VolumeX, X,
 } from "lucide-react";
 import { DevicePreview, GuideMode, Project, Viewport, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
-import { ackMessage, hostReadyMessage, parseDemoMessage, SYMPLY_HOUSE_WEB_ORIGIN } from "@/lib/demo-bridge";
 
 type Message = { role: "guide" | "visitor"; text: string; projectId?: string; evidence?: string };
 
 const deviceSizes: Record<DevicePreview, string> = { iphone: "390 × 844", ipad: "768 × 1024", android: "412 × 915", desktop: "1280 × 800" };
-const SYMPLY_HOUSE_WEB_PREVIEW = "https://symply-house-web.pages.dev/?embed=portfolio-v1&build=caf3b0595";
-
 function makeGuideReply(question: string, project: Project, mode: GuideMode, tourStep: number) {
   const lower = question.toLowerCase();
   if (lower.includes("personally") || lower.includes("personally own") || lower.includes("сделал") || lower.includes("вклад")) {
-    return `For ${project.name}, the public manifest is still awaiting owner verification, so I won’t invent a personal contribution. What I can show now is the reconstructed core flow and its explicit boundary. Once the source build and role are confirmed, this answer will be grounded in that reviewed case card.`;
+    return `For ${project.name}, the public manifest does not yet state a personal contribution, so I won’t invent one. What I can show now is the reviewed source boundary, the seeded core flow and the engineering decisions that are safe to claim.`;
   }
   if (lower.includes("hard") || lower.includes("сложн") || lower.includes("challenge")) {
     return `${project.challenge.title}. ${project.challenge.body} The important engineering decision here is to make the limitation visible instead of filling it with an impressive but unsupported story.`;
@@ -49,62 +46,7 @@ function Avatar({ speaking, hidden, onToggleHidden }: { speaking: boolean; hidde
   );
 }
 
-function ConnectedHousePreview({ device }: { device: DevicePreview }) {
-  const [loaded, setLoaded] = useState(false);
-  const [bridgeScreen, setBridgeScreen] = useState<"home" | "tasks" | "spaces">("home");
-  const [bridgeReady, setBridgeReady] = useState(false);
-  const [lastBridgeEvent, setLastBridgeEvent] = useState("waiting for app handshake");
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const frameWidth = device === "iphone" ? 390 : device === "ipad" ? 768 : device === "android" ? 412 : undefined;
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent<unknown>) => {
-      if (event.origin !== SYMPLY_HOUSE_WEB_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
-      const message = parseDemoMessage(event.data);
-      if (!message) return;
-      if (message.type === "ready") {
-        setBridgeReady(true);
-        setBridgeScreen(message.payload.screen);
-        setLastBridgeEvent("handshake acknowledged");
-      } else if (message.type === "screen") {
-        setBridgeScreen(message.payload.screen);
-        setLastBridgeEvent(`screen: ${message.payload.screen}`);
-      } else if (message.type === "stepComplete") {
-        setLastBridgeEvent("task completion received");
-      } else {
-        setLastBridgeEvent(`app error: ${message.payload.code}`);
-      }
-      (event.source as Window | null)?.postMessage(ackMessage(message.type), event.origin);
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  const sendHostReady = () => {
-    iframeRef.current?.contentWindow?.postMessage(hostReadyMessage(), SYMPLY_HOUSE_WEB_ORIGIN);
-  };
-
-  return (
-    <div className={`connected-preview connected-preview-${device}`}>
-      <div className="connected-preview-bar">
-        <span><span className={`connected-preview-dot ${bridgeReady ? "ready" : ""}`} />Device Lab · {device === "desktop" ? "Desktop Web" : device} · {bridgeReady ? `bridge ready · ${bridgeScreen}` : "connecting"}</span>
-        <a href={SYMPLY_HOUSE_WEB_PREVIEW} target="_blank" rel="noreferrer">Open full preview <ExternalLink size={12} /></a>
-      </div>
-      {!loaded && <div className="connected-preview-loading">Loading the connected source build…</div>}
-      <div className={`device-shell device-shell-${device}`}>
-        {device !== "desktop" && <div className="device-chrome"><span>9:41</span><span className="device-chrome-title">{device === "android" ? "Symply House" : "Symply"}</span><span className="device-chrome-icons">● ◒</span></div>}
-        <div className="device-screen">
-          <iframe ref={iframeRef} className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="lazy" referrerPolicy="no-referrer" onLoad={() => { setLoaded(true); sendHostReady(); }} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
-        </div>
-        {device !== "desktop" && <div className="device-navigation"><span /></div>}
-      </div>
-      <div className="connected-preview-event" aria-live="polite"><span className={loaded ? "ready" : ""} />{lastBridgeEvent}</div>
-    </div>
-  );
-}
-
 function DemoCanvas({ project, device, completed, onComplete }: { project: Project; device: DevicePreview; completed: boolean; onComplete: () => void }) {
-  if (project.id === "symply-house") return <ConnectedHousePreview device={device} />;
   const syntheticViewport: Viewport = device === "ipad" ? "tablet" : device === "desktop" ? "desktop" : "phone";
   return <SyntheticDemoCanvas project={project} viewport={syntheticViewport} completed={completed} onComplete={onComplete} />;
 }
@@ -113,7 +55,7 @@ function SyntheticDemoCanvas({ project, viewport, completed, onComplete }: { pro
   const [selected, setSelected] = useState(0);
   const [saved, setSaved] = useState<string[]>([]);
   const [stage, setStage] = useState<"idle" | "active" | "done">(completed ? "done" : "idle");
-  const items = useMemo(() => ["Context first", "Constraints visible", "Next action clear"], []);
+  const items = project.checkpoints;
   const start = () => setStage("active");
   const reset = () => { setSelected(0); setSaved([]); setStage("idle"); };
   useEffect(() => { setSelected(0); setSaved([]); setStage(completed ? "done" : "idle"); }, [project.id, viewport, completed]);
@@ -127,8 +69,8 @@ function SyntheticDemoCanvas({ project, viewport, completed, onComplete }: { pro
         {stage === "idle" && <button className="demo-primary" onClick={start}><Play size={15} fill="currentColor" />{project.scenario.action}</button>}
         {stage === "active" && <div className="demo-interaction">
           <div className="demo-progress"><span style={{ width: `${((selected + 1) / items.length) * 100}%`, background: project.color }} /><small>step {selected + 1} of {items.length}</small></div>
-          <div className="demo-card"><div className="card-index">0{selected + 1}</div><div><span className="card-label">CHECKPOINT</span><strong>{items[selected]}</strong><p>{selected === 0 ? "Start with the user’s intent before reaching for a feature." : selected === 1 ? "A useful boundary is part of the interface, not a footnote." : "A good demo ends with a decision you can inspect."}</p></div><Check className="card-check" size={18} /></div>
-          <div className="demo-actions"><button className="demo-secondary" onClick={() => { setSaved([...saved, items[selected]]); if (selected === items.length - 1) { setStage("done"); onComplete(); } else setSelected(selected + 1); }}>{selected === items.length - 1 ? "Complete flow" : "Continue"}<ChevronRight size={15} /></button><span>{saved.length} saved</span></div>
+          <div className="demo-card"><div className="card-index">0{selected + 1}</div><div><span className="card-label">CHECKPOINT</span><strong>{items[selected].title}</strong><p>{items[selected].detail}</p></div><Check className="card-check" size={18} /></div>
+          <div className="demo-actions"><button className="demo-secondary" onClick={() => { setSaved([...saved, items[selected].title]); if (selected === items.length - 1) { setStage("done"); onComplete(); } else setSelected(selected + 1); }}>{selected === items.length - 1 ? "Complete flow" : "Continue"}<ChevronRight size={15} /></button><span>{saved.length} saved</span></div>
         </div>}
         {stage === "done" && <div className="demo-done"><Check size={16} /> Scenario complete · resettable seed</div>}
       </div>
@@ -158,7 +100,7 @@ function ProjectRail({ activeId, onSelect }: { activeId: string; onSelect: (id: 
 }
 
 export default function Home() {
-  const [activeId, setActiveId] = useState("symply-house");
+  const [activeId, setActiveId] = useState("hoc-v2");
   const [device, setDevice] = useState<DevicePreview>("desktop");
   const [mode, setMode] = useState<GuideMode>("explore");
   const [tourStep, setTourStep] = useState(0);
@@ -180,10 +122,10 @@ export default function Home() {
     <main className="site-shell">
       <header className="site-header"><a className="wordmark" href="#top" aria-label="Andrei Tekhtelev home"><span className="wordmark-mark">AT</span><span>ANDREI<br /><b>TEKHTELEV</b></span></a><div className="header-center"><span className="header-status"><span className="status-dot" />Interactive portfolio <span>·</span> v0.1</span></div><div className="header-actions"><a href="#architecture">Architecture</a><button className="header-contact" onClick={() => ask("How can I contact you?")}>Get in touch <ArrowUpRight size={15} /></button></div></header>
       <div className="intro" id="top"><div><p className="display-kicker">FULL-STACK ENGINEER <span>×</span> AI PRACTITIONER</p><h1>Work that holds<br /><em>up to questions.</em></h1></div><div className="intro-note"><p>This is not a gallery of screenshots. It’s a place to try the work, inspect the trade-offs and ask why.</p><a href="#workspace">Start exploring <ChevronRight size={15} /></a></div></div>
-      <div className="workspace" id="workspace"><section className="workbench"><div className="workbench-head"><div><div className="section-eyebrow"><Layers3 size={14} /> Project workspace</div><h2>{project.name}<span>/ {project.discipline}</span></h2></div><div className="workspace-actions"><StatusPill tone={project.status === "verified build" || project.status === "pilot" ? "success" : "warning"}>{project.status}</StatusPill>{project.sourceRepository ? <a className="icon-btn" href={project.sourceRepository} target="_blank" rel="noreferrer" aria-label="Open source repository"><ExternalLink size={15} /></a> : <button className="icon-btn" aria-label="Open project separately"><Maximize2 size={15} /></button>}</div></div><div className="runtime-note"><Gauge size={14} /><span><b>{project.runtimeLabel}</b> · source platforms: {project.originalPlatforms.join(" · ")}</span><button title="Why this label?" aria-label="Why this label?"><CircleHelp size={14} /></button></div><div className="viewport-switcher"><span>In-site Device Lab</span>{(["iphone", "ipad", "android", "desktop"] as DevicePreview[]).map(size => <button key={size} className={device === size ? "active" : ""} onClick={() => setDevice(size)}><span className={`device-icon ${size}`} />{size === "iphone" ? "iPhone" : size === "ipad" ? "iPad" : size === "android" ? "Android" : "Desktop"}<small>{deviceSizes[size]}</small></button>)}</div><DemoCanvas project={project} device={device} completed={!!completed[project.id]} onComplete={() => setCompleted(current => ({ ...current, [project.id]: true }))}/><div className="workbench-foot"><span><span className="keyboard-key">⌘</span> Click a project to switch</span><span className="workspace-note">{project.id === "symply-house" ? "Connected source build · local read-only data · no production effects" : "Only the active demo loads · synthetic data · no production effects"}</span></div></section><GuidePanel project={project} mode={mode} setMode={setMode} messages={messages} onAsk={ask} onSpeak={speak} speaking={speaking} muted={muted} setMuted={setMuted} onStop={stopSpeaking} tourStep={tourStep} onNextTour={nextTour} avatarHidden={avatarHidden} onToggleAvatar={() => setAvatarHidden(hidden => !hidden)}/></div>
+      <div className="workspace" id="workspace"><section className="workbench"><div className="workbench-head"><div><div className="section-eyebrow"><Layers3 size={14} /> Project workspace</div><h2>{project.name}<span>/ {project.discipline}</span></h2></div><div className="workspace-actions"><StatusPill tone={project.status === "source verified" || project.status === "pilot" ? "success" : "warning"}>{project.status}</StatusPill>{project.sourceRepository ? <a className="icon-btn" href={project.sourceRepository} target="_blank" rel="noreferrer" aria-label="Open source repository"><ExternalLink size={15} /></a> : <button className="icon-btn" aria-label="Open project separately"><Maximize2 size={15} /></button>}</div></div><div className="runtime-note"><Gauge size={14} /><span><b>{project.runtimeLabel}</b> · source platforms: {project.originalPlatforms.join(" · ")}</span><button title="Why this label?" aria-label="Why this label?"><CircleHelp size={14} /></button></div><div className="viewport-switcher"><span>Web Device Lab</span>{(["iphone", "ipad", "android", "desktop"] as DevicePreview[]).map(size => <button key={size} className={device === size ? "active" : ""} onClick={() => setDevice(size)}><span className={`device-icon ${size}`} />{size === "iphone" ? "iPhone" : size === "ipad" ? "iPad" : size === "android" ? "Android" : "Desktop"}<small>{deviceSizes[size]}</small></button>)}</div><DemoCanvas project={project} device={device} completed={!!completed[project.id]} onComplete={() => setCompleted(current => ({ ...current, [project.id]: true }))}/><div className="workbench-foot"><span><span className="keyboard-key">⌘</span> Click a project to switch</span><span className="workspace-note">Synthetic seeded preview · no production effects</span></div></section><GuidePanel project={project} mode={mode} setMode={setMode} messages={messages} onAsk={ask} onSpeak={speak} speaking={speaking} muted={muted} setMuted={setMuted} onStop={stopSpeaking} tourStep={tourStep} onNextTour={nextTour} avatarHidden={avatarHidden} onToggleAvatar={() => setAvatarHidden(hidden => !hidden)}/></div>
       <ProjectRail activeId={activeId} onSelect={selectProject}/>
       <section className="architecture-section" id="architecture"><div className="architecture-heading"><div><div className="section-eyebrow"><Sparkles size={14} /> Agentic architecture</div><h2>Capability with<br /><em>guardrails.</em></h2></div><p>AI accelerates the conversation; contracts, evidence and human review decide what the system is allowed to say or do. The point is not a prompt. It is a measurable engineering system.</p></div><div className="architecture-flow"><div className="architecture-step"><span>01</span><strong>Ground</strong><p>Resolve the question against the approved corpus and current project context.</p><code>sourceIds[]</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>02</span><strong>Decide</strong><p>Return one bounded answer and, only when valid, one typed action.</p><code>GuideAction</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>03</span><strong>Act</strong><p>Let the UI confirm the project, viewport or evidence state before reporting success.</p><code>requestId + ack</code></div><div className="architecture-connector">→</div><div className="architecture-step"><span>04</span><strong>Evaluate</strong><p>Run deterministic fixtures for facts, injection resistance, fallback and follow-ups.</p><code>offline evals</code></div></div><div className="architecture-foot"><span><Check size={14}/> Model replaceable</span><span><Check size={14}/> Demos remain usable without AI</span><span><Check size={14}/> Domain review owns quality</span><a href="https://github.com/Androkzn/interactive-portfolio-ai-guide/tree/main/skills" target="_blank" rel="noreferrer">Read the skills <ExternalLink size={13}/></a></div></section>
-      <section className="case-study" id="about"><div className="case-intro"><div className="section-eyebrow">How to read this portfolio</div><h2>Every claim should<br /><em>earn trust.</em></h2><p>The first build makes the architecture visible: the demos are separate from the guide, the guide is grounded in reviewed content, and uncertainty is shown in the interface.</p></div><div className="case-grid"><div className="case-card"><span className="case-index">01</span><ShieldCheck size={21}/><h3>Truth over polish</h3><p>Candidate projects stay marked as pending until ownership, source builds and permitted evidence are verified.</p></div><div className="case-card"><span className="case-index">02</span><MessageCircle size={21}/><h3>Questions become navigation</h3><p>A guide turn can point to a project, scenario or evidence card without taking control away from the visitor.</p></div><div className="case-card"><span className="case-index">03</span><RotateCcw size={21}/><h3>Safe by default</h3><p>Every demo is seeded, local and resettable. No payments, patient records, contacts or production writes.</p></div></div></section>
+      <section className="case-study" id="about"><div className="case-intro"><div className="section-eyebrow">How to read this portfolio</div><h2>Every claim should<br /><em>earn trust.</em></h2><p>The build makes the architecture visible: the demos are separate from the guide, the guide is grounded in reviewed content, and uncertainty is shown in the interface.</p></div><div className="case-grid"><div className="case-card"><span className="case-index">01</span><ShieldCheck size={21}/><h3>Truth over polish</h3><p>Only the two approved source projects are published; contribution and evidence claims remain bounded by reviewed material.</p></div><div className="case-card"><span className="case-index">02</span><MessageCircle size={21}/><h3>Questions become navigation</h3><p>A guide turn can point to a project, scenario or evidence card without taking control away from the visitor.</p></div><div className="case-card"><span className="case-index">03</span><RotateCcw size={21}/><h3>Safe by default</h3><p>Every demo is seeded, local and resettable. No payments, financial records, contacts or production writes.</p></div></div></section>
       <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Built as an experiment in making engineering legible.</span><a href="#top">Back to top <ArrowUpRight size={13}/></a></footer>
     </main>
   );

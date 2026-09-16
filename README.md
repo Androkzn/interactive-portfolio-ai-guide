@@ -17,8 +17,8 @@ Build the static export:
 npm run build
 ```
 
-## Current connected source
+## Published projects
 
-Symply House is the first connected project: [Androkzn/symply-house](https://github.com/Androkzn/symply-house). Its source matrix is recorded as iPhone, iPad, Android and Web. This portfolio currently presents a safe local Web preview; native platforms are not misrepresented as browser runtimes.
+The portfolio currently contains only [House of Commons Citizen Companion](https://github.com/Androkzn/hocv2) and [Symply Budget](https://github.com/Androkzn/symply-budget). Their Device Lab previews are seeded and local. They show the interaction contract inside the site; native iOS and Android binaries are not misrepresented as browser runtimes.
 
 See [`documents/IMPLEMENTATION_STATUS.md`](documents/IMPLEMENTATION_STATUS.md) for requirement traceability, completed blocks and the next verification gates.
