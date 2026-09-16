@@ -12,7 +12,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Site build source commit:** `5babbcc` (native device viewport polish release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
 - **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
-- **Connected source commit:** `9e1c739df` (`feat(web): add safe public Home preview`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions.
+- **Connected source commit:** `60cca35b5` (`feat(web): add secure portfolio preview bridge`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions and reports typed lifecycle events to the host.
 - **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Active` with `SSL enabled`; the root CNAME is present in the Cloudflare DNS zone, public resolvers return Cloudflare addresses, and HTTPS returns `200`. The local default resolver on the development machine still has a negative-cache result and may require a DNS cache/network refresh.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
@@ -43,7 +43,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## In progress / next implementation blocks
 
 - [x] Run and verify the Next.js build after dependencies are installed.
-- [ ] Add a typed `DemoMessage` bridge for a separately deployed Symply House Web build (`ready`, `screen`, `stepComplete`, `ack`, `error`). The current iframe uses the browser load event; the richer event contract remains a follow-up.
+- [x] Add a typed `DemoMessage` bridge for the separately deployed Symply House Web build (`ready`, `screen`, `stepComplete`, `ack`, `error`) with fixed-origin validation, source-window validation and host acknowledgements.
 - [x] Verify the actual Expo Web export from the connected Symply House repository and record its commit/build version here.
 - [x] Replace the local Symply House reconstruction in the player with the verified Web build; origin, sandbox, local reset behavior and direct browser rendering were checked.
 - [ ] Complete the remaining four app audits: ownership, permitted sources, platform dependencies, evidence and core flow.
@@ -62,7 +62,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 | BR-06 / C5 | Synthetic local seed, reset, no production effects | Implemented for local preview |
 | BR-07 / F2 | Static shell and curated guide do not require AI quota | Implemented for first slice |
 | BR-10 / D1–D6 | Project-aware local guide, mode state and interruption-safe new turns | First slice implemented; Worker grounding pending |
-| BR-11 / B4 | Guide can request/open a project in the shared player | Implemented for the connected player; typed cross-frame event bridge pending |
+| BR-11 / B4 | Guide can request/open a project in the shared player | Implemented for the connected player; secure origin-checked typed cross-frame bridge implemented |
 | BR-12 / E2–E4 | Manual speech, Stop, mute, text fallback and visibility cancellation | First slice implemented |
 | BR-14 / F3 | Responsive layout, reduced-motion CSS, semantic buttons | First slice implemented; device QA pending |
 | TRD §4 / D1–D5 | `apps/guide-api` typed request/response, origin guard, safe action union | First slice implemented; Turnstile and live AI pending |
@@ -75,6 +75,6 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## Owner inputs still required
 
 - Confirm the final five-project list and the permission status of each candidate.
-- Confirm the remaining native release artifacts and the richer cross-frame `DemoMessage` event contract; the public Web review mode and local reset contract are implemented at source commit `9e1c739df`.
+- Confirm the remaining native release artifacts and any future extensions to the cross-frame `DemoMessage` contract; the public Web review mode, local reset contract and secure bridge are implemented at source commit `60cca35b5`.
 - Provide approved personal contribution, challenge and evidence material for each published case.
 - Provide neutral poster and speaking-loop assets if the CSS avatar should be replaced.

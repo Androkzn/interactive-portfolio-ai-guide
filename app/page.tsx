@@ -7,6 +7,7 @@ import {
   Sparkles, Volume2, VolumeX, X,
 } from "lucide-react";
 import { DevicePreview, GuideMode, Project, Viewport, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
+import { ackMessage, hostReadyMessage, parseDemoMessage, SYMPLY_HOUSE_WEB_ORIGIN } from "@/lib/demo-bridge";
 
 type Message = { role: "guide" | "visitor"; text: string; projectId?: string; evidence?: string };
 
@@ -50,21 +51,54 @@ function Avatar({ speaking, hidden, onToggleHidden }: { speaking: boolean; hidde
 
 function ConnectedHousePreview({ device }: { device: DevicePreview }) {
   const [loaded, setLoaded] = useState(false);
+  const [bridgeScreen, setBridgeScreen] = useState<"home" | "tasks" | "spaces">("home");
+  const [bridgeReady, setBridgeReady] = useState(false);
+  const [lastBridgeEvent, setLastBridgeEvent] = useState("waiting for app handshake");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const frameWidth = device === "iphone" ? 390 : device === "ipad" ? 768 : device === "android" ? 412 : undefined;
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent<unknown>) => {
+      if (event.origin !== SYMPLY_HOUSE_WEB_ORIGIN || event.source !== iframeRef.current?.contentWindow) return;
+      const message = parseDemoMessage(event.data);
+      if (!message) return;
+      if (message.type === "ready") {
+        setBridgeReady(true);
+        setBridgeScreen(message.payload.screen);
+        setLastBridgeEvent("handshake acknowledged");
+      } else if (message.type === "screen") {
+        setBridgeScreen(message.payload.screen);
+        setLastBridgeEvent(`screen: ${message.payload.screen}`);
+      } else if (message.type === "stepComplete") {
+        setLastBridgeEvent("task completion received");
+      } else {
+        setLastBridgeEvent(`app error: ${message.payload.code}`);
+      }
+      (event.source as Window | null)?.postMessage(ackMessage(message.type), event.origin);
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const sendHostReady = () => {
+    iframeRef.current?.contentWindow?.postMessage(hostReadyMessage(), SYMPLY_HOUSE_WEB_ORIGIN);
+  };
+
   return (
     <div className={`connected-preview connected-preview-${device}`}>
       <div className="connected-preview-bar">
-        <span><span className={`connected-preview-dot ${loaded ? "ready" : ""}`} />Device Lab · {device === "desktop" ? "Desktop Web" : device} · connected Expo Web build</span>
+        <span><span className={`connected-preview-dot ${bridgeReady ? "ready" : ""}`} />Device Lab · {device === "desktop" ? "Desktop Web" : device} · {bridgeReady ? `bridge ready · ${bridgeScreen}` : "connecting"}</span>
         <a href={SYMPLY_HOUSE_WEB_PREVIEW} target="_blank" rel="noreferrer">Open full preview <ExternalLink size={12} /></a>
       </div>
       {!loaded && <div className="connected-preview-loading">Loading the connected source build…</div>}
       <div className={`device-shell device-shell-${device}`}>
         {device !== "desktop" && <div className="device-chrome"><span>9:41</span><span className="device-chrome-title">{device === "android" ? "Symply House" : "Symply"}</span><span className="device-chrome-icons">● ◒</span></div>}
         <div className="device-screen">
-          <iframe className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="lazy" referrerPolicy="no-referrer" onLoad={() => setLoaded(true)} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
+          <iframe ref={iframeRef} className="connected-preview-frame" title="Symply House connected Web preview" src={SYMPLY_HOUSE_WEB_PREVIEW} loading="lazy" referrerPolicy="no-referrer" onLoad={() => { setLoaded(true); sendHostReady(); }} sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts" style={frameWidth ? { maxWidth: frameWidth } : undefined} />
         </div>
         {device !== "desktop" && <div className="device-navigation"><span /></div>}
       </div>
+      <div className="connected-preview-event" aria-live="polite"><span className={loaded ? "ready" : ""} />{lastBridgeEvent}</div>
     </div>
   );
 }

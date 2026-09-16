@@ -58,6 +58,9 @@ button,a,input { font:inherit; } button { border:0; cursor:pointer; color:inheri
 .device-shell-android .device-navigation span { width:6px; height:6px; border:1px solid #dedbd1; background:transparent; border-radius:50%; justify-self:center; }
 .device-shell-ipad .device-chrome { height:20px; background:#252624; }
 .device-shell-ipad .device-navigation { display:none; }
+.connected-preview-event { display:flex; align-items:center; gap:7px; padding:8px 14px; border-top:1px solid #d8d5cc; color:#8b887f; background:#eeece6; font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.05em; text-transform:uppercase; }
+.connected-preview-event span { width:5px; height:5px; border-radius:50%; background:#d6a85e; }
+.connected-preview-event span.ready { background:#68ad6a; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; scroll-behavior:auto !important; transition-duration:.01ms !important; } }
 
 /* The featured connected project adds a sixth manifest card without changing
