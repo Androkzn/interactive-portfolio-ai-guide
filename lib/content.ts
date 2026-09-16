@@ -1,4 +1,5 @@
 export type Viewport = "phone" | "tablet" | "desktop";
+export type DevicePreview = "iphone" | "ipad" | "android" | "desktop";
 export type GuideMode = "explore" | "tour" | "interview";
 
 export type Project = {
@@ -34,7 +35,7 @@ export const projects: Project[] = [
     status: "verified build",
     sourceRepository: "https://github.com/Androkzn/symply-house",
     scenario: { title: "Review a home task", description: "Walk through a seeded household task from context to a clear next action.", action: "Start task flow" },
-    challenge: { title: "One product, four honest runtimes", body: "Symply House is the first connected source in this portfolio. Its source project supports iPhone, iPad, Android and Web. The portfolio preview runs the Web build; native platform support is linked as source evidence rather than simulated inside the browser." },
+    challenge: { title: "One product, four honest runtimes", body: "Symply House is the first connected source in this portfolio. Its source project supports iPhone, iPad, Android and Web. The in-site Device Lab runs the connected Web build inside platform-sized shells; native support remains linked as source/build evidence rather than being misrepresented as a native runtime in the browser." },
     evidence: [
       { label: "Source repository", type: "verified", detail: "Androkzn/symply-house · connected project source." },
       { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Web." },

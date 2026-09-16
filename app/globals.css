@@ -36,6 +36,28 @@ button,a,input { font:inherit; } button { border:0; cursor:pointer; color:inheri
 .connected-preview-dot.ready { background:#68ad6a; }
 .connected-preview-loading { position:absolute; inset:42px 0 0; display:grid; place-items:center; color:#77756e; font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; pointer-events:none; }
 .connected-preview-frame { display:block; width:100%; height:660px; border:0; background:#f4f3ef; }
+.device-icon { width:10px; height:14px; border:1px solid currentColor; border-radius:3px; display:inline-block; position:relative; }
+.device-icon.iphone { border-radius:4px; }
+.device-icon.iphone::before { content:""; position:absolute; top:1px; left:50%; width:4px; height:1px; transform:translateX(-50%); background:currentColor; border-radius:2px; }
+.device-icon.ipad { width:15px; height:12px; border-radius:3px; }
+.device-icon.android { border-radius:2px; }
+.device-icon.desktop { width:16px; height:11px; border-radius:1px; }
+.device-shell { margin:18px auto 0; overflow:hidden; background:#f4f3ef; transition:width .25s ease, border-radius .25s ease, box-shadow .25s ease; }
+.device-shell-iphone { width:min(390px,100%); border:8px solid #171817; border-radius:32px; box-shadow:0 18px 45px #1b1b1824; }
+.device-shell-ipad { width:min(768px,100%); border:7px solid #252624; border-radius:24px; box-shadow:0 18px 45px #1b1b1824; }
+.device-shell-android { width:min(412px,100%); border:7px solid #20211f; border-radius:24px; box-shadow:0 18px 45px #1b1b1824; }
+.device-shell-desktop { width:100%; border:1px solid #cbc8be; border-radius:8px; box-shadow:0 12px 28px #1b1b1814; }
+.device-chrome { height:25px; padding:0 15px; display:flex; align-items:center; justify-content:space-between; background:#171817; color:#f2f0e9; font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.04em; }
+.device-chrome-title { opacity:.68; font-size:7px; }
+.device-chrome-icons { font-size:7px; letter-spacing:2px; }
+.device-screen { overflow:hidden; background:#f4f3ef; }
+.device-navigation { height:20px; display:grid; place-items:center; background:#171817; }
+.device-navigation span { display:block; width:92px; height:3px; border-radius:5px; background:#e9e7df; opacity:.9; }
+.device-shell-android .device-chrome { background:#151614; }
+.device-shell-android .device-navigation { height:24px; background:#20211f; justify-items:stretch; padding:0 34px; grid-template-columns:repeat(3,1fr); }
+.device-shell-android .device-navigation span { width:6px; height:6px; border:1px solid #dedbd1; background:transparent; border-radius:50%; justify-self:center; }
+.device-shell-ipad .device-chrome { height:20px; background:#252624; }
+.device-shell-ipad .device-navigation { display:none; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; scroll-behavior:auto !important; transition-duration:.01ms !important; } }
 
 /* The featured connected project adds a sixth manifest card without changing
