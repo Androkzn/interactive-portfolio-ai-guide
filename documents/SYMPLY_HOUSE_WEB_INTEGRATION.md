@@ -10,7 +10,7 @@ The portfolio embeds the connected Expo Web build of [Symply House](https://gith
 - Connected Web preview: `https://symply-house-web.pages.dev/?embed=portfolio-v1`
 - In-site Device Lab: `iPhone` · `iPad` · `Android` · `Desktop` modes inside the portfolio workspace
 - Cloudflare Pages project: `symply-house-web`
-- Source commit: `60cca35b5` (`feat(web): add secure portfolio preview bridge`)
+- Source commit: `caf3b0595` (`fix(web): isolate public review runtime`)
 
 ## What the reviewer can try
 
@@ -46,3 +46,4 @@ The authenticated app path remains the default when the flag is absent. This is 
 - Browser smoke check reaches `PublicHousePreviewScreen` without a login gate.
 - Portfolio build and static export checks pass.
 - Portfolio iframe uses a sandbox, explicit source URL and a read-only label.
+- Public Web runtime smoke confirms the latest review deployment loads without the previous native auth/notification initialization paths.

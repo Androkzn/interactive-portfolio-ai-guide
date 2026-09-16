@@ -8,11 +8,11 @@ This tracker is updated as implementation blocks are completed. It separates wha
 
 - **GitHub:** https://github.com/Androkzn/interactive-portfolio-ai-guide
 - **Cloudflare Pages production URL:** https://interactive-portfolio-ai-guide.pages.dev/
-- **Deployment preview URL:** https://73abd003.interactive-portfolio-ai-guide.pages.dev
-- **Site build source commit:** `d2e2ccc` (connected in-site Device Lab and typed preview bridge release).
+- **Deployment preview URL:** https://c78a1171.interactive-portfolio-ai-guide.pages.dev
+- **Site build source commit:** `bf06fef` (connected in-site Device Lab and typed preview bridge release).
 - **Verification:** HTTP `200`; static smoke markers found in the deployed HTML; browser iframe smoke check opened the embedded Tasks tab.
 - **Connected Symply House Web build:** https://symply-house-web.pages.dev/?embed=portfolio-v1
-- **Connected source commit:** `60cca35b5` (`feat(web): add secure portfolio preview bridge`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions and reports typed lifecycle events to the host.
+- **Connected source commit:** `caf3b0595` (`fix(web): isolate public review runtime`). Expo export verified in Chrome; the public route opens a deterministic read-only Home surface with Overview, Tasks and Spaces interactions and reports typed lifecycle events to the host. Web-only auth, native notification, telemetry and reachability side effects are isolated from this review surface.
 - **Custom domain:** `andreitekhtelev.dev` was registered in Cloudflare Registrar and added to the Pages project on 2026-09-15. Cloudflare Pages status: `Active` with `SSL enabled`; the root CNAME is present in the Cloudflare DNS zone, public resolvers return Cloudflare addresses, and HTTPS returns `200`. The local default resolver on the development machine still has a negative-cache result and may require a DNS cache/network refresh.
 - **Framework security update:** upgraded to Next.js `16.3.5` / React `19.3.0`; `npm audit --omit=dev` reports 0 vulnerabilities.
 
@@ -75,6 +75,6 @@ This tracker is updated as implementation blocks are completed. It separates wha
 ## Owner inputs still required
 
 - Confirm the final five-project list and the permission status of each candidate.
-- Confirm the remaining native release artifacts and any future extensions to the cross-frame `DemoMessage` contract; the public Web review mode, local reset contract and secure bridge are implemented at source commit `60cca35b5`.
+- Confirm the remaining native release artifacts and any future extensions to the cross-frame `DemoMessage` contract; the public Web review mode, local reset contract and secure bridge are implemented at source commit `caf3b0595`.
 - Provide approved personal contribution, challenge and evidence material for each published case.
 - Provide neutral poster and speaking-loop assets if the CSS avatar should be replaced.
