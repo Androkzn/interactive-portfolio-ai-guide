@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Bot, ChevronRight, Code2, ExternalLink, Layers3, MessageCircle, Monitor, Moon, Pause, Play, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles, Sun, Tablet, Volume2 } from "lucide-react";
-import { DevicePreview, GuideMode, Project, projectById, projects, quickPrompts, tourSteps } from "@/lib/content";
-import { acceptsPreviewMessage, deviceWidths } from "@/lib/preview";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Code2, Github, Layers3, Linkedin, MessageCircle, MonitorCog, Moon, RotateCcw, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, Wifi } from "lucide-react";
+import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
+import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
 const contactUrl = "https://www.linkedin.com/in/andreitekhtelev/";
+const githubUrl = "https://github.com/Androkzn";
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
-const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Desktop" };
+const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
 const deviceFrameAssets: Partial<Record<DevicePreview, { src: string; model: string }>> = {
-  iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.png", model: "iPhone 16 Pro" },
+  iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.png", model: "iPhone 16 Pro Max" },
   ipad: { src: "/images/device-frames/ipad-pro-11-space-gray.png", model: "iPad Pro 11-inch" },
   android: { src: "/images/device-frames/pixel-7-pro-obsidian.png", model: "Google Pixel 7 Pro" },
 };
@@ -69,7 +70,7 @@ function selectBestMaleVoice(voices: SpeechSynthesisVoice[]) {
 
 const projectLogoSources: Record<Project["id"], string> = {
   "symply-house": "/images/apps/symply-house.png",
-  "hoc-v2": "/images/apps/house-of-commons.png",
+  "hoc-v2": "/images/apps/house-of-commons-main.png",
   "symply-budget": "/images/apps/symply-budget.png",
 };
 
@@ -78,14 +79,22 @@ function ProjectLogo({ id }: { id: Project["id"] }) {
 }
 
 function PreviewDeviceIcon({ device }: { device: DevicePreview }) {
-  const icon = device === "iphone" ? <Smartphone size={18} />
-    : device === "ipad" ? <Tablet size={18} />
-      : device === "android" ? <Bot size={18} />
-        : <Monitor size={18} />;
-  return <span className="preview-device-icon" aria-hidden="true">{icon}</span>;
+  const icon = device === "iphone" ? <Smartphone size={16} strokeWidth={2.1} />
+    : device === "ipad" ? <TabletSmartphone size={16} strokeWidth={2.1} />
+      : device === "android" ? <Bot size={16} strokeWidth={2.1} />
+        : <MonitorCog size={16} strokeWidth={2.1} />;
+  return <span className={`preview-device-icon preview-device-icon-${device}`} aria-hidden="true"><span className="preview-device-icon-glow" />{icon}</span>;
 }
 
-function makeGuideReply(question: string, project: Project, mode: GuideMode, tourStep: number) {
+function DeviceStatusBar({ device }: { device: Exclude<DevicePreview, "desktop"> }) {
+  return <div className={`device-status-bar device-status-bar-${device}`} aria-hidden="true">
+    <span className="device-status-time">9:41</span>
+    <span className="device-status-cutout" />
+    <span className="device-status-icons"><Signal size={15} strokeWidth={2.25} /><Wifi size={16} strokeWidth={2.25} /><BatteryFull size={18} strokeWidth={2.25} /></span>
+  </div>;
+}
+
+function makeGuideReply(question: string, project: Project) {
   const lower = question.toLowerCase();
   if (lower.includes("personally") || lower.includes("own") || lower.includes("вклад")) {
     return `**What I can substantiate**\n\nThe public manifest for ${project.name} does not yet specify personal contribution. I won’t invent one.\n\n- Explore the deployed Web application.\n- Inspect the linked source repository.\n- Treat ownership and impact claims as pending evidence.`;
@@ -97,12 +106,86 @@ function makeGuideReply(question: string, project: Project, mode: GuideMode, tou
     return "**AI assists; evidence decides.**\n\n- Prepared answers stay within the approved project material.\n- The apps run independently of this guide.\n- Unsupported contribution or impact claims stay unpublished.\n\nThis panel uses curated responses, not a live model. Explore the architecture below for the intended contract.";
   }
   if (lower.includes("show") || lower.includes("flow") || lower.includes("покаж")) {
-    return project.id === "hoc-v2"
-      ? "**Try the public civic flow**\n\n- Browse parliamentary information in the live app.\n- Open a representative or activity to inspect its details.\n- Use the original sources to verify what you read.\n\nPublic browsing does not require an account."
-      : `**Try ${project.name}**\n\n- Sign in using your existing product account.\n- Explore the live product with your own data.\n- Open the app in a separate tab if your browser restricts embedded sign-in.\n\nThis is a real app: account actions affect your account. No shared credentials or simulated balance are injected.`;
+    return `**Try ${project.name}**\n\n- Guest email and password are already filled in.\n- Tap Sign In in the live app.\n- Explore the product and try its core flows.\n\nThe guest account is reserved for this portfolio demo.`;
   }
-  if (mode === "tour") return `**${tourSteps[tourStep].title}**\n\n${tourSteps[tourStep].detail}`;
   return `**Explore ${project.name}**\n\nI have prepared answers about the source boundary, documented challenge and core flow. Choose a question below or inspect the source. For a deeper conversation, get in touch with Andrei.\n\nI don’t have a verified answer to every free-form question.`;
+}
+
+function initialGuideMessage(project: Project) {
+  if (project.id === "symply-house" || project.id === "symply-budget") {
+    return `**Guest access is ready.**\n\nThe email and password are already filled in for ${project.name}. Tap Sign In in the live app to start exploring.`;
+  }
+  return "**No account needed.**\n\nStart exploring the live civic app on the left. Then ask about the decisions behind it; I’ll separate documented facts from what still needs evidence.";
+}
+
+type LiveGuideAction = { label: string; answer: string };
+type LiveGuideContext = {
+  key: string;
+  label: string;
+  title: string;
+  body: string;
+  actions: LiveGuideAction[];
+};
+
+function guideContextFor(project: Project, pathname: string): LiveGuideContext {
+  const path = pathname.toLowerCase();
+  const context = (label: string, title: string, body: string, actions: LiveGuideAction[]): LiveGuideContext => ({
+    key: `${project.id}:${label}`,
+    label,
+    title,
+    body,
+    actions,
+  });
+
+  if (path === "/login" || path.includes("login")) {
+    return context("READY TO START", "One tap from the demo", `Guest email and password are already filled in for ${project.name}. Tap Sign In in the live app.`, [
+      { label: "What happens next?", answer: "You’ll enter the real guest workspace with prepared content, then the guide will follow the screen you open. Feel free to play and interact with the app." },
+      { label: "What can I change?", answer: "Explore, add and edit items inside the guest experience. The account is reserved for portfolio visitors." },
+    ]);
+  }
+
+  if (path.includes("projects")) {
+    return context("PROJECTS", "Welcome to Projects", "This workspace turns an idea—renovation, repair or upgrade—into scope, materials, tasks and a visible next step.", [
+      { label: "What can I try here?", answer: "Open a project, inspect its plan, then add or update a task to see how household work stays connected." },
+      { label: "How is it built?", answer: "Projects compose typed domain records for plans, tasks, spaces, materials and budgets while keeping each workflow independently testable." },
+    ]);
+  }
+
+  if (path.includes("spending") || path.includes("bills")) {
+    return context("SPENDING", "Follow where money goes", "Review transactions and recurring commitments, then move from raw activity to a decision you can act on.", [
+      { label: "What can I try here?", answer: "Open a transaction or bill, inspect its category and adjust it to see how the budget view responds." },
+      { label: "What is the UX goal?", answer: "Keep financial detail inspectable without turning the screen into a spreadsheet." },
+    ]);
+  }
+
+  if (path.includes("budget") || path.includes("planning") || path.includes("savings")) {
+    const title = project.id === "symply-budget" ? "Give every dollar a purpose" : "Keep home costs in context";
+    return context("BUDGET", title, "Balances, plans and goals stay close to the decision they support instead of becoming isolated numbers.", [
+      { label: "What can I try here?", answer: "Inspect a category or goal, change an amount and watch the plan recalculate around that decision." },
+      { label: "Why local-first?", answer: "The core budget remains responsive and understandable while sync and provider integrations stay explicit boundaries." },
+    ]);
+  }
+
+  if (path.includes("chat") || path.includes("mira")) {
+    return context("ASSISTANT", "Ask, decide, then act", "The assistant is designed to explain context and propose the next step without claiming an action succeeded before the app confirms it.", [
+      { label: "What should I ask?", answer: "Ask for a summary, the most important next action or an explanation of a recommendation." },
+      { label: "Where are the guardrails?", answer: "Evidence grounds the answer, typed actions bound what can happen and acknowledgements confirm real state changes." },
+    ]);
+  }
+
+  if (path.includes("settings") || path.includes("profile")) {
+    return context("MORE", "Control the experience", "Settings collect personalization, permissions and account boundaries without crowding the daily workflow.", [
+      { label: "What can I inspect?", answer: "Try appearance, navigation customization and profile controls to see how the app adapts without changing its core model." },
+      { label: "Why separate this?", answer: "Occasional controls stay reachable but do not compete with the primary tasks on Home." },
+    ]);
+  }
+
+  return context("HOME", project.id === "symply-budget" ? "Your money at a glance" : "Your household at a glance", project.id === "symply-budget"
+    ? "Home summarizes the financial signals that need attention now and keeps deeper analysis one tap away."
+    : "Home brings tasks, reminders and household context together so the next useful action is immediately visible.", [
+    { label: "What should I try first?", answer: project.id === "symply-budget" ? "Open a summary card, then move into Budget or Spending to inspect the underlying detail." : "Open Projects or a task card to move from the household overview into a concrete workflow." },
+    { label: "Why this layout?", answer: "The screen prioritizes current decisions and exceptions instead of showing every available feature at once." },
+  ]);
 }
 
 function FormattedText({ text }: { text: string }) {
@@ -158,95 +241,109 @@ function Avatar({ active }: { active: boolean }) {
   </div>;
 }
 
-function ConnectedSourcePreview({ project, device }: { project: Project; device: DevicePreview }) {
+const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, device, onDeviceChange, onNavigate }: { project: Project; device: DevicePreview; onDeviceChange: (device: DevicePreview) => void; onNavigate: (pathname: string) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [slow, setSlow] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [theme, setTheme] = useState<Theme>("light");
   const [appliedTheme, setAppliedTheme] = useState<Theme | null>(null);
   const [themeReady, setThemeReady] = useState(false);
   const themeRef = useRef(theme);
   themeRef.current = theme;
-  const url = project.webPreviewUrl;
+  const url = project.webPreviewUrl
+    ? (() => {
+        const previewUrl = new URL(project.webPreviewUrl);
+        if (portfolioDemoMessageFor(project.id)) previewUrl.searchParams.set("portfolioDemo", "1");
+        return previewUrl.toString();
+      })()
+    : undefined;
   useEffect(() => {
     if (!url) return;
     const origin = new URL(url).origin;
+    const demoMessage = portfolioDemoMessageFor(project.id);
     let retries = 0;
     const requestTheme = () => frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
+    const requestDemo = () => { if (demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin); };
     const handshake = window.setInterval(() => {
       requestTheme();
+      requestDemo();
       if (++retries >= 45) window.clearInterval(handshake);
     }, 1000);
     const receive = (event: MessageEvent) => {
       if (!acceptsPreviewMessage(event, frame.current?.contentWindow, origin)) return;
       if (event.data.type === "portfolio:theme-ready") {
         setThemeReady(true);
-        setLoaded(true); setSlow(false);
         frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
       }
       if (event.data.type === "portfolio:theme-applied" && (event.data.theme === "light" || event.data.theme === "dark")) {
         setThemeReady(true);
         setAppliedTheme(event.data.theme);
-        setLoaded(true); setSlow(false);
         window.clearInterval(handshake);
+      }
+      if (event.data.type === "portfolio:demo-ready" && event.data.projectId === project.id) {
+        requestDemo();
+        requestTheme();
+      }
+      if (event.data.type === "portfolio:navigation" && event.data.projectId === project.id && typeof event.data.pathname === "string") {
+        onNavigate(event.data.pathname);
       }
     };
     window.addEventListener("message", receive);
     requestTheme();
+    requestDemo();
     return () => { window.removeEventListener("message", receive); window.clearInterval(handshake); };
-  }, [url, attempt]);
-  useEffect(() => {
-    setLoaded(false); setSlow(false); setThemeReady(false); setAppliedTheme(null);
-    const timer = window.setTimeout(() => setSlow(true), 18000);
-    return () => window.clearTimeout(timer);
-  }, [url, attempt]);
+  }, [project.id, url, attempt, onNavigate]);
   const changeTheme = (next: Theme) => {
     setTheme(next);
     if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
   };
   if (!url) return <p>Live preview unavailable.</p>;
   const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
-    setLoaded(true); setSlow(false);
-    frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, new URL(url).origin);
-  }} onError={() => { setLoaded(false); setSlow(true); }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
+    const origin = new URL(url).origin;
+    frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
+    const demoMessage = portfolioDemoMessageFor(project.id);
+    if (demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin);
+  }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
     sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-same-origin allow-scripts" />;
   const frameAsset = deviceFrameAssets[device];
   return <div className="connected-preview">
     <div className="connected-preview-bar">
-      <span><i className={loaded ? "status-dot ready" : "status-dot"} />{loaded ? "Live app loaded" : "Loading live app"}</span>
-      <a href={url} target="_blank" rel="noreferrer">Open live app <ExternalLink size={13} /></a>
+      <div className="preview-bar-actions">
+        <div className="app-theme-controls" role="group" aria-label="Live app appearance">
+          <span>App theme</span>
+          <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
+          <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
+        </div>
+        <div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button className={`viewport-option viewport-option-${value}`} key={value} aria-pressed={device === value} onClick={() => onDeviceChange(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div>
+        <button className="preview-reload" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button>
+      </div>
     </div>
     <div className="device-stage">
-      {!loaded && <div className="load-notice" role="status">{slow ? "Taking longer than expected. Try reloading or open the app in a new tab." : "Opening the real application…"}</div>}
-      <div className="app-theme-controls" role="group" aria-label="Live app appearance">
-        <span>App theme</span>
-        <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
-        <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
-      </div>
-      <div className={`device-shell device-shell-${device}`} style={{ width: deviceWidths[device] }}>
+      <div className={`device-shell device-shell-${device} device-theme-${appliedTheme ?? theme}`} style={{ width: deviceWidths[device] }}>
         {device === "desktop" ? <div className="device-screen">
           <div className="device-chrome device-chrome-desktop"><span className="device-window-dots" aria-hidden="true"><i /><i /><i /></span><span className="device-desktop-title">{project.name}</span><span className="device-desktop-menu" aria-hidden="true">•••</span></div>
           {liveFrame}
         </div> : <>
-          <div className="device-live-screen">{liveFrame}</div>
+          <div className="device-live-screen">
+            <DeviceStatusBar device={device} />
+            <div className="device-app-viewport">{liveFrame}</div>
+          </div>
           <img className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
           <span className="sr-only">Previewed in a {frameAsset?.model} frame.</span>
         </>}
       </div>
     </div>
-    <div className="preview-footer"><span>{project.id === "hoc-v2" ? "Public data · explore without an account" : "Real account · real data · sign-in required"}</span><button onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button></div>
+    {!portfolioDemoMessageFor(project.id) && <div className="preview-footer"><span>Public data · explore without an account</span></div>}
   </div>;
-}
+});
 
-function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () => void }) {
-  const [mode, setMode] = useState<GuideMode>("explore");
-  const [tourStep, setTourStep] = useState(0);
+const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { project: Project; appPath: string; onCoreFlow: () => void }) {
   const [input, setInput] = useState("");
   const [speaking, setSpeaking] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "guide", text: "**The work, explained.**\n\nTry a real app on the left. Then ask about the decisions behind it. I’ll separate documented facts from what still needs evidence." }]);
+  const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "guide", text: initialGuideMessage(project) }]);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const nextId = useRef(1);
   const thread = useRef<HTMLDivElement>(null);
   const speech = useRef<SpeechSynthesisUtterance | null>(null);
@@ -277,18 +374,31 @@ function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () 
     if (element.lastElementChild) observer.observe(element.lastElementChild);
     element.addEventListener("scroll", onScroll, { passive: true });
     return () => { observer.disconnect(); element.removeEventListener("scroll", onScroll); };
-  }, [messages, mode]);
+  }, [messages]);
+  const context = guideContextFor(project, appPath);
+  useEffect(() => {
+    window.speechSynthesis?.cancel();
+    speech.current = null;
+    setSpeaking(false);
+    setActiveAction(null);
+    setMessages([{ id: nextId.current++, role: "guide", text: guideContextFor(project, appPath).body, animate: true }]);
+  }, [appPath, project]);
   const ask = (text: string) => {
     stop();
-    if (text === quickPrompts[3]) onCoreFlow();
-    const visitorId = nextId.current++;
+    if (text.toLowerCase().includes("core flow")) onCoreFlow();
     const replyId = nextId.current++;
-    setMessages(current => [...current.slice(-6), { id: visitorId, role: "visitor", text }, { id: replyId, role: "guide", text: makeGuideReply(text, project, mode, tourStep), animate: true }]);
+    setActiveAction(text);
+    setMessages([{ id: replyId, role: "guide", text: makeGuideReply(text, project), animate: true }]);
+  };
+  const chooseAction = (action: LiveGuideAction) => {
+    stop();
+    setActiveAction(action.label);
+    setMessages([{ id: nextId.current++, role: "guide", text: action.answer, animate: true }]);
   };
   const speak = () => {
-    if (speaking) { stop(); return; }
     const latest = [...messages].reverse().find(message => message.role === "guide");
     if (!latest || !voiceAvailable) return;
+    window.speechSynthesis?.cancel();
     const utterance = new SpeechSynthesisUtterance(latest.text.replaceAll("**", "").replaceAll("\n- ", ". "));
     const voice = selectBestMaleVoice(voices.length > 0 ? voices : window.speechSynthesis.getVoices());
     if (voice) {
@@ -312,20 +422,25 @@ function GuidePanel({ project, onCoreFlow }: { project: Project; onCoreFlow: () 
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
-  const prompts = [<Code2 key="code" size={15} />, <Layers3 key="layers" size={15} />, <ShieldCheck key="shield" size={15} />, <Play key="play" size={15} />];
+  useEffect(() => {
+    if (muted || !voiceAvailable) return;
+    speak();
+  }, [messages, muted, voiceAvailable]);
+  const toggleMute = () => {
+    if (muted) {
+      setMuted(false);
+      return;
+    }
+    setMuted(true);
+    stop();
+  };
   return <aside className="guide-panel" id="guide" aria-label="Andrei’s project guide">
-    <h2>Good work invites<br /><em>better questions.</em></h2>
-    <div className="guide-avatar-row"><Avatar active={speaking} /><div className="guide-bio"><strong>Meet Andrei’s guide.</strong><p>Product decisions, technical boundaries and what to try next.</p><button className="voice-button" disabled={!voiceAvailable} onClick={speak} aria-pressed={speaking}>{speaking ? <Pause size={14} /> : <Volume2 size={14} />}{speaking ? "Stop reading" : "Read answer aloud"}</button><small>Male voice · best quality available on this device</small></div></div>
-    <div className="guide-context"><span className="status-dot ready" />Exploring <strong>{project.name}</strong></div>
-    <div className="guide-modes" role="group" aria-label="Guide mode">{(["explore", "tour", "interview"] as GuideMode[]).map(value => <button key={value} aria-pressed={mode === value} onClick={() => setMode(value)}>{value}</button>)}</div>
-    {mode === "interview" && <p className="mode-hint">Start with ownership, constraints or verification. Claims stay tied to reviewed material.</p>}
-    {mode === "tour" && <div className="tour-card"><span className="section-eyebrow">Stop {tourStep + 1} / {tourSteps.length}</span><strong>{tourSteps[tourStep].title}</strong><p>{tourSteps[tourStep].detail}</p><button onClick={() => setTourStep(value => (value + 1) % tourSteps.length)}>{tourStep === tourSteps.length - 1 ? "Restart tour" : "Next stop"}<ArrowRight size={14} /></button></div>}
-    <div ref={thread} className="guide-thread" tabIndex={0} aria-label="Guide conversation">{messages.map(message => <div key={message.id} className={`message ${message.role}`}><span className="message-marker">{message.role === "guide" ? <Sparkles size={13} /> : <MessageCircle size={13} />}</span><div>{message.role === "guide" ? <GuideReply message={message} /> : <p>{message.text}</p>}</div></div>)}</div>
-    <div className="quick-prompts"><span className="section-eyebrow">Take a closer look</span>{quickPrompts.map((prompt, index) => <button key={prompt} onClick={() => ask(prompt)}>{prompts[index]}<span>{prompt}</span><ChevronRight size={14} /></button>)}</div>
-    <form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about this project…" aria-label="Ask about this project" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form>
-    <div className="guide-disclaimer"><ShieldCheck size={15} /><span>Prepared answers · approved sources · no invented claims</span></div>
+    <div className="guide-live-head"><Avatar active={speaking} /><button className="voice-button" disabled={!voiceAvailable} onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? "Unmute guide voice" : "Mute guide voice"}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}<span>{muted ? "Muted" : "Mute"}</span></button></div>
+    <div className="guide-context-card" aria-live="polite" aria-atomic="true"><h2>{context.title}</h2><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>
+    <div className="guide-actions" aria-label="Suggested questions">{context.actions.map(action => <button key={action.label} className={activeAction === action.label ? "active" : ""} onClick={() => chooseAction(action)}>{action.label}</button>)}</div>
+    <form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about this screen…" aria-label="Ask about this screen" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form>
   </aside>;
-}
+});
 
 const steps = [
   { name: "Ground", code: "sourceIds[]", body: "Find approved evidence for the question and the selected project.", input: "A question + the current project", output: "Relevant source IDs, or an explicit evidence gap" },
@@ -347,16 +462,18 @@ function Architecture() {
         <div><span>OUTPUT</span><p>{steps[selected].output}</p></div>
       </div>
     </div>
-    <div className="architecture-foot"><span><ShieldCheck size={15} />Evidence before claims</span><span><Layers3 size={15} />Apps independent of the guide</span><a href="https://github.com/Androkzn/interactive-portfolio-ai-guide/tree/main/skills" target="_blank" rel="noreferrer">Inspect the contracts <ArrowUpRight size={15} /></a></div>
   </section>;
 }
 
 export default function Home() {
-  const [activeId, setActiveId] = useState("hoc-v2");
+  const [activeId, setActiveId] = useState(DEFAULT_PROJECT_ID);
   const [device, setDevice] = useState<DevicePreview>("iphone");
+  const [appPath, setAppPath] = useState("/login");
   const [progress, setProgress] = useState(0);
-  const [showContact, setShowContact] = useState(false);
   const project = projectById(activeId);
+  const focusLivePreview = useCallback(() => {
+    document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus();
+  }, []);
   useEffect(() => {
     let frame = 0;
     const update = () => {
@@ -364,7 +481,6 @@ export default function Home() {
       frame = requestAnimationFrame(() => {
         const max = document.documentElement.scrollHeight - window.innerHeight;
         setProgress(max > 0 ? window.scrollY / max : 0);
-        setShowContact(window.scrollY > window.innerHeight * 1.2);
       });
     };
     update();
@@ -372,19 +488,19 @@ export default function Home() {
     window.addEventListener("resize", update);
     return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
   }, []);
-  const explore = (id = activeId) => { setActiveId(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
+  const chooseProject = (id: string) => { setActiveId(id); setAppPath("/login"); };
+  const explore = (id = activeId) => { chooseProject(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
   return <main className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER</span><nav className="header-actions"><a href="#architecture">The thinking</a><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Contact Andrei on LinkedIn" title="Contact Andrei on LinkedIn"><ArrowUpRight size={22} /></a></nav></header>
-    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">I build tools for everyday decisions—from managing a home and a budget to understanding Parliament.</p><a className="explore-link" href="#workspace">Try the work <ArrowDown size={17} /></a></div><div className="hero-stats"><span className="section-eyebrow">A few ways in</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>3 real products. Yours to explore.</small></span><ArrowUpRight size={18} /></button><button onClick={() => { setDevice("ipad"); explore(); }}><span className="stat-symbol" aria-hidden="true"><Code2 size={26} /></span><span><strong>Source platforms</strong><small>iPhone · iPad · Android · Web</small></span><ArrowUpRight size={18} /></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Inspect the engineering decisions.</small></span><ArrowUpRight size={18} /></a><p>Web previews below. Device frames resize the Web app; they are not native emulators.</p></div></section>
+    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER</span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><Linkedin size={21} strokeWidth={2.1} aria-hidden="true" /><span>LinkedIn</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Github size={21} strokeWidth={2.1} aria-hidden="true" /><span>GitHub</span></a></nav></header>
+    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">I build tools for everyday decisions—from managing a home and a budget to understanding Parliament.</p></div><div className="hero-stats"><span className="section-eyebrow">A few ways in</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>3 real products. Yours to explore.</small></span></button><button onClick={() => { setDevice("ipad"); explore(); }}><span className="stat-symbol" aria-hidden="true"><Code2 size={26} /></span><span><strong>Source platforms</strong><small>iPhone · iPad · Android · Web</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Inspect the engineering decisions.</small></span></a></div></section>
     <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick a product. <em>Make it yours.</em></h2></div></div>
-      <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => setActiveId(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span><ArrowUpRight size={19} /></button>)}</nav>
-      <div className="workspace"><section className="workbench" aria-label="Live application preview"><div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button key={value} aria-pressed={device === value} onClick={() => setDevice(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div><ConnectedSourcePreview key={project.id} project={project} device={device} /></section><GuidePanel project={project} onCoreFlow={() => document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus()} /></div>
+      <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
+      <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} /></div>
     </section>
     <Architecture />
-    <section className="case-study"><div><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2></div><div className="case-grid"><article><Code2 size={22} /><h3>Inspect the source</h3><p>Every published project links to its repository. Follow a decision beyond the interface.</p></article><article><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Let’s talk about the details.</p><a className="contact-link" href={contactUrl} target="_blank" rel="noreferrer" aria-label="Discuss a role with Andrei on LinkedIn" title="Discuss a role with Andrei"><ArrowUpRight size={22} /></a></article></div></section>
-    <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span><a href="#top">Back to top <ArrowUpRight size={14} /></a></footer>
-    <a className={`sticky-contact ${showContact ? "visible" : ""}`} href={contactUrl} target="_blank" rel="noreferrer" tabIndex={showContact ? 0 : -1} aria-hidden={!showContact}><span className="status-dot ready" />Let’s build something <ArrowUpRight size={17} /></a>
+    <section className="case-study"><div><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2></div><div className="case-grid"><article><Code2 size={22} /><h3>Explore the work</h3><p>Try the live products and see how each workflow turns a real question into a useful next step.</p></article><article><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Let’s talk about the details.</p></article></div></section>
+    <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
   </main>;
 }

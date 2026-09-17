@@ -33,8 +33,8 @@ export const projects: Project[] = [
     color: "#ff9d66",
     accent: "orange",
     originalPlatforms: ["iPhone", "iPad", "Android", "Web"],
-    runtimeLabel: "Connected Expo Web build · current URL auth-gated · portfolio demo ready",
-    webPreviewUrl: "https://symply-house-web.pages.dev/",
+    runtimeLabel: "Connected Expo Web build · authenticated guest household",
+    webPreviewUrl: "https://symply-house-web.pages.dev/?portfolioDemo=1",
     status: "source verified",
     sourceRepository: "https://github.com/Androkzn/symply-house",
     scenario: { title: "Review a home task", description: "Open the live household flow from context to a clear next action.", action: "Start home flow" },
@@ -43,11 +43,11 @@ export const projects: Project[] = [
       { title: "Shared responsibility", detail: "Represent ownership and timing as product state that can survive multiple people and platforms." },
       { title: "Authenticated completion", detail: "Sign in to the live app to inspect your household data and complete a real account-scoped action." },
     ],
-    challenge: { title: "Keep a shared home calm and useful", body: "The current Web URL remains the authenticated product. For a non-empty public portfolio experience, the repository now includes a separate isolated read-only demo build: its cards and tasks use local synthetic data, with no account state, production data API or shared user. The full authenticated product remains available from the source project." },
+    challenge: { title: "Keep a shared home calm and useful", body: "The portfolio opens the normal authenticated product with a dedicated guest household. Its address, home photo, floor plan, renovation projects, budgets and tasks are real account-scoped records created through the same production API used by the app." },
     evidence: [
       { label: "Source repository", type: "verified", detail: "Androkzn/symply-house · public source project." },
       { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Web, based on the connected Expo source." },
-      { label: "Live boundary", type: "runtime", detail: "Current URL is auth-gated; the separate portfolio build is deterministic, read-only and local-only, with no account, microphone, telemetry or production writes." },
+      { label: "Live boundary", type: "runtime", detail: "A dedicated guest account contains synthetic household content in real product records; it is isolated from personal users and shared production households." },
     ],
   },
   {
@@ -87,8 +87,8 @@ export const projects: Project[] = [
     color: "#d4ff4f",
     accent: "lime",
     originalPlatforms: ["iPhone", "iPad", "Android", "Web"],
-    runtimeLabel: "Connected Expo Web build · auth-gated current URL · no shared demo account",
-    webPreviewUrl: "https://symply-budget-web.pages.dev/",
+    runtimeLabel: "Connected Expo Web build · authenticated guest account",
+    webPreviewUrl: "https://symply-budget-web.pages.dev/?portfolioDemo=1",
     status: "source verified",
     sourceRepository: "https://github.com/Androkzn/symply-budget",
     scenario: { title: "Review a household budget", description: "Open the live budgeting flow from context to a safe, inspectable decision.", action: "Start budget flow" },
@@ -97,14 +97,16 @@ export const projects: Project[] = [
       { title: "Financial intent", detail: "Separate an understandable household decision from integrations, permissions and provider failures." },
       { title: "Controlled handoff", detail: "Sign in to inspect account-scoped budget data; credentials and financial records are never embedded in the portfolio." },
     ],
-    challenge: { title: "Design for trust when data is personal", body: "The repository now includes an explicit local fixture mode for a separate portfolio build: read-only synthetic transactions, balances and goals with no production writes, credentials or shared financial identity. The current Budget Web URL remains the authenticated Expo build until that separate Pages artifact is deployed." },
+    challenge: { title: "Design for trust when data is personal", body: "The Web build keeps the normal authenticated product flow. A dedicated guest account is used for the portfolio so the interface and navigation remain real while personal financial data stays out of scope." },
     evidence: [
       { label: "Source repository", type: "verified", detail: "Androkzn/symply-budget · public source project." },
       { label: "Native matrix", type: "runtime", detail: "iPhone · iPad · Android, with iPad support declared in the Expo configuration." },
-      { label: "Live boundary", type: "runtime", detail: "Current Budget Web URL keeps the normal auth gate; the separate portfolio artifact uses local synthetic data only, with no shared user, financial credential or production write." },
+      { label: "Live boundary", type: "runtime", detail: "The guest login is isolated to a dedicated account; the portfolio does not expose a personal financial identity or shared production records." },
     ],
   },
 ];
+
+export const DEFAULT_PROJECT_ID = "symply-house";
 
 export const quickPrompts = [
   "What did you personally own?",

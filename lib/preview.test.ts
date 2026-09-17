@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptsPreviewMessage, deviceWidths } from "./preview";
+import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "./preview";
 
 describe("live preview message boundary", () => {
   const frame = {} as Window;
@@ -8,6 +8,8 @@ describe("live preview message boundary", () => {
   it("accepts the current app frame and exact origin", () => {
     expect(acceptsPreviewMessage(ready, frame, origin)).toBe(true);
     expect(acceptsPreviewMessage({ ...ready, data: { type: "portfolio:theme-applied", theme: "dark" } }, frame, origin)).toBe(true);
+    expect(acceptsPreviewMessage({ ...ready, data: { type: "portfolio:demo-ready", projectId: "symply-house" } }, frame, origin)).toBe(true);
+    expect(acceptsPreviewMessage({ ...ready, data: { type: "portfolio:navigation", pathname: "/projects" } }, frame, origin)).toBe(true);
   });
   it("rejects other frames, missing frames and lookalike origins", () => {
     expect(acceptsPreviewMessage(ready, {} as Window, origin)).toBe(false);
@@ -19,7 +21,22 @@ describe("live preview message boundary", () => {
       expect(acceptsPreviewMessage({ ...ready, data }, frame, origin)).toBe(false);
     }
   });
-  it("keeps distinct fluid frame widths for the device controls", () => {
-    expect(deviceWidths).toEqual({ iphone: 390, ipad: 768, android: 412, desktop: 1280 });
+  it("gives the phones comparable real screen widths while preserving larger tablet and desktop frames", () => {
+    expect(deviceWidths).toEqual({ iphone: 538, ipad: 768, android: 515, desktop: 1280 });
+  });
+  it("provides guest credentials for all three connected apps", () => {
+    expect(portfolioDemoMessageFor("hoc-v2")).toEqual({
+      type: "portfolio:demo-credentials",
+      projectId: "hoc-v2",
+      email: "guest@commons.com",
+      password: "Guest123!",
+    });
+    expect(portfolioDemoMessageFor("symply-house")).toEqual({
+      type: "portfolio:demo-credentials",
+      projectId: "symply-house",
+      email: "guest@house.com",
+      password: "Guest123!",
+    });
+    expect(portfolioDemoMessageFor("symply-budget")?.email).toBe("guest@budget.com");
   });
 });
