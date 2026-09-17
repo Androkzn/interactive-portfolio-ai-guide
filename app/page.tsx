@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Check, Code2, Github, Layers3, Linkedin, MessageCircle, MonitorCog, Moon, RotateCcw, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
 import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
@@ -512,71 +512,86 @@ const puzzleFailures = [
   { id: "wet-goat", title: "Right intention. No protection.", image: "/images/goat-wet-white-sad.png", cause: "The output reached the world before the system had a boundary or a verified state." },
   { id: "storm-goat", title: "The symbol replaced the substance.", image: "/images/goat-storm-on-side-white.png", cause: "The model copied the idea of a storm onto the wrong object instead of producing the capability." },
   { id: "shower-goat", title: "Connected. Still not correct.", image: "/images/goat-under-shower-storm-generator.png", cause: "Every pipe is connected to a storm generator. The user still received a shower." },
+  { id: "near-storm-generator", title: "Almost a storm. Still a goat.", image: "/images/goat-near-storm-generator.png", cause: "Five careful handoffs held together. The generator is producing weather, but the final output is still the wrong species." },
 ] as const;
 
 function failureFor(sequence: PuzzleActionId[]) {
-  const position = (id: PuzzleActionId) => sequence.indexOf(id);
-  if (sequence.includes("prompt-first") || sequence.includes("generate-first") || sequence.includes("ship-first")) return puzzleFailures[0];
-  if (position("ground") > position("contract") || position("ground") === -1) return puzzleFailures[1];
-  if (position("bound") > position("typed") || position("bound") === -1) return puzzleFailures[2];
-  return puzzleFailures[3];
+  const progress = Math.min(verifiedPrefixLength(sequence), 5);
+  if (progress >= 5) return puzzleFailures[4];
+  if (progress >= 3) return puzzleFailures[3];
+  if (progress === 2) return puzzleFailures[2];
+  if (progress === 1) return puzzleFailures[1];
+  return puzzleFailures[0];
+}
+
+function verifiedPrefixLength(sequence: PuzzleActionId[]) {
+  let length = 0;
+  while (length < sequence.length && sequence[length] === correctPuzzleSequence[length]) length += 1;
+  return length;
+}
+
+function PuzzleActionIcon({ id, locked = false }: { id: PuzzleActionId; locked?: boolean }) {
+  const icon = id === "contract" ? <FileCheck2 size={16} strokeWidth={2.1} />
+    : id === "ground" ? <DatabaseZap size={16} strokeWidth={2.1} />
+      : id === "bound" ? <ShieldCheck size={16} strokeWidth={2.1} />
+        : id === "typed" ? <Braces size={16} strokeWidth={2.1} />
+          : id === "confirm" ? <ClipboardCheck size={16} strokeWidth={2.1} />
+            : id === "evaluate" ? <SearchCheck size={16} strokeWidth={2.1} />
+              : id === "prompt-first" ? <WandSparkles size={16} strokeWidth={2.1} />
+                : id === "generate-first" ? <Sparkles size={16} strokeWidth={2.1} />
+                  : <ArrowUpRight size={16} strokeWidth={2.1} />;
+  return <span className={`puzzle-action-icon puzzle-action-icon-${id}`} aria-hidden="true">{icon}{locked && <span className="puzzle-lock-mark"><LockKeyhole size={9} strokeWidth={2.4} /></span>}</span>;
 }
 
 function GoatMode() {
-  const [sequence, setSequence] = useState<(PuzzleActionId | null)[]>([]);
+  const [sequence, setSequence] = useState<PuzzleActionId[]>([]);
   const [result, setResult] = useState<PuzzleResult>("idle");
   const [failureId, setFailureId] = useState<string | null>(null);
   const [status, setStatus] = useState("Build the chain in the order a senior architect would ship it.");
   const [dragging, setDragging] = useState<PuzzleActionId | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
+  const [verifiedCount, setVerifiedCount] = useState(0);
   const failure = puzzleFailures.find(item => item.id === failureId);
-  const connectedCount = sequence.filter(Boolean).length;
+  const lockedPrefixLength = Math.min(verifiedCount, verifiedPrefixLength(sequence));
 
   const placeAction = (id: PuzzleActionId, targetIndex?: number) => {
-    setSequence(current => {
-      const next = Array.from({ length: correctPuzzleSequence.length }, (_, index) => current[index] ?? null);
-      const sourceIndex = next.indexOf(id);
-      const emptyIndex = next.findIndex(item => item === null);
-      if (sourceIndex === -1 && emptyIndex === -1) return next;
-
-      const destination = targetIndex === undefined
-        ? emptyIndex
-        : Math.max(0, Math.min(targetIndex, correctPuzzleSequence.length - 1));
-
-      if (sourceIndex !== -1) {
-        [next[sourceIndex], next[destination]] = [next[destination], next[sourceIndex]];
-      } else {
-        if (next[destination] !== null) next[emptyIndex] = next[destination];
-        next[destination] = id;
-      }
-      return next;
-    });
+    const sourceIndex = sequence.indexOf(id);
+    if (sourceIndex !== -1 && sourceIndex < lockedPrefixLength) return;
+    if (targetIndex !== undefined && targetIndex < lockedPrefixLength) return;
+    const next = sequence.filter(item => item !== id);
+    let destination = targetIndex === undefined ? next.length : Math.max(0, Math.min(targetIndex, next.length));
+    if (sourceIndex !== -1 && sourceIndex < destination) destination -= 1;
+    next.splice(destination, 0, id);
+    setSequence(next);
     setResult("idle");
     setFailureId(null);
-    setStatus("Keep going. Every link needs to earn its place.");
+    setHint(null);
+    setStatus("Step added. Ship to production when you are ready to verify the chain.");
   };
 
   const removeAction = (id: PuzzleActionId) => {
-    setSequence(current => current.map(item => item === id ? null : item));
+    if (sequence.slice(0, lockedPrefixLength).includes(id)) return;
+    setSequence(current => current.filter(item => item !== id));
     setResult("idle");
     setFailureId(null);
+    setHint(null);
     setStatus("Step removed. Rebuild the chain when ready.");
   };
 
   const checkSequence = () => {
-    const filledSequence = sequence.filter((id): id is PuzzleActionId => id !== null);
-    if (filledSequence.length !== correctPuzzleSequence.length) {
-      const remaining = correctPuzzleSequence.length - filledSequence.length;
-      setStatus(`The chain is incomplete · ${remaining} slot${remaining === 1 ? "" : "s"} left.`);
+    if (sequence.length === 0) {
+      setStatus("Add a production action before shipping.");
       return;
     }
-    if (filledSequence.every((id, index) => id === correctPuzzleSequence[index])) {
+    setVerifiedCount(current => Math.max(current, verifiedPrefixLength(sequence)));
+    if (sequence.length === correctPuzzleSequence.length && sequence.every((id, index) => id === correctPuzzleSequence[index])) {
       setResult("success");
       setFailureId(null);
       setStatus("VERIFIED · the storm arrived without turning into a goat.");
       return;
     }
-    const nextFailure = failureFor(filledSequence);
+    const nextFailure = failureFor(sequence);
     setFailureId(nextFailure.id);
     setResult("failure");
     setStatus(`FAILED · ${nextFailure.title.toLowerCase()}`);
@@ -588,13 +603,57 @@ function GoatMode() {
     setFailureId(null);
     setDragging(null);
     setDragOverIndex(null);
+    setHint(null);
+    setVerifiedCount(0);
     setStatus("Build the chain in the order a senior architect would ship it.");
+  };
+
+  const askForHint = () => {
+    const has = (id: PuzzleActionId) => sequence.includes(id);
+    const position = (id: PuzzleActionId) => sequence.indexOf(id);
+    const followsSafePath = sequence.length > 0 && sequence.every((id, index) => id === correctPuzzleSequence[index]);
+    let nextHint = "The pieces are on the table, but the spell has a small stumble in it. Watch the moment an intention becomes an action—and the moment the result earns its name.";
+
+    if (followsSafePath) {
+      const encouragements = [
+        "Nice beginning—the spell has found its shape. Keep the next move close to its purpose.",
+        "Good rhythm—the request now has something solid beneath it. Keep the circle intact.",
+        "The circle is holding. Choose an instrument that can be inspected after it moves.",
+        "The spell is becoming operational. Leave room for the world to answer before calling it real.",
+        "Almost there—the weather looks promising. Give the result one last sober look before it travels.",
+        "That rhythm holds. The chain is ready for its final test."
+      ];
+      nextHint = encouragements[Math.min(sequence.length - 1, encouragements.length - 1)];
+    } else if (sequence.some(id => id === "prompt-first" || id === "generate-first" || id === "ship-first")) {
+      nextHint = "One of the shiny shortcuts may be doing too much of the talking. Pretty magic is not the same as a safe spell.";
+    } else if (!has("contract")) {
+      nextHint = "Before the wand moves, give the spell a shape everyone can point at and agree on.";
+    } else if (has("ground") && position("ground") < position("contract")) {
+      nextHint = "The librarian arrived before the question was finished. Let the thing being asked take the stage first.";
+    } else if (!has("ground")) {
+      nextHint = "Every reliable spell has something solid beneath it. Look for the approved pages and context before the weather changes.";
+    } else if (!has("bound")) {
+      nextHint = "The destination is visible. Now mark the edge of the map so the spell knows where not to wander.";
+    } else if (has("typed") && position("typed") < position("bound")) {
+      nextHint = "The instrument is tuned, but the circle around it is not. Which should a careful wizard draw first?";
+    } else if (!has("typed")) {
+      nextHint = "Once the circle is drawn, choose an instrument that can be checked—not merely admired.";
+    } else if (!has("confirm")) {
+      nextHint = "The wand moved, but the room has not answered yet. Leave a beat for reality to reply.";
+    } else if (!has("evaluate")) {
+      nextHint = "The storm looks convincing from the window. A senior wizard still checks the same incantation twice.";
+    } else if (sequence.length === correctPuzzleSequence.length && sequence.every((id, index) => id === correctPuzzleSequence[index])) {
+      nextHint = "The spell has a steady rhythm now. Even the smallest final check should feel unsurprising.";
+    }
+
+    setHint(nextHint);
+    setStatus(followsSafePath ? "Andrei reviewed the current chain · the spell is holding together." : "Andrei reviewed the current chain.");
   };
 
   const dropAction = (event: React.DragEvent<HTMLDivElement>, targetIndex: number) => {
     event.preventDefault();
     const dropped = event.dataTransfer.getData("text/plain") as PuzzleActionId;
-    if (puzzleActions.some(item => item.id === dropped)) placeAction(dropped, targetIndex);
+    if (targetIndex >= lockedPrefixLength && puzzleActions.some(item => item.id === dropped)) placeAction(dropped, targetIndex);
     setDragging(null);
     setDragOverIndex(null);
   };
@@ -637,24 +696,26 @@ function GoatMode() {
 
     <div className="puzzle-board">
       <div className="puzzle-builder">
-        <div className="puzzle-builder-head"><div><span className="wizard-card-label"><span>01</span>Available actions</span><h3>Choose and connect the safe path.</h3><small className="puzzle-builder-hint">Drag a card to any slot, or click it to add.</small></div><span className="puzzle-count">{connectedCount}/{correctPuzzleSequence.length} connected</span></div>
+        <div className="puzzle-builder-head"><div><span className="wizard-card-label"><span>01</span>Available actions</span><h3>Choose and connect the safe path.</h3><small className="puzzle-builder-hint">Drag cards into the sequence, or click to add.</small></div></div>
         <div className="puzzle-action-grid" aria-label="Available production actions">
-          {puzzleActions.map(action => { const isPlaced = sequence.includes(action.id); const canAdd = !isPlaced && connectedCount < correctPuzzleSequence.length; return <button key={action.id} className={`puzzle-action ${isPlaced ? "is-placed" : ""} ${dragging === action.id ? "is-dragging" : ""}`} draggable={canAdd} onDragStart={event => { setDragging(action.id); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => canAdd && placeAction(action.id)} disabled={!canAdd}><span className="puzzle-action-handle" aria-hidden="true">⠿</span><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button>; })}
+          {puzzleActions.filter(action => !sequence.includes(action.id)).map(action => <button key={action.id} className={`puzzle-action ${dragging === action.id ? "is-dragging" : ""}`} draggable onDragStart={event => { setDragging(action.id); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => placeAction(action.id)}><PuzzleActionIcon id={action.id} /><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button>)}
         </div>
       </div>
 
-      <div className="puzzle-sequence-panel">
-        <div className="puzzle-builder-head"><div><span className="wizard-card-label"><span>02</span>Connected sequence</span><h3>Drop the steps here.</h3><small className="puzzle-builder-hint">Drag any connected card to reorder it.</small></div><button className="puzzle-reset" onClick={resetPuzzle}><RotateCcw size={14} />Reset</button></div>
+      <div className={`puzzle-sequence-panel ${lockedPrefixLength > 0 ? "has-verified" : ""} ${result === "success" ? "is-verified" : ""}`}>
+        <div className="puzzle-builder-head"><div><span className="wizard-card-label"><span>02</span>Connected sequence</span><h3>Drop the steps here.</h3><small className="puzzle-builder-hint">Drop onto a card to insert before it. Drop at the end to append.</small></div><button className="puzzle-reset" onClick={resetPuzzle}><RotateCcw size={14} />Reset</button></div>
         <div className="puzzle-sequence" aria-label="Connected production sequence">
-          {Array.from({ length: correctPuzzleSequence.length }, (_, index) => {
-            const id = sequence[index];
-            const action = puzzleActions.find(item => item.id === id);
-            return <div key={index} className={`puzzle-slot ${id ? "is-filled" : ""} ${dragOverIndex === index ? "is-target" : ""}`} onDragEnter={() => dragging && setDragOverIndex(index)} onDragOver={event => { event.preventDefault(); if (dragging) setDragOverIndex(index); }} onDrop={event => dropAction(event, index)}>
-              <span className="puzzle-slot-number">0{index + 1}</span>{action ? <button className="puzzle-placed" draggable onDragStart={event => { setDragging(action.id); setDragOverIndex(index); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => removeAction(action.id)} aria-label={`Drag to reorder or click to remove ${action.label} from slot ${index + 1}`}><span className="puzzle-placed-grip" aria-hidden="true">⠿</span><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button> : <span className="puzzle-slot-hint">Drop a step here</span>}
-            </div>;
-          })}
+          {sequence.length === 0 ? <div className={`puzzle-drop-zone ${dragOverIndex === 0 ? "is-target" : ""}`} onDragEnter={() => dragging && setDragOverIndex(0)} onDragOver={event => { event.preventDefault(); if (dragging) setDragOverIndex(0); }} onDrop={event => dropAction(event, 0)}>Drop any step here</div> : <>
+            {sequence.map((id, index) => {
+              const action = puzzleActions.find(item => item.id === id);
+              const locked = index < lockedPrefixLength;
+              return <div key={id} className={`puzzle-sequence-item ${locked ? "is-correct" : ""} ${dragOverIndex === index ? "is-target" : ""}`} onDragEnter={() => dragging && index >= lockedPrefixLength && setDragOverIndex(index)} onDragOver={event => { event.preventDefault(); if (dragging && index >= lockedPrefixLength) setDragOverIndex(index); }} onDrop={event => dropAction(event, index)}>{action && <button className="puzzle-placed" disabled={locked} draggable={!locked} onDragStart={event => { setDragging(action.id); setDragOverIndex(index); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => removeAction(action.id)} aria-label={`${locked ? "Verified and locked" : "Drag to reorder or click to remove"} ${action.label}`} title={locked ? "Verified step · locked" : "Drag to reorder or click to remove"}><PuzzleActionIcon id={action.id} locked={locked} /><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button>}</div>;
+            })}
+            {sequence.length < puzzleActions.length && <div className={`puzzle-drop-zone puzzle-drop-zone-end ${dragOverIndex === sequence.length ? "is-target" : ""}`} onDragEnter={() => dragging && setDragOverIndex(sequence.length)} onDragOver={event => { event.preventDefault(); if (dragging) setDragOverIndex(sequence.length); }} onDrop={event => dropAction(event, sequence.length)}>Drop another step here</div>}
+          </>}
         </div>
-        <div className="puzzle-controls"><p aria-live="polite"><span className={`puzzle-status-dot puzzle-status-dot-${result}`} />{status}</p><button className="puzzle-check" onClick={checkSequence} disabled={connectedCount !== correctPuzzleSequence.length}><Check size={16} />Check the sequence</button></div>
+        <div className="puzzle-controls"><p aria-live="polite"><span className={`puzzle-status-dot puzzle-status-dot-${result}`} />{status}</p><div className="puzzle-control-buttons"><button className="puzzle-hint-button" onClick={askForHint}><span className="puzzle-andrei-avatar" aria-hidden="true"><img src="/images/andrei-tekhtelev-avatar.png" alt="" /></span>Ask Andrei for a hint</button><button className="puzzle-check" onClick={checkSequence} disabled={sequence.length === 0}><Check size={16} />Ship to production</button></div></div>
+        {hint && <div className={`puzzle-hint-card ${lockedPrefixLength > 0 ? "is-encouraging" : ""}`} role="status"><div><span className="puzzle-andrei-avatar puzzle-andrei-avatar-card"><img src="/images/andrei-tekhtelev-avatar.png" alt="Andrei" /></span><strong>Andrei’s hint</strong></div><p>{hint}</p></div>}
       </div>
     </div>
 
@@ -662,10 +723,14 @@ function GoatMode() {
       <div className="puzzle-result-copy">
         <span className="wizard-card-label"><span>03</span>{result === "success" ? "Verified outcome" : result === "failure" ? "Intermediate output" : "Outcome checkpoint"}</span>
         <h3>{result === "success" ? "The storm arrived." : result === "failure" && failure ? failure.title : "The result is waiting on your architecture."}</h3>
-        <p>{result === "success" ? "The programmer is under an umbrella, the storm is beautiful and the contract survived the journey." : result === "failure" && failure ? failure.cause : "A senior architect does not ship a confident guess. Connect all six production steps, then check the sequence."}</p>
+        <p>{result === "success" ? "The programmer is under an umbrella, the storm is beautiful and the contract survived the journey." : result === "failure" && failure ? failure.cause : "A senior AI wizard does not ship a confident guess. Connect the production steps, then ship when ready."}</p>
         {result === "success" && <div className="wizard-final-checks"><span><Check size={15} />Intent preserved</span><span><Check size={15} />State confirmed</span></div>}
+        <div className="puzzle-architect-contrast" aria-label="What separates a good AI architect from a bad AI architect">
+          <div className="puzzle-architect-side puzzle-architect-good"><strong><ShieldCheck size={14} />Good AI architect</strong><p>Names the outcome, grounds decisions, sets boundaries and verifies reality.</p></div>
+          <div className="puzzle-architect-side puzzle-architect-bad"><strong><WandSparkles size={14} />Bad AI architect</strong><p>Trusts the prompt, ships the first output and skips the final check.</p></div>
+        </div>
       </div>
-      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm.png" alt="A programmer standing under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result !== "failure" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span>}</div>
+      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="A programmer wizard in an AI-logo mantle standing fully visible under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result !== "failure" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span>}</div>
     </div>
     <p className="goat-caption">A wrong result is funny in a cartoon. In a product, the sequence is the spell that keeps the goat from shipping.</p>
   </div>;
