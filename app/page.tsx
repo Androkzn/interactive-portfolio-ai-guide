@@ -602,12 +602,12 @@ function GoatMode() {
   return <div className={`goat-mode wizard-mode puzzle-mode puzzle-mode-${result}`}>
     <div className="goat-mode-heading">
       <div>
-        <div className="section-eyebrow"><WandSparkles size={15} />Production puzzle / senior architect required</div>
+        <div className="section-eyebrow"><WandSparkles size={15} />Production puzzle / senior AI wizard required</div>
         <h2>Connect the spell.<br /><em>Protect the result.</em></h2>
       </div>
       <div className="goat-mode-intro">
         <p>The goal is simple: make a storm. Choose the real production steps, place them in order and earn the verified outcome. The prompt is only the spell.</p>
-        <div className="wizard-identity"><span className="wizard-avatar wizard-avatar-small"><img src="/images/wizard-programmer-avatar.png" alt="Wizard programmer avatar" /></span><span><strong>AI spellcaster</strong><small>Good at intent. Needs a reviewer.</small></span></div>
+        <div className="wizard-identity"><span className="wizard-avatar wizard-avatar-small"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span><span><strong>AI spellcaster</strong><small>Good at intent. Needs a reviewer.</small></span></div>
       </div>
     </div>
 
@@ -617,13 +617,13 @@ function GoatMode() {
         <div className="puzzle-ideal-visuals">
           <div className="puzzle-ideal-scene puzzle-caster-scene">
             <span className="puzzle-scene-label">01 / Spell cast</span>
-            <div className="puzzle-caster-art"><img src="/images/wizard-programmer-avatar.png" alt="A programmer wizard casting a spell with a wand" /></div>
+            <div className="puzzle-caster-art"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="A programmer wizard casting a spell with AI lab emblems on the robe" /></div>
             <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><small>Spell spoken</small></div>
           </div>
           <div className="puzzle-ideal-arrow" aria-hidden="true"><ArrowRight size={19} /><small>instant</small></div>
           <div className="puzzle-ideal-scene puzzle-result-scene">
             <span className="puzzle-scene-label">02 / Desired result</span>
-            <div className="puzzle-ideal-art"><img src="/images/programmer-under-umbrella-storm-banner.png" alt="The desired result: a programmer under an umbrella in a storm" /></div>
+            <div className="puzzle-ideal-art"><img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="The desired result: a programmer wizard with AI-emblem robes under an umbrella in a storm" /></div>
           </div>
         </div>
       </div>
@@ -665,7 +665,7 @@ function GoatMode() {
         <p>{result === "success" ? "The programmer is under an umbrella, the storm is beautiful and the contract survived the journey." : result === "failure" && failure ? failure.cause : "A senior architect does not ship a confident guess. Connect all six production steps, then check the sequence."}</p>
         {result === "success" && <div className="wizard-final-checks"><span><Check size={15} />Intent preserved</span><span><Check size={15} />State confirmed</span></div>}
       </div>
-      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm.png" alt="A programmer standing under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result !== "failure" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/wizard-programmer-avatar.png" alt="Wizard programmer avatar" /></span>}</div>
+      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm.png" alt="A programmer standing under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result !== "failure" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span>}</div>
     </div>
     <p className="goat-caption">A wrong result is funny in a cartoon. In a product, the sequence is the spell that keeps the goat from shipping.</p>
   </div>;
@@ -676,7 +676,7 @@ function Architecture() {
   const [scenarioId, setScenarioId] = useState<GuardrailScenarioId>("normal");
   const [activePhase, setActivePhase] = useState(-1);
   const [runId, setRunId] = useState(0);
-  const [view, setView] = useState<ArchitectureView>("contract");
+  const [view, setView] = useState<ArchitectureView>("goat");
   const scenario = guardrailScenarios.find(item => item.id === scenarioId) ?? guardrailScenarios[0];
   const isRunning = activePhase >= 0 && activePhase < steps.length;
   const isComplete = activePhase >= steps.length;
