@@ -1,13 +1,15 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, Mail, MessageCircle, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
 import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
 const contactUrl = "https://www.linkedin.com/in/andreitekhtelev/";
+const emailUrl = "mailto:a.tekhtelev@gmail.com";
+const phoneUrl = "tel:+17788834228";
 const githubUrl = "https://github.com/Androkzn";
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
@@ -675,6 +677,15 @@ const puzzleActions: { id: PuzzleActionId; label: string; detail: string; code: 
   { id: "ship-first", label: "Ship if it looks right", detail: "Skip the final check.", code: "looks-good" },
 ];
 
+function shufflePuzzleActions(actions: typeof puzzleActions) {
+  const shuffled = [...actions];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 const correctPuzzleSequence: PuzzleActionId[] = ["contract", "ground", "bound", "typed", "confirm", "evaluate"];
 const puzzleFailures = [
   { id: "striped-goat", title: "Wrong species. Perfect confidence.", image: "/images/pink-goat-blue-stripe.png", cause: "A prompt was mistaken for a product contract. The worst possible goat shipped." },
@@ -714,6 +725,7 @@ function PuzzleActionIcon({ id, locked = false }: { id: PuzzleActionId; locked?:
 
 function GoatMode() {
   const [sequence, setSequence] = useState<PuzzleActionId[]>([]);
+  const [availableActions, setAvailableActions] = useState(puzzleActions);
   const [result, setResult] = useState<PuzzleResult>("idle");
   const [failureId, setFailureId] = useState<string | null>(null);
   const [status, setStatus] = useState("Build the chain in the order a senior architect would ship it.");
@@ -725,10 +737,20 @@ function GoatMode() {
   const stormVideo = useRef<HTMLVideoElement | null>(null);
   const failure = puzzleFailures.find(item => item.id === failureId);
   const lockedPrefixLength = Math.min(verifiedCount, verifiedPrefixLength(sequence));
+  const outcomeProgress = result === "success" ? correctPuzzleSequence.length : result === "failure" ? Math.min(verifiedPrefixLength(sequence), correctPuzzleSequence.length - 1) : 0;
+  const outcomeGoat = result === "success"
+    ? { id: "success", image: "/images/goat-thumbs-up-avatar.png", alt: "Happy white goat giving a thumbs-up" }
+    : failure
+      ? { id: failure.id, image: failure.image, alt: failure.title }
+      : null;
 
   useEffect(() => () => {
     window.speechSynthesis?.cancel();
     stormVideo.current?.pause();
+  }, []);
+
+  useEffect(() => {
+    setAvailableActions(shufflePuzzleActions(puzzleActions));
   }, []);
 
   const playSpell = () => {
@@ -799,6 +821,7 @@ function GoatMode() {
 
   const resetPuzzle = () => {
     setSequence([]);
+    setAvailableActions(shufflePuzzleActions(puzzleActions));
     setResult("idle");
     setFailureId(null);
     setDragging(null);
@@ -887,12 +910,12 @@ function GoatMode() {
         </div>
       </div>
       <div className="puzzle-unfortunately">
-        <img className="puzzle-unfortunately-wizard" src="/images/wizard-programmer-sad.png" alt="A sad programmer wizard after a spell went wrong" />
         <div className="puzzle-unfortunately-copy">
           <span className="wizard-card-label">Unfortunately...</span>
           <h3>Prompts do not ship outcomes.</h3>
           <p>In production, the first interpretation can drift into an unexpected result. Connect the senior-architect steps below to protect the desired result.</p>
         </div>
+        <img className="puzzle-unfortunately-wizard" src="/images/wizard-programmer-sad.png" alt="A sad programmer wizard after a spell went wrong" />
       </div>
     </div>
 
@@ -900,7 +923,7 @@ function GoatMode() {
       <div className="puzzle-builder">
         <div className="puzzle-builder-head"><div><span className="wizard-card-label"><span>01</span>Available actions</span><h3>Choose and connect the safe path.</h3><small className="puzzle-builder-hint">Drag cards into the sequence, or click to add.</small></div></div>
         <div className="puzzle-action-grid" aria-label="Available production actions">
-          {puzzleActions.filter(action => !sequence.includes(action.id)).map(action => <button key={action.id} className={`puzzle-action ${dragging === action.id ? "is-dragging" : ""}`} draggable onDragStart={event => { setDragging(action.id); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => placeAction(action.id)}><PuzzleActionIcon id={action.id} /><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button>)}
+          {availableActions.filter(action => !sequence.includes(action.id)).map(action => <button key={action.id} className={`puzzle-action ${dragging === action.id ? "is-dragging" : ""}`} draggable onDragStart={event => { setDragging(action.id); event.dataTransfer.setData("text/plain", action.id); }} onDragEnd={() => { setDragging(null); setDragOverIndex(null); }} onClick={() => placeAction(action.id)}><PuzzleActionIcon id={action.id} /><span><strong>{action.label}</strong><small>{action.detail}</small></span><code>{action.code}</code></button>)}
         </div>
       </div>
 
@@ -917,7 +940,10 @@ function GoatMode() {
           </>}
         </div>
         <div className="puzzle-controls"><p aria-live="polite"><span className={`puzzle-status-dot puzzle-status-dot-${result}`} />{status}</p><div className="puzzle-control-buttons"><button className="puzzle-hint-button" onClick={askForHint}><span className="puzzle-andrei-avatar" aria-hidden="true"><img src="/images/andrei-tekhtelev-avatar.png" alt="" /></span>Ask Andrei for a hint</button><button className="puzzle-check" onClick={checkSequence} disabled={sequence.length === 0}><Check size={16} />Ship to production</button></div></div>
-        {hint && <div className={`puzzle-hint-card ${lockedPrefixLength > 0 ? "is-encouraging" : ""}`} role="status"><div><span className="puzzle-andrei-avatar puzzle-andrei-avatar-card"><img src="/images/andrei-tekhtelev-avatar.png" alt="Andrei" /></span><strong>Andrei’s hint</strong></div><p>{hint}</p></div>}
+        {hint && <div className={`puzzle-hint-card ${lockedPrefixLength > 0 ? "is-encouraging" : ""}`} role="status">
+          <span className="puzzle-andrei-avatar puzzle-andrei-avatar-card"><img src="/images/andrei-tekhtelev-avatar.png" alt="Andrei" /></span>
+          <div className="puzzle-hint-bubble"><strong>Andrei’s hint</strong><p>{hint}</p></div>
+        </div>}
       </div>
     </div>
 
@@ -932,9 +958,16 @@ function GoatMode() {
           <div className="puzzle-architect-side puzzle-architect-bad"><strong><WandSparkles size={14} />Bad AI architect</strong><p>Trusts the prompt, ships the first output and skips the final check.</p></div>
         </div>}
       </div>
-      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="A programmer wizard in an AI-logo mantle standing fully visible under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result === "success" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/goat-thumbs-up-avatar.png" alt="Happy white goat giving a thumbs-up" /></span>}</div>
+      <div className={`puzzle-result-art puzzle-result-art-progress-${outcomeProgress} ${outcomeGoat ? `puzzle-result-art-goat-${outcomeGoat.id}` : "puzzle-result-art-idle"}`}>
+        <div className="puzzle-sky" aria-hidden="true"><img className="puzzle-sky-layer puzzle-sky-layer-clear" src="/images/puzzle-sky-clear.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-cloudy" src="/images/puzzle-sky-cloudy.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-storm" src="/images/puzzle-sky-storm.png" alt="" /></div>
+        <div className="puzzle-result-stage">
+          <div className="puzzle-result-surface" aria-hidden="true" />
+          <img className="puzzle-result-wizard" src="/images/wizard-programmer-bewildered-clean.png" alt="Bewildered AI wizard looking at the goat with both hands raised" />
+          {outcomeGoat ? <img className={`puzzle-result-goat puzzle-result-goat-${outcomeGoat.id}`} src={outcomeGoat.image} alt={outcomeGoat.alt} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}
+        </div>
+      </div>
     </div>
-    <p className="goat-caption">A wrong result is funny in a cartoon. In a product, the sequence is the spell that keeps the goat from shipping.</p>
+    <p className="goat-caption">In production, a verified sequence protects the original intent, confirms the outcome and keeps the wrong result from shipping.</p>
   </div>;
 }
 
@@ -1129,13 +1162,13 @@ export default function Home() {
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
     <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER <b>×</b> PRODUCT OWNER</span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><Linkedin size={21} strokeWidth={2.1} aria-hidden="true" /><span>LinkedIn</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Github size={21} strokeWidth={2.1} aria-hidden="true" /><span>GitHub</span></a></nav></header>
-    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow">Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p><div className="hero-actions"><button className="hero-primary" onClick={() => explore()}><span>Start with a live product</span><ArrowRight size={18} /></button><a className="hero-secondary" href="#guide"><span>Ask the guide what changed</span><ArrowUpRight size={17} /></a></div><p className="hero-note">Click through a real workflow, then inspect the decisions behind it.</p></div><div className="hero-stats"><span className="section-eyebrow">Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><button onClick={() => { setDevice("ipad"); explore(); }}><span className="stat-symbol" aria-hidden="true"><Code2 size={26} /></span><span><strong>Source platforms</strong><small>See the thinking adapt: iPhone · iPad · Android · Web</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a></div></section>
+    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p></div><div className="hero-stats"><span className="section-eyebrow">Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a></div></section>
     <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick an application. <em>Make it yours.</em></h2></div></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
       <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} /></div>
     </section>
     <Architecture />
-    <section className="case-study"><div><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2></div><div className="case-grid"><article><Code2 size={22} /><h3>Explore the work</h3><p>Try the live products and see how each workflow turns a real question into a useful next step.</p></article><article><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? <a href={contactUrl} target="_blank" rel="noreferrer">Message me on LinkedIn</a>, email me or give me a call.</p></article></div></section>
+    <section className="case-study" id="contact"><div className="case-study-heading"><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2><p>Explore the work, check the boundary, then choose how to continue.</p></div><div className="case-study-content"><div className="case-grid"><article><span className="case-index">01</span><Code2 size={22} /><h3>Explore the work</h3><p>Try the live products and see how each workflow turns a real question into a useful next step.</p></article><article><span className="case-index">02</span><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><span className="case-index">03</span><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Pick the channel that works for you.</p></article></div><nav className="contact-actions" aria-label="Contact Andrei"><a className="contact-action contact-action-profile" href={contactUrl} target="_blank" rel="noreferrer"><span className="contact-action-icon"><Linkedin size={19} /></span><span className="contact-action-copy"><small>PROFILE</small><strong>LinkedIn</strong></span><ArrowUpRight size={17} /></a><a className="contact-action contact-action-email" href={emailUrl}><span className="contact-action-icon"><Mail size={19} /></span><span className="contact-action-copy"><small>EMAIL</small><strong>a.tekhtelev@gmail.com</strong></span><ArrowUpRight size={17} /></a><a className="contact-action contact-action-phone" href={phoneUrl}><span className="contact-action-icon"><Phone size={19} /></span><span className="contact-action-copy"><small>PHONE</small><strong>+1 778 883 4228</strong></span><ArrowUpRight size={17} /></a></nav></div></section>
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
   </main>;
 }
