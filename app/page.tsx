@@ -730,7 +730,7 @@ function GoatMode() {
           <div className="puzzle-architect-side puzzle-architect-bad"><strong><WandSparkles size={14} />Bad AI architect</strong><p>Trusts the prompt, ships the first output and skips the final check.</p></div>
         </div>
       </div>
-      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="A programmer wizard in an AI-logo mantle standing fully visible under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result !== "failure" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span>}</div>
+      <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="A programmer wizard in an AI-logo mantle standing fully visible under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result === "success" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/goat-thumbs-up-avatar.png" alt="Happy white goat giving a thumbs-up" /></span>}</div>
     </div>
     <p className="goat-caption">A wrong result is funny in a cartoon. In a product, the sequence is the spell that keeps the goat from shipping.</p>
   </div>;
