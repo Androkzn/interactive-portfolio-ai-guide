@@ -522,7 +522,7 @@ button > svg,a > svg { flex-shrink:0; }
 @keyframes goat-drift-in { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:none; } }
 @keyframes goat-wiggle { 0% { transform:rotate(0) scale(.94); } 45% { transform:rotate(-3deg) scale(1.01); } 70% { transform:rotate(2deg); } 100% { transform:none; } }
 @keyframes puzzle-check-pulse { 0%,100% { box-shadow:0 7px 14px #5142d92b,0 0 0 0 #5142d933; } 50% { box-shadow:0 9px 18px #5142d940,0 0 0 8px #5142d912; } }
-@keyframes puzzle-magic-appear { 0% { opacity:0; transform:scale(.58) rotate(-8deg); } 18% { opacity:.96; } 48% { opacity:1; transform:scale(1.06) rotate(3deg); } 76% { opacity:.94; transform:scale(1) rotate(0); } 100% { opacity:0; transform:scale(1.02) rotate(1deg); } }
+@keyframes puzzle-magic-appear { 0% { opacity:0; transform:scale(.72) rotate(-5deg); } 18% { opacity:.9; } 46% { opacity:1; transform:scale(1) rotate(2deg); } 76% { opacity:.92; transform:scale(.98) rotate(0); } 100% { opacity:0; transform:scale(.96) rotate(1deg); } }
 .goat-story .goat-intent-panel { animation:goat-panel-in .48s cubic-bezier(.22,1,.36,1) both; }
 .goat-story .goat-drift { animation:goat-drift-in .45s .17s ease-out both; }
 .goat-story .goat-result-panel { animation:goat-result-in .55s .3s cubic-bezier(.22,1,.36,1) both; }
@@ -643,7 +643,10 @@ button > svg,a > svg { flex-shrink:0; }
 
 /* Puzzle mode: production actions are draggable, but also clickable for touch and keyboard users. */
 .puzzle-mode .goat-mode-heading { margin-bottom:24px; }
-.puzzle-mode .goat-mode-intro { max-width:460px; }
+.puzzle-mode .goat-mode-intro { display:grid; grid-template-columns:minmax(180px,.82fr) minmax(0,1.18fr); align-items:center; gap:24px; max-width:640px; }
+.puzzle-mode .goat-mode-intro p { margin-bottom:0; }
+.puzzle-mode .wizard-identity { min-width:0; justify-self:start; }
+.puzzle-mode .wizard-avatar-small { width:72px; height:72px; flex-basis:72px; }
 .puzzle-reality-banner { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr); gap:0; margin-bottom:18px; overflow:hidden; border:1px solid #d2cec5; border-radius:20px; background:#fbfaf6; box-shadow:0 13px 28px #252a1710, inset 0 1px #fff; }
 .puzzle-ideal-world { padding:18px; border-right:1px solid #dad5ca; background:linear-gradient(135deg,#f8f6ff,#fbfaf6 68%); }
 .puzzle-ideal-visuals { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:stretch; gap:clamp(9px,2vw,24px); margin-top:13px; }
@@ -654,7 +657,7 @@ button > svg,a > svg { flex-shrink:0; }
 .puzzle-caster-scene > .puzzle-scene-label { grid-column:1 / -1; }
 .puzzle-caster-art { position:relative; grid-column:1; grid-row:2; display:grid; place-items:center; width:min(100%,240px); aspect-ratio:1; height:auto; margin:8px auto 0; overflow:hidden; border-radius:9px; background:transparent; }
 .puzzle-caster-art img { display:block; width:100%; height:100%; object-fit:contain; }
-.puzzle-caster-art .puzzle-magic-effect { position:absolute; z-index:2; top:-2%; left:0; width:36%; height:36%; object-fit:contain; opacity:0; pointer-events:none; transform-origin:72% 78%; filter:drop-shadow(0 0 8px #ffd45e99); }
+.puzzle-caster-art .puzzle-magic-effect { position:absolute; z-index:2; top:2%; left:0; width:28%; height:28%; object-fit:contain; opacity:0; pointer-events:none; transform-origin:72% 78%; filter:drop-shadow(0 0 8px #ffd45e99); }
 .puzzle-caster-art.is-casting .puzzle-magic-effect { animation:puzzle-magic-appear 1s cubic-bezier(.22,.8,.32,1) both; }
 .puzzle-spell-bubble { grid-column:2; grid-row:2; display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:7px; min-width:112px; height:100%; margin-top:8px; }
 .puzzle-spell-bubble code { min-width:0; padding:6px 7px; border:1px solid #c9c0f1; border-radius:6px; background:#fff; color:#4d3ebb; font:700 10px/1.2 var(--font-code); white-space:nowrap; }
@@ -770,6 +773,8 @@ button > svg,a > svg { flex-shrink:0; }
 }
 @media (max-width:560px) {
   .puzzle-reality-banner { grid-template-columns:1fr; }
+  .puzzle-mode .goat-mode-intro { display:block; }
+  .puzzle-mode .goat-mode-intro p { margin-bottom:18px; }
   .puzzle-ideal-visuals { grid-template-columns:1fr; gap:10px; }
   .puzzle-caster-scene { display:block; }
   .puzzle-caster-art { width:min(100%,230px); margin:8px auto 0; }

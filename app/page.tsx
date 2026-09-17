@@ -696,8 +696,8 @@ function GoatMode() {
         <h2>Connect the spell.<br /><em>Protect the result.</em></h2>
       </div>
       <div className="goat-mode-intro">
-        <p>The goal is simple: make a storm. Choose the real production steps, place them in order and earn the verified outcome. The prompt is only the spell.</p>
         <div className="wizard-identity"><span className="wizard-avatar wizard-avatar-small"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span><span><strong>AI spellcaster</strong><small>Good at intent. Needs a reviewer.</small></span></div>
+        <p>The goal is simple: make a storm. Choose the real production steps, place them in order and earn the verified outcome. The prompt is only the spell.</p>
       </div>
     </div>
 
