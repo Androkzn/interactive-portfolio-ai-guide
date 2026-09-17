@@ -7,7 +7,7 @@ await Promise.all([
   "pixel-7-pro-obsidian.png",
 ].map((asset) => access(new URL(`../out/images/device-frames/${asset}`, import.meta.url))));
 const html = await readFile(new URL("../out/index.html", import.meta.url), "utf8");
-const requiredMarkers = ["Work that holds", "House of Commons Citizen Companion", "Symply Budget", "Symply House", "Agentic architecture", "Ground", "Evaluate", "App theme", "iphone-16-pro-black-titanium.png", "andrei-talking-lips-web.webm", "andrei-talking-lips-web-60fps.mp4", "https://symply-house-web.pages.dev/?portfolioDemo=1", "Interactive design walkthrough"];
+const requiredMarkers = ["Work that holds", "House of Commons Citizen Companion", "Symply Budget", "Symply House", "Build a 24/7 plumbing assistant", "duplicate invoices", "Architecture walkthrough", "?", "Run the review to reveal the approach", "Assign to Andrei", "Assign to another engineer", "manager-assignment-avatar.png", "App theme", "iphone-16-pro-black-titanium.png", "andrei-talking-lips-web.webm", "andrei-talking-lips-web-60fps.mp4", "https://symply-house-web.pages.dev/?portfolioDemo=1"];
 const missing = requiredMarkers.filter((marker) => !html.includes(marker));
 if (missing.length) {
   console.error(JSON.stringify({ ok: false, missing }, null, 2));

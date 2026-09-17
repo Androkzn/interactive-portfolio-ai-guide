@@ -88,7 +88,7 @@ export const projects: Project[] = [
     accent: "lime",
     originalPlatforms: ["iPhone", "iPad", "Android", "Web"],
     runtimeLabel: "Connected Expo Web build · authenticated guest account",
-    webPreviewUrl: "https://budget-v2.symply-budget-web.pages.dev/?portfolioDemo=1",
+    webPreviewUrl: "https://symply-budget-web.pages.dev/?portfolioDemo=1",
     status: "source verified",
     sourceRepository: "https://github.com/Androkzn/symply-budget",
     scenario: { title: "Review a household budget", description: "Open the live budgeting flow from context to a safe, inspectable decision.", action: "Start budget flow" },
