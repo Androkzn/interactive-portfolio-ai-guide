@@ -707,7 +707,7 @@ function GoatMode() {
         <div className="puzzle-ideal-visuals">
           <div className="puzzle-ideal-scene puzzle-caster-scene">
             <span className="puzzle-scene-label">01 / Spell cast</span>
-            <div className="puzzle-caster-art"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="A programmer wizard casting a spell with AI lab emblems on the robe" /></div>
+            <div className={`puzzle-caster-art ${spellCast ? "is-casting" : ""}`}><img src="/images/wizard-programmer-ai-logos-avatar-calm.png" alt="A programmer wizard holding a wand with AI lab emblems on the robe" /><img className="puzzle-magic-effect" src="/images/wizard-magic-effect.png" alt="" aria-hidden="true" /></div>
             <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><button type="button" className={`puzzle-sound-button ${spellCast ? "is-playing" : ""}`} onClick={playSpell} aria-label="Speak the spell and play the storm" aria-keyshortcuts="Enter"><CornerDownLeft size={14} />Speak the spell</button></div>
           </div>
           <div className="puzzle-ideal-arrow" aria-hidden="true"><ArrowRight size={19} /><small>instant</small></div>
@@ -718,10 +718,12 @@ function GoatMode() {
         </div>
       </div>
       <div className="puzzle-unfortunately">
-        <span className="wizard-card-label"><span>!</span>Unfortunately...</span>
-        <h3>Prompts do not ship outcomes.</h3>
-        <p>In production, the first interpretation can drift into a goat. Connect the senior-architect steps below to protect the desired result.</p>
-        <span className="puzzle-reality-note"><ShieldCheck size={15} />Contract, evidence, boundaries and verification.</span>
+        <img className="puzzle-unfortunately-wizard" src="/images/wizard-programmer-sad.png" alt="A sad programmer wizard after a spell went wrong" />
+        <div className="puzzle-unfortunately-copy">
+          <span className="wizard-card-label">Unfortunately...</span>
+          <h3>Prompts do not ship outcomes.</h3>
+          <p>In production, the first interpretation can drift into an unexpected result. Connect the senior-architect steps below to protect the desired result.</p>
+        </div>
       </div>
     </div>
 
