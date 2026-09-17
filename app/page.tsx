@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, AudioLines, BatteryFull, Bot, Braces, Check, ClipboardCheck, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, AudioLines, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
 import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
@@ -708,8 +708,7 @@ function GoatMode() {
           <div className="puzzle-ideal-scene puzzle-caster-scene">
             <span className="puzzle-scene-label">01 / Spell cast</span>
             <div className="puzzle-caster-art"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="A programmer wizard casting a spell with AI lab emblems on the robe" /></div>
-            <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><small>Spell spoken</small></div>
-            <div className="puzzle-sound-controls" aria-label="Spell sound controls"><button type="button" className={`puzzle-sound-button ${spellCast ? "is-playing" : ""}`} onClick={playSpell} aria-label="Speak the spell and play the storm"><AudioLines size={14} />Speak the spell</button></div>
+            <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><button type="button" className={`puzzle-sound-button ${spellCast ? "is-playing" : ""}`} onClick={playSpell} aria-label="Speak the spell and play the storm"><AudioLines size={14} />Speak the spell</button></div>
           </div>
           <div className="puzzle-ideal-arrow" aria-hidden="true"><ArrowRight size={19} /><small>instant</small></div>
           <div className="puzzle-ideal-scene puzzle-result-scene">
