@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, AudioLines, BatteryFull, Bot, Braces, Check, ClipboardCheck, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, MessageCircle, MonitorCog, Moon, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
 import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
@@ -552,8 +552,39 @@ function GoatMode() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [verifiedCount, setVerifiedCount] = useState(0);
+  const [spellCast, setSpellCast] = useState(false);
+  const stormVideo = useRef<HTMLVideoElement | null>(null);
   const failure = puzzleFailures.find(item => item.id === failureId);
   const lockedPrefixLength = Math.min(verifiedCount, verifiedPrefixLength(sequence));
+
+  useEffect(() => () => {
+    window.speechSynthesis?.cancel();
+    stormVideo.current?.pause();
+  }, []);
+
+  const playSpell = () => {
+    setSpellCast(false);
+    window.requestAnimationFrame(() => setSpellCast(true));
+    const video = stormVideo.current;
+    if (video) {
+      video.currentTime = 0;
+      void video.play().catch(() => setSpellCast(false));
+    }
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance("Make a storm.");
+    const voice = selectBestMaleVoice(window.speechSynthesis.getVoices());
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-US";
+    }
+    utterance.rate = 0.78;
+    utterance.pitch = 0.72;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  };
 
   const placeAction = (id: PuzzleActionId, targetIndex?: number) => {
     const sourceIndex = sequence.indexOf(id);
@@ -678,11 +709,12 @@ function GoatMode() {
             <span className="puzzle-scene-label">01 / Spell cast</span>
             <div className="puzzle-caster-art"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="A programmer wizard casting a spell with AI lab emblems on the robe" /></div>
             <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><small>Spell spoken</small></div>
+            <div className="puzzle-sound-controls" aria-label="Spell sound controls"><button type="button" className={`puzzle-sound-button ${spellCast ? "is-playing" : ""}`} onClick={playSpell} aria-label="Speak the spell and play the storm"><AudioLines size={14} />Speak the spell</button></div>
           </div>
           <div className="puzzle-ideal-arrow" aria-hidden="true"><ArrowRight size={19} /><small>instant</small></div>
           <div className="puzzle-ideal-scene puzzle-result-scene">
             <span className="puzzle-scene-label">02 / Desired result</span>
-            <div className="puzzle-ideal-art"><img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="The desired result: a programmer wizard with AI-emblem robes under an umbrella in a storm" /></div>
+            <div className={`puzzle-ideal-art ${spellCast ? "is-animating" : ""}`}><video ref={stormVideo} src="/video/storm-spell.mp4" poster="/images/programmer-under-umbrella-storm-banner-ai-logos.png" playsInline preload="metadata" onEnded={() => setSpellCast(false)} onError={() => setSpellCast(false)} aria-label="Animated storm with rain, lightning and thunder" /></div>
           </div>
         </div>
       </div>
@@ -725,10 +757,10 @@ function GoatMode() {
         <h3>{result === "success" ? "The storm arrived." : result === "failure" && failure ? failure.title : "The result is waiting on your architecture."}</h3>
         <p>{result === "success" ? "The programmer is under an umbrella, the storm is beautiful and the contract survived the journey." : result === "failure" && failure ? failure.cause : "A senior AI wizard does not ship a confident guess. Connect the production steps, then ship when ready."}</p>
         {result === "success" && <div className="wizard-final-checks"><span><Check size={15} />Intent preserved</span><span><Check size={15} />State confirmed</span></div>}
-        <div className="puzzle-architect-contrast" aria-label="What separates a good AI architect from a bad AI architect">
+        {result === "success" && <div className="puzzle-architect-contrast" aria-label="What separates a good AI architect from a bad AI architect">
           <div className="puzzle-architect-side puzzle-architect-good"><strong><ShieldCheck size={14} />Good AI architect</strong><p>Names the outcome, grounds decisions, sets boundaries and verifies reality.</p></div>
           <div className="puzzle-architect-side puzzle-architect-bad"><strong><WandSparkles size={14} />Bad AI architect</strong><p>Trusts the prompt, ships the first output and skips the final check.</p></div>
-        </div>
+        </div>}
       </div>
       <div className="puzzle-result-art">{result === "success" ? <img src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="A programmer wizard in an AI-logo mantle standing fully visible under an umbrella in a beautiful thunderstorm" /> : result === "failure" && failure ? <img src={failure.image} alt={failure.title} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}{result === "success" && <span className="wizard-final-avatar wizard-avatar"><img src="/images/goat-thumbs-up-avatar.png" alt="Happy white goat giving a thumbs-up" /></span>}</div>
     </div>
