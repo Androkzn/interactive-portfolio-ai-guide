@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
@@ -729,15 +730,16 @@ const scenarioImageSources: Record<GuardrailScenarioId, string> = {
 };
 
 const randomToolSymbols = [
-  { id: "gpt", label: "GPT", icon: Sparkles, className: "random-tool-gpt" },
-  { id: "claude", label: "Claude", icon: Bot, className: "random-tool-claude" },
-  { id: "gemini", label: "Gemini", icon: WandSparkles, className: "random-tool-gemini" },
-  { id: "copilot", label: "Copilot", icon: Braces, className: "random-tool-copilot" },
-  { id: "cursor", label: "Cursor", icon: Code2, className: "random-tool-cursor" },
-  { id: "perplexity", label: "Search", icon: DatabaseZap, className: "random-tool-perplexity" },
+  { id: "gpt", label: "OpenAI", logo: "/images/ai-logos/openai.svg", className: "random-tool-gpt" },
+  { id: "claude", label: "Claude", logo: "/images/ai-logos/anthropic.svg", className: "random-tool-claude" },
+  { id: "gemini", label: "Gemini", logo: "/images/ai-logos/google-gemini.svg", className: "random-tool-gemini" },
+  { id: "copilot", label: "Copilot", logo: "/images/ai-logos/github-copilot.svg", className: "random-tool-copilot" },
+  { id: "cursor", label: "Cursor", logo: "/images/ai-logos/cursor.svg", className: "random-tool-cursor" },
+  { id: "perplexity", label: "Perplexity", logo: "/images/ai-logos/perplexity.svg", className: "random-tool-perplexity" },
 ] as const;
 type RandomToolId = typeof randomToolSymbols[number]["id"];
 type RandomAssignmentSelection = { scenarioId: GuardrailScenarioId; owner: ReviewOwner; tools: RandomToolId[] };
+type RandomReelSpin = { duration: number; delay: number; distance: number };
 
 function randomToolById(id: RandomToolId) {
   return randomToolSymbols.find(tool => tool.id === id) ?? randomToolSymbols[0];
@@ -1216,40 +1218,41 @@ function ReviewOutcomeVisual({ scenarioId, variant }: { scenarioId: GuardrailSce
   </div>;
 }
 
-function RandomAssignmentMachine({ isSpinning, result, onPull }: { isSpinning: boolean; result: RandomAssignmentSelection | null; onPull: () => void }) {
+function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, onPull }: { isSpinning: boolean; result: RandomAssignmentSelection | null; spinPlan: RandomReelSpin[]; hasPulled: boolean; onPull: () => void }) {
   const resultScenario = result ? guardrailScenarios.find(item => item.id === result.scenarioId) : null;
   const ownerLabel = result?.owner === "andrei" ? "Andrei" : "AI-reliant engineer";
   return <div className={`random-assignment ${isSpinning ? "is-randomizing" : ""}`}>
     <div className="random-assignment-head">
-      <span className="random-assignment-or"><Sparkles size={14} aria-hidden="true" />OR</span>
-      <div>
-        <strong>Random task + assignee</strong>
-        <p>Let the machine choose both. Pull the lever and watch the AI tools spin.</p>
-      </div>
+      <span className="section-eyebrow"><Sparkles size={14} aria-hidden="true" />Random task + assignee</span>
+      <p>Let the machine choose both. Pull the lever and watch the AI tools spin.</p>
     </div>
-    <div className="random-machine-layout">
+    <div className="random-machine-stage">
       <div className="random-machine-visual">
         <img className="random-machine-art" src="/images/random-task-slot-machine.png" alt="Interactive AI task slot machine" />
         <div className="random-reels" aria-hidden="true">
           {[0, 1, 2].map(index => {
             const settledTool = randomToolById(result?.tools[index] ?? randomToolSymbols[index].id);
-            const reelTools = isSpinning ? [...randomToolSymbols, ...randomToolSymbols] : [settledTool];
-            return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index}`}>
-              {reelTools.map((tool, toolIndex) => { const ToolIcon = tool.icon; return <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><ToolIcon size={22} strokeWidth={2.2} /><small>{tool.label}</small></span>; })}
+            const settledIndex = randomToolSymbols.findIndex(tool => tool.id === settledTool.id);
+            const previousTool = randomToolSymbols[(settledIndex - 1 + randomToolSymbols.length) % randomToolSymbols.length];
+            const nextTool = randomToolSymbols[(settledIndex + 1) % randomToolSymbols.length];
+            const reelTools = isSpinning ? [...randomToolSymbols, ...randomToolSymbols, ...randomToolSymbols] : [previousTool, settledTool, nextTool];
+            const spin = spinPlan[index] ?? spinPlan[0];
+            const spinStyle = { "--random-reel-duration": `${spin.duration}s`, "--random-reel-delay": `${spin.delay}s`, "--random-reel-mid": `-${Math.round(spin.distance * 0.34)}%`, "--random-reel-near": `-${Math.round(spin.distance * 0.72)}%`, "--random-reel-late": `-${Math.round(spin.distance * 0.92)}%`, "--random-reel-distance": `-${spin.distance}%` } as CSSProperties;
+            return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index} ${isSpinning ? "" : "is-settled"}`} style={spinStyle}>
+              {reelTools.map((tool, toolIndex) => <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><img className="random-tool-logo" src={tool.logo} alt="" /><small>{tool.label}</small></span>)}
             </div></div>;
           })}
         </div>
-        <button className="random-machine-lever" type="button" onClick={onPull} disabled={isSpinning} aria-label={isSpinning ? "Random selection in progress" : "Pull the random task and assignee lever"}><span>Pull</span></button>
+        {!hasPulled && <>
+          <button className="random-machine-lever" type="button" onClick={onPull} disabled={isSpinning} aria-label={isSpinning ? "Random selection in progress" : "Pull the random task and assignee lever"}><span>Pull</span></button>
+          <button className="random-pull-button" type="button" onClick={onPull} disabled={isSpinning}><ArrowDownLeft size={16} aria-hidden="true" /><span>{isSpinning ? "Spinning…" : "Pull the lever"}</span></button>
+        </>}
       </div>
-      <div className="random-assignment-copy">
-        <span className="random-machine-kicker"><span className="random-status-dot" />RANDOMIZER ONLINE</span>
-        <h3>Give the decision to chance.</h3>
-        <p>Three reels of AI tools create a small moment of uncertainty. The machine then registers a real review task and a real owner in the flow below.</p>
-        <button className="random-pull-button" type="button" onClick={onPull} disabled={isSpinning}><Sparkles size={17} aria-hidden="true" />{isSpinning ? "Spinning the reels…" : "Pull the lever"}</button>
-        <div className={`random-assignment-result ${result ? "has-result" : ""}`} aria-live="polite" aria-atomic="true">
-          {result && resultScenario ? <><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned to {ownerLabel}</small></> : <><span>Waiting for a pull</span><small>The selected task and developer will appear here.</small></>}
-        </div>
-      </div>
+      {hasPulled && <div className="random-luck-message" role="status" aria-live="polite">
+        <span className="random-luck-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager" /></span>
+        <span className="random-luck-bubble"><small>ENGINEERING MANAGER</small><strong>I believe we’ll get lucky 🤞</strong><span className="random-luck-bubble-tail" aria-hidden="true" /></span>
+      </div>}
+      {result && resultScenario && <div className="random-assignment-result has-result" aria-live="polite" aria-atomic="true"><div className="random-result-identity" aria-hidden="true"><span className="random-result-icon random-result-task"><img src={scenarioImageSources[resultScenario.id]} alt="" /></span><span className="random-result-plus">+</span><span className="random-result-icon random-result-developer">{result.owner === "andrei" ? <img src="/images/andrei-tekhtelev-avatar.png" alt="" /> : <Bot size={20} />}</span></div><div className="random-result-copy"><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned developer · {ownerLabel}</small></div></div>}
     </div>
   </div>;
 }
@@ -1264,6 +1267,12 @@ function Architecture() {
   const [typedAssignment, setTypedAssignment] = useState(guardrailScenarios[0].assignment);
   const [isRandomizing, setIsRandomizing] = useState(false);
   const [randomSelection, setRandomSelection] = useState<RandomAssignmentSelection | null>(null);
+  const [hasPulledRandomLever, setHasPulledRandomLever] = useState(false);
+  const [randomSpinPlan, setRandomSpinPlan] = useState<RandomReelSpin[]>([
+    { duration: 1.72, delay: 0, distance: 60 },
+    { duration: 1.96, delay: 0.12, distance: 64 },
+    { duration: 2.18, delay: 0.24, distance: 58 },
+  ]);
   const randomTimer = useRef<number | null>(null);
   const scenario = guardrailScenarios.find(item => item.id === scenarioId) ?? guardrailScenarios[0];
   const selectedOwner = owner ?? "prompt-only";
@@ -1337,9 +1346,17 @@ function Architecture() {
 
   const pullRandomLever = () => {
     if (isRandomizing) return;
+    setHasPulledRandomLever(true);
     const nextScenario = guardrailScenarios[Math.floor(Math.random() * guardrailScenarios.length)];
     const nextOwner: ReviewOwner = Math.random() > 0.5 ? "andrei" : "prompt-only";
     const tools = [0, 1, 2].map(() => randomToolSymbols[Math.floor(Math.random() * randomToolSymbols.length)].id);
+    const nextSpinPlan = [0, 1, 2].map(index => ({
+      duration: 1.55 + Math.random() * 0.55 + index * 0.08,
+      delay: index * 0.1 + Math.random() * 0.16,
+      distance: 720 + Math.random() * 260 + index * 40,
+    }));
+    const spinDuration = Math.max(...nextSpinPlan.map(spin => spin.duration + spin.delay));
+    setRandomSpinPlan(nextSpinPlan);
     setIsRandomizing(true);
     setRandomSelection(null);
     setOwner(null);
@@ -1352,7 +1369,7 @@ function Architecture() {
       setRunId(value => value + 1);
       setIsRandomizing(false);
       randomTimer.current = null;
-    }, 1550);
+    }, Math.ceil((spinDuration + 0.16) * 1000));
   };
 
   return <>
@@ -1367,9 +1384,13 @@ function Architecture() {
           <div className="task-assignment-copy"><span className="task-assignment-kicker">Assignment brief <small>Same task · two possible paths</small></span><strong>{scenario.assignment}</strong><p>Who should own this task? Choose an engineer and watch the investigation unfold.</p></div>
         </div>
         <div className="playground-controls">
-          <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><div className="control-heading"><span className="control-heading-title"><SearchCheck size={17} aria-hidden="true" />Review task</span><p>Pick the situation you want to inspect.</p></div>{orderedGuardrailScenarios.map(item => <button key={item.id} disabled={isRandomizing} className={`scenario-option scenario-option-${item.reviews[selectedOwner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-thumb"><img src={scenarioImageSources[item.id]} alt="" aria-hidden="true" /></span><span className="scenario-option-copy"><span>{item.label}</span></span></button>)}</div>
-          <div className="review-controls"><div className="task-owner-picker" role="group" aria-label="Choose who owns the task"><div className="control-heading"><span className="control-heading-title"><Bot size={17} aria-hidden="true" />Assign the task</span><p>Choose once. The review starts immediately.</p></div><button disabled={isRandomizing} className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /><span><strong>Andrei</strong><small>Context, evidence and guardrails</small></span><Check size={16} aria-hidden="true" /></button><button disabled={isRandomizing} className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Engineer who over-relies on AI</strong><small>First answer, shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div><div className="review-action"><span>{owner ? "The decision path is ready to inspect." : "Select an owner to reveal the decision path."}</span>{owner && <button className="architecture-run-button" onClick={runScenario} disabled={isRunning || isRandomizing}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Replay this path" : "Run architecture review"}</button>}</div></div>
-          <RandomAssignmentMachine isSpinning={isRandomizing} result={randomSelection} onPull={pullRandomLever} />
+          <RandomAssignmentMachine isSpinning={isRandomizing} result={randomSelection} spinPlan={randomSpinPlan} hasPulled={hasPulledRandomLever} onPull={pullRandomLever} />
+          <div className="manual-assignment">
+            <div className="playground-divider" aria-hidden="true"><span>OR</span></div>
+            <div className="manual-assignment-heading"><span className="section-eyebrow"><SearchCheck size={14} />Choose manually</span><p>Select the task and owner yourself, then start the review.</p></div>
+            <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><div className="control-heading"><span className="control-heading-title"><SearchCheck size={17} aria-hidden="true" />Review task</span><p>Pick the situation you want to inspect.</p></div>{orderedGuardrailScenarios.map(item => <button key={item.id} disabled={isRandomizing} className={`scenario-option scenario-option-${item.reviews[selectedOwner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-thumb"><img src={scenarioImageSources[item.id]} alt="" aria-hidden="true" /></span><span className="scenario-option-copy"><span>{item.label}</span></span></button>)}</div>
+            <div className="review-controls"><div className="task-owner-picker" role="group" aria-label="Choose who owns the task"><div className="control-heading"><span className="control-heading-title"><Bot size={17} aria-hidden="true" />Assign the task</span><p>Choose once. The review starts immediately.</p></div><button disabled={isRandomizing} className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /><span><strong>Andrei</strong><small>Context, evidence and guardrails</small></span><Check size={16} aria-hidden="true" /></button><button disabled={isRandomizing} className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Engineer who over-relies on AI</strong><small>First answer, shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div><div className="review-action"><span>{owner ? "The decision path is ready to inspect." : "Select an owner to reveal the decision path."}</span>{owner && <button className="architecture-run-button" onClick={runScenario} disabled={isRunning || isRandomizing}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Replay this path" : "Run architecture review"}</button>}</div></div>
+          </div>
         </div>
       </div>
       <div className={`simulation-status simulation-status-${isRunning || isComplete ? review.tone : "idle"} ${isRunning ? "is-running" : ""}`} aria-live="polite"><span className="simulation-status-dot" />{isComplete ? review.verdict : isRunning ? `RUNNING · ${review.steps[Math.min(activePhase, review.steps.length - 1)].name.toUpperCase()}` : owner ? "READY · review is queued" : "WAITING · choose an owner to reveal the solution"}</div>
@@ -1525,7 +1546,7 @@ export default function Home() {
   return <main className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER <b>×</b> PRODUCT OWNER</span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, AI practitioner, product owner"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">AI PRACTITIONER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">PRODUCT OWNER</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
     <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p></div><div className="hero-stats"><span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a><a href="#recommendations"><span className="stat-symbol"><BrandLogo brand="linkedin" /></span><span><strong>Peer recommendations</strong><small>See what teammates say about working with me.</small></span></a><a href="#puzzle"><span className="stat-symbol stat-symbol-sparkle" aria-hidden="true"><Sparkles size={26} /></span><span><strong>Fun &amp; magic</strong><small>Keep the craft rigorous and leave room for wonder.</small></span></a></div></section>
     <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick an application. <em>Make it yours.</em></h2></div><p className="workspace-heading-note">Navigate the live app and the guide follows the route: one screen, one set of challenges, decisions and implementation details.</p></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
