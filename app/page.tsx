@@ -1,9 +1,9 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Github, Layers3, Linkedin, LockKeyhole, Mail, MessageCircle, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
-import { DEFAULT_PROJECT_ID, DevicePreview, Project, projectById, projects } from "@/lib/content";
-import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
+import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
@@ -13,6 +13,69 @@ const phoneUrl = "tel:+17788834228";
 const githubUrl = "https://github.com/Androkzn";
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
+type LinkedInReview = {
+  id: string;
+  name: string;
+  role: string;
+  relationship: string;
+  date: string;
+  quote: string;
+  href: string;
+  photo: string;
+};
+
+const linkedInReviews: LinkedInReview[] = [
+  {
+    id: "kentaro-kojima",
+    name: "Kentaro Kojima",
+    role: "Full-Stack Developer | Next.js, Go, AWS",
+    relationship: "Worked with Andrei on the same team",
+    date: "September 12, 2026",
+    quote: "I worked with Andrei on the same software engineering team at step.co. He has a remarkably proactive, self-driven approach: he would quickly prototype AI-powered features, propose them to the team, and ship several of them into the product. His expertise is unusually broad, spanning mobile and web, front end to back end and infrastructure, and whatever design or debugging challenge came up, he was always collaborative and offered the kind of support that actually moved us toward a solution. In a fast-changing, demanding environment, Andrei is a model of how an engineer should operate, and I would gladly work with him again.",
+    href: "https://www.linkedin.com/in/kentaro-kojima/",
+    photo: "/images/linkedin-reviews/kentaro-kojima.jpg",
+  },
+  {
+    id: "irene-zhu",
+    name: "Irene Zhu",
+    role: "Marketing & Business Development Leader | Global Brands, Consumer Growth & Partnerships | Digital, AI & Performance Marketing",
+    relationship: "Worked with Andrei on the same team",
+    date: "September 11, 2026",
+    quote: "I had the pleasure of working with Andrei at Step, and he was always someone I could count on. He is incredibly detail-oriented, efficient, creative, and thoughtful in the way he approaches his work. From a cross-functional perspective, I especially appreciated his strong work ethic, responsiveness, and ability to turn ideas into solutions quickly while still paying close attention to the details. He is also a great team player and very easy to work with. Andrei would be a great choice to any team looking for a talented, dependable, and highly capable engineer.",
+    href: "https://www.linkedin.com/in/irene-zhu-78427919/",
+    photo: "/images/linkedin-reviews/irene-zhu.jpg",
+  },
+  {
+    id: "andrei-chernykh",
+    name: "Andrei Chernykh",
+    role: "Senior Software Engineer",
+    relationship: "Andrei was Andrei’s mentor",
+    date: "September 10, 2026",
+    quote: "Andrei and I are friends, and I've mentored him occasionally during his professional journey. What I appreciate most is that he takes feedback seriously without taking it personally. He's got the range (backend, frontend web, iOS, AI) and the work ethic. Hard-working, curious, and a great person to have around. Any team would be lucky to have him.",
+    href: "https://www.linkedin.com/in/andreichernykh/",
+    photo: "/images/linkedin-reviews/andrei-chernykh.jpg",
+  },
+  {
+    id: "olena-tomanova",
+    name: "Olena Tomanova",
+    role: "Software QA Lead. Scrum Master.",
+    relationship: "Worked with Andrei on the same team",
+    date: "September 10, 2026",
+    quote: "Andrei consistently delivered exceptional work as a Software Developer during our time at Fortify. He has a rare talent for turning complex requirements into clean, scalable, and reliable code. While working on 'Brij - The Social FastPass,' Andrei took complete ownership of the architecture, anticipated bottlenecks, and ensured seamless integration across teams. He is not only technically brilliant but also a fantastic communicator and a great team player. I highly recommend Andrei for any future development role or technical challenge.",
+    href: "https://www.linkedin.com/in/olenatomanova/",
+    photo: "/images/linkedin-reviews/olena-tomanova.jpg",
+  },
+  {
+    id: "tandin-wangchen",
+    name: "Tandin Wangchen",
+    role: "Full-Stack Software Engineer | React, Node.js, TypeScript, AWS/Azure | Building scalable web apps & AI-integrated tools",
+    relationship: "Worked with Andrei but on different teams",
+    date: "September 9, 2026",
+    quote: "I highly recommend Andrei. He was kind, approachable, and always supportive. He helped me a lot while I was learning Swift, especially with Xcode and AWS architecture, and explained things in a clear, practical way. He is someone who makes the team environment better while also being technically knowledgeable and genuinely helpful.",
+    href: "https://www.linkedin.com/in/tandinwangchen/",
+    photo: "/images/linkedin-reviews/tandin-wangchen.jpg",
+  },
+];
 const deviceFrameAssets: Partial<Record<DevicePreview, { src: string; model: string }>> = {
   iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.png", model: "iPhone 16 Pro Max" },
   ipad: { src: "/images/device-frames/ipad-pro-11-space-gray.png", model: "iPad Pro 11-inch" },
@@ -76,6 +139,10 @@ const projectLogoSources: Record<Project["id"], string> = {
   "symply-budget": "/images/apps/symply-budget.png",
 };
 
+function BrandLogo({ brand }: { brand: "github" | "linkedin" }) {
+  return <img className={`brand-logo brand-logo-${brand}`} src={`/images/brand/${brand}.svg`} alt="" aria-hidden="true" />;
+}
+
 function ProjectLogo({ id }: { id: Project["id"] }) {
   return <img className={`project-logo project-logo-${id}`} src={projectLogoSources[id]} alt="" aria-hidden="true" />;
 }
@@ -96,13 +163,20 @@ function DeviceStatusBar({ device }: { device: Exclude<DevicePreview, "desktop">
   </div>;
 }
 
-function makeGuideReply(question: string, project: Project) {
+function makeGuideReply(question: string, project: Project, pathname: string) {
   const lower = question.toLowerCase();
+  const insight = screenInsightFor(project, pathname);
   if (lower.includes("personally") || lower.includes("own") || lower.includes("вклад")) {
     return `**What I can substantiate**\n\nThe public manifest for ${project.name} does not yet specify personal contribution. I won’t invent one.\n\n- Explore the deployed Web application.\n- Inspect the linked source repository.\n- Treat ownership and impact claims as pending evidence.`;
   }
   if (lower.includes("hard") || lower.includes("challenge") || lower.includes("сложн")) {
-    return `**${project.challenge.title}**\n\n${project.challenge.body}\n\nThis is the documented boundary—not a claim about an unverified outcome.`;
+    return `**${insight.challenge.title}**\n\n${insight.challenge.body}\n\nThis is the screen-level challenge documented from the source trace below.`;
+  }
+  if (lower.includes("solution") || lower.includes("decision") || lower.includes("реш") || lower.includes("trade-off") || lower.includes("tradeoff")) {
+    return `**${insight.solution.title}**\n\n${insight.solution.body}\n\n**Decision:** ${insight.decision.body}`;
+  }
+  if (lower.includes("built") || lower.includes("implement") || lower.includes("tech") || lower.includes("stack") || lower.includes("как сдел")) {
+    return `**Implementation on ${insight.route}**\n\n${insight.implementation}\n\n**Trace:** ${insight.sourceTrace}\n\n**Stack:** ${insight.stack.join(" · ")}.`;
   }
   if (lower.includes("ai") || lower.includes("verify") || lower.includes("провер")) {
     return "**AI assists; evidence decides.**\n\n- Prepared answers stay within the approved project material.\n- The apps run independently of this guide.\n- Unsupported contribution or impact claims stay unpublished.\n\nThis panel uses curated responses, not a live model. Explore the architecture below for the intended contract.";
@@ -110,7 +184,7 @@ function makeGuideReply(question: string, project: Project) {
   if (lower.includes("show") || lower.includes("flow") || lower.includes("покаж")) {
     return `**Try ${project.name}**\n\n- Guest email and password are already filled in.\n- Tap Sign In in the live app.\n- Explore the product and try its core flows.\n\nThe guest account is reserved for this portfolio demo.`;
   }
-  return `**Explore ${project.name}**\n\nI have prepared answers about the source boundary, documented challenge and core flow. Choose a question below or inspect the source. For a deeper conversation, get in touch with Andrei.\n\nI don’t have a verified answer to every free-form question.`;
+  return `**${insight.title}**\n\n${insight.summary}\n\nAsk about the challenge, decision or implementation for this screen. I’ll keep the answer tied to the source trace and call out anything that still needs verification.`;
 }
 
 function initialGuideMessage(project: Project) {
@@ -127,66 +201,23 @@ type LiveGuideContext = {
   title: string;
   body: string;
   actions: LiveGuideAction[];
+  insight: ScreenInsight;
 };
 
 function guideContextFor(project: Project, pathname: string): LiveGuideContext {
-  const path = pathname.toLowerCase();
-  const context = (label: string, title: string, body: string, actions: LiveGuideAction[]): LiveGuideContext => ({
-    key: `${project.id}:${label}`,
-    label,
-    title,
-    body,
+  const insight = screenInsightFor(project, pathname);
+  const context = (actions: LiveGuideAction[]): LiveGuideContext => ({
+    key: `${project.id}:${insight.id}`,
+    label: insight.label,
+    title: insight.title,
+    body: insight.summary,
     actions,
+    insight,
   });
-
-  if (path === "/login" || path.includes("login")) {
-    return context("READY TO START", "One tap from the demo", `Guest email and password are already filled in for ${project.name}. Tap Sign In in the live app.`, [
-      { label: "What happens next?", answer: "You’ll enter the real guest workspace with prepared content, then the guide will follow the screen you open. Feel free to play and interact with the app." },
-      { label: "What can I change?", answer: "Explore, add and edit items inside the guest experience. The account is reserved for portfolio visitors." },
-    ]);
-  }
-
-  if (path.includes("projects")) {
-    return context("PROJECTS", "Welcome to Projects", "This workspace turns an idea—renovation, repair or upgrade—into scope, materials, tasks and a visible next step.", [
-      { label: "What can I try here?", answer: "Open a project, inspect its plan, then add or update a task to see how household work stays connected." },
-      { label: "How is it built?", answer: "Projects compose typed domain records for plans, tasks, spaces, materials and budgets while keeping each workflow independently testable." },
-    ]);
-  }
-
-  if (path.includes("spending") || path.includes("bills")) {
-    return context("SPENDING", "Follow where money goes", "Review transactions and recurring commitments, then move from raw activity to a decision you can act on.", [
-      { label: "What can I try here?", answer: "Open a transaction or bill, inspect its category and adjust it to see how the budget view responds." },
-      { label: "What is the UX goal?", answer: "Keep financial detail inspectable without turning the screen into a spreadsheet." },
-    ]);
-  }
-
-  if (path.includes("budget") || path.includes("planning") || path.includes("savings")) {
-    const title = project.id === "symply-budget" ? "Give every dollar a purpose" : "Keep home costs in context";
-    return context("BUDGET", title, "Balances, plans and goals stay close to the decision they support instead of becoming isolated numbers.", [
-      { label: "What can I try here?", answer: "Inspect a category or goal, change an amount and watch the plan recalculate around that decision." },
-      { label: "Why local-first?", answer: "The core budget remains responsive and understandable while sync and provider integrations stay explicit boundaries." },
-    ]);
-  }
-
-  if (path.includes("chat") || path.includes("mira")) {
-    return context("ASSISTANT", "Ask, decide, then act", "The assistant is designed to explain context and propose the next step without claiming an action succeeded before the app confirms it.", [
-      { label: "What should I ask?", answer: "Ask for a summary, the most important next action or an explanation of a recommendation." },
-      { label: "Where are the guardrails?", answer: "Evidence grounds the answer, typed actions bound what can happen and acknowledgements confirm real state changes." },
-    ]);
-  }
-
-  if (path.includes("settings") || path.includes("profile")) {
-    return context("MORE", "Control the experience", "Settings collect personalization, permissions and account boundaries without crowding the daily workflow.", [
-      { label: "What can I inspect?", answer: "Try appearance, navigation customization and profile controls to see how the app adapts without changing its core model." },
-      { label: "Why separate this?", answer: "Occasional controls stay reachable but do not compete with the primary tasks on Home." },
-    ]);
-  }
-
-  return context("HOME", project.id === "symply-budget" ? "Your money at a glance" : "Your household at a glance", project.id === "symply-budget"
-    ? "Home summarizes the financial signals that need attention now and keeps deeper analysis one tap away."
-    : "Home brings tasks, reminders and household context together so the next useful action is immediately visible.", [
-    { label: "What should I try first?", answer: project.id === "symply-budget" ? "Open a summary card, then move into Budget or Spending to inspect the underlying detail." : "Open Projects or a task card to move from the household overview into a concrete workflow." },
-    { label: "Why this layout?", answer: "The screen prioritizes current decisions and exceptions instead of showing every available feature at once." },
+  return context([
+    { label: "What was the challenge?", answer: `**${insight.challenge.title}**\n\n${insight.challenge.body}` },
+    { label: "What did you decide?", answer: `**${insight.decision.title}**\n\n${insight.decision.body}` },
+    { label: "How is it implemented?", answer: `**${insight.solution.title}**\n\n${insight.solution.body}\n\n${insight.implementation}` },
   ]);
 }
 
@@ -243,25 +274,50 @@ function Avatar({ active }: { active: boolean }) {
   </div>;
 }
 
+function ScreenInsightCard({ insight }: { insight: ScreenInsight }) {
+  const blocks = [
+    { number: "01", label: "Challenge", title: insight.challenge.title, body: insight.challenge.body, className: "insight-challenge" },
+    { number: "02", label: "Decision", title: insight.decision.title, body: insight.decision.body, className: "insight-decision" },
+    { number: "03", label: "Solution", title: insight.solution.title, body: insight.solution.body, className: "insight-solution" },
+  ];
+  const impact = insight.impact ? { number: "04", label: "Impact", title: insight.impact.title, body: insight.impact.body } : null;
+  return <section className="screen-insight" aria-labelledby={`screen-insight-${insight.id}`}>
+    <div className="screen-insight-header"><span className="screen-insight-kicker"><Code2 size={13} />{insight.id === "budget-login" ? "Local Device-First Strategy" : insight.id === "house-login" ? "Offline-First / Privacy" : "Screen teardown"}</span><code>{insight.route}</code></div>
+    <h3 id={`screen-insight-${insight.id}`}>{insight.title}</h3>
+    <div className="screen-insight-grid">{blocks.map(block => <article key={block.label} className={`screen-insight-block ${block.className}`}><span className="screen-insight-number">{block.number}</span><div><span className="screen-insight-label">{block.label}</span><strong>{block.title}</strong><p>{block.body}</p></div></article>)}</div>
+    {impact && <article className="screen-insight-impact"><span className="screen-insight-number">{impact.number}</span><div><span className="screen-insight-label">{impact.label}</span><strong>{impact.title}</strong><p>{impact.body}</p></div></article>}
+    <div className="screen-insight-implementation"><div><span className="screen-insight-label">Implementation</span><p>{insight.implementation}</p></div><div className="screen-insight-stack" aria-label="Implementation stack">{insight.stack.map(item => <span key={item}>{item}</span>)}</div></div>
+  </section>;
+}
+
 const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, device, onDeviceChange, onNavigate }: { project: Project; device: DevicePreview; onDeviceChange: (device: DevicePreview) => void; onNavigate: (pathname: string) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const [portfolioSessionId, setPortfolioSessionId] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [theme, setTheme] = useState<Theme>("light");
   const [appliedTheme, setAppliedTheme] = useState<Theme | null>(null);
   const [themeReady, setThemeReady] = useState(false);
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const demoMessage = portfolioDemoMessageFor(project.id);
+  const hasDemoSession = demoMessage !== null;
+  useEffect(() => {
+    if (hasDemoSession) setPortfolioSessionId(createPortfolioSessionId());
+  }, [hasDemoSession]);
   const url = project.webPreviewUrl
+    && (!demoMessage || portfolioSessionId)
     ? (() => {
         const previewUrl = new URL(project.webPreviewUrl);
-        if (portfolioDemoMessageFor(project.id)) previewUrl.searchParams.set("portfolioDemo", "1");
+        if (demoMessage && portfolioSessionId) {
+          previewUrl.searchParams.set("portfolioDemo", "1");
+          previewUrl.searchParams.set("portfolioSession", portfolioSessionId);
+        }
         return previewUrl.toString();
       })()
     : undefined;
   useEffect(() => {
     if (!url) return;
     const origin = new URL(url).origin;
-    const demoMessage = portfolioDemoMessageFor(project.id);
     let retries = 0;
     const requestTheme = () => frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
     const requestDemo = () => { if (demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin); };
@@ -390,7 +446,7 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
     if (text.toLowerCase().includes("core flow")) onCoreFlow();
     const replyId = nextId.current++;
     setActiveAction(text);
-    setMessages([{ id: replyId, role: "guide", text: makeGuideReply(text, project), animate: true }]);
+    setMessages([{ id: replyId, role: "guide", text: makeGuideReply(text, project, appPath), animate: true }]);
   };
   const chooseAction = (action: LiveGuideAction) => {
     stop();
@@ -438,7 +494,8 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
   };
   return <aside className="guide-panel" id="guide" aria-label="Andrei’s project guide">
     <div className="guide-live-head"><Avatar active={speaking} /><button className="voice-button" disabled={!voiceAvailable} onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? "Unmute guide voice" : "Mute guide voice"}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}<span>{muted ? "Muted" : "Mute"}</span></button></div>
-    <div className="guide-context-card" aria-live="polite" aria-atomic="true"><h2>{context.title}</h2><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>
+    <div className="guide-context-card" aria-live="polite" aria-atomic="true"><div className="guide-card-heading"><span className="heading-icon" aria-hidden="true"><Sparkles size={18} /></span><h2>{context.title}</h2></div><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>
+    <ScreenInsightCard insight={context.insight} />
     <div className="guide-actions" aria-label="Suggested questions">{context.actions.map(action => <button key={action.label} className={activeAction === action.label ? "active" : ""} onClick={() => chooseAction(action)}>{action.label}</button>)}</div>
     <form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about this screen…" aria-label="Ask about this screen" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form>
   </aside>;
@@ -660,7 +717,31 @@ const guardrailScenarios: GuardrailScenario[] = [
   },
 ];
 
-type ArchitectureView = "contract" | "goat";
+const reviewTaskOrder: GuardrailScenarioId[] = ["bug-fix", "plumbing-assistant", "code-review"];
+const orderedGuardrailScenarios = reviewTaskOrder
+  .map(id => guardrailScenarios.find(item => item.id === id))
+  .filter((item): item is GuardrailScenario => Boolean(item));
+
+const scenarioImageSources: Record<GuardrailScenarioId, string> = {
+  "bug-fix": "/images/scenario-cards/bug-fix.png",
+  "plumbing-assistant": "/images/scenario-cards/plumbing-assistant.png",
+  "code-review": "/images/scenario-cards/code-review.png",
+};
+
+const randomToolSymbols = [
+  { id: "gpt", label: "GPT", icon: Sparkles, className: "random-tool-gpt" },
+  { id: "claude", label: "Claude", icon: Bot, className: "random-tool-claude" },
+  { id: "gemini", label: "Gemini", icon: WandSparkles, className: "random-tool-gemini" },
+  { id: "copilot", label: "Copilot", icon: Braces, className: "random-tool-copilot" },
+  { id: "cursor", label: "Cursor", icon: Code2, className: "random-tool-cursor" },
+  { id: "perplexity", label: "Search", icon: DatabaseZap, className: "random-tool-perplexity" },
+] as const;
+type RandomToolId = typeof randomToolSymbols[number]["id"];
+type RandomAssignmentSelection = { scenarioId: GuardrailScenarioId; owner: ReviewOwner; tools: RandomToolId[] };
+
+function randomToolById(id: RandomToolId) {
+  return randomToolSymbols.find(tool => tool.id === id) ?? randomToolSymbols[0];
+}
 
 type PuzzleActionId = "contract" | "ground" | "bound" | "typed" | "confirm" | "evaluate" | "prompt-first" | "generate-first" | "ship-first";
 type PuzzleResult = "idle" | "success" | "failure";
@@ -692,12 +773,14 @@ const puzzleFailures = [
   { id: "wet-goat", title: "Right intention. No protection.", image: "/images/goat-wet-white-sad.png", cause: "The output reached the world before the system had a boundary or a verified state." },
   { id: "storm-goat", title: "The symbol replaced the substance.", image: "/images/goat-storm-on-side-white.png", cause: "The model copied the idea of a storm onto the wrong object instead of producing the capability." },
   { id: "shower-goat", title: "Connected. Still not correct.", image: "/images/goat-under-shower-storm-generator.png", cause: "Every pipe is connected to a storm generator. The user still received a shower." },
+  { id: "advanced-storm-generator", title: "Powerful generator. Wrong output.", image: "/images/goat-advanced-storm-generator.png", cause: "Four careful handoffs produced an advanced storm engine, but the delivered subject is still a goat." },
   { id: "near-storm-generator", title: "Almost a storm. Still a goat.", image: "/images/goat-near-storm-generator.png", cause: "Five careful handoffs held together. The generator is producing weather, but the final output is still the wrong species." },
 ] as const;
 
 function failureFor(sequence: PuzzleActionId[]) {
   const progress = Math.min(verifiedPrefixLength(sequence), 5);
-  if (progress >= 5) return puzzleFailures[4];
+  if (progress >= 5) return puzzleFailures[5];
+  if (progress === 4) return puzzleFailures[4];
   if (progress >= 3) return puzzleFailures[3];
   if (progress === 2) return puzzleFailures[2];
   if (progress === 1) return puzzleFailures[1];
@@ -959,19 +1042,77 @@ function GoatMode() {
         </div>}
       </div>
       <div className={`puzzle-result-art puzzle-result-art-progress-${outcomeProgress} ${outcomeGoat ? `puzzle-result-art-goat-${outcomeGoat.id}` : "puzzle-result-art-idle"}`}>
-        <div className="puzzle-sky" aria-hidden="true"><img className="puzzle-sky-layer puzzle-sky-layer-clear" src="/images/puzzle-sky-clear.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-cloudy" src="/images/puzzle-sky-cloudy.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-storm" src="/images/puzzle-sky-storm.png" alt="" /></div>
-        <div className="puzzle-result-stage">
-          <div className="puzzle-result-surface" aria-hidden="true" />
-          <img className="puzzle-result-wizard" src="/images/wizard-programmer-bewildered-clean.png" alt="Bewildered AI wizard looking at the goat with both hands raised" />
-          {outcomeGoat ? <img className={`puzzle-result-goat puzzle-result-goat-${outcomeGoat.id}`} src={outcomeGoat.image} alt={outcomeGoat.alt} /> : <span className="puzzle-empty-art"><WandSparkles size={35} /><small>Complete the chain to reveal the output</small></span>}
-        </div>
+        {result === "success" && outcomeGoat ? <><img className="puzzle-success-scene" src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="AI wizard standing under an umbrella in a storm while coding" /><span className="puzzle-success-goat-speech"><span className="puzzle-success-goat-bubble">In production, a verified sequence protects the original intent, confirms the outcome and keeps the wrong result from shipping.</span><span className="puzzle-success-goat-avatar"><img src={outcomeGoat.image} alt={outcomeGoat.alt} /></span></span></> : <><div className="puzzle-sky" aria-hidden="true"><img className="puzzle-sky-layer puzzle-sky-layer-clear" src="/images/puzzle-sky-clear.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-cloudy" src="/images/puzzle-sky-cloudy.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-storm" src="/images/puzzle-sky-storm.png" alt="" /></div><div className="puzzle-result-stage"><div className="puzzle-result-surface" aria-hidden="true" /><img className={`puzzle-result-wizard ${outcomeGoat ? "puzzle-result-wizard-result" : "puzzle-result-wizard-idle"}`} src={outcomeGoat ? "/images/wizard-programmer-bewildered-clean.png" : "/images/wizard-programmer-meditating-coding.png"} alt={outcomeGoat ? "Bewildered AI wizard looking at the goat with both hands raised" : "Focused AI wizard levitating in a lotus position while coding"} />{outcomeGoat && <img className={`puzzle-result-goat puzzle-result-goat-${outcomeGoat.id}`} src={outcomeGoat.image} alt={outcomeGoat.alt} />}</div></>}
       </div>
     </div>
-    <p className="goat-caption">In production, a verified sequence protects the original intent, confirms the outcome and keeps the wrong result from shipping.</p>
   </div>;
 }
 
 type OutcomeVisualVariant = "stable" | "chaos" | "blocked";
+
+type FlowVisualId = "evidence" | "prompt" | "investigate" | "action" | "verify" | "monitor"
+  | "plumbing-map" | "plumbing-triage" | "plumbing-dispatch" | "plumbing-verify" | "plumbing-launch"
+  | "plumbing-prompt" | "plumbing-infer" | "plumbing-connect"
+  | "code-context" | "code-risk" | "code-evidence" | "code-approve" | "code-shortcut" | "code-scan" | "code-shortcut-approve";
+
+const flowImageSources: Record<FlowVisualId, string> = {
+  evidence: "/images/flow-cards/evidence.png",
+  prompt: "/images/flow-cards/prompt.png",
+  investigate: "/images/flow-cards/investigate.png",
+  action: "/images/flow-cards/action.png",
+  verify: "/images/flow-cards/verify.png",
+  monitor: "/images/flow-cards/monitor.png",
+  "plumbing-map": "/images/flow-cards/tasks/plumbing-map.png",
+  "plumbing-triage": "/images/flow-cards/tasks/plumbing-triage.png",
+  "plumbing-dispatch": "/images/flow-cards/tasks/plumbing-dispatch.png",
+  "plumbing-verify": "/images/flow-cards/tasks/plumbing-verify.png",
+  "plumbing-launch": "/images/flow-cards/tasks/plumbing-launch.png",
+  "plumbing-prompt": "/images/flow-cards/tasks/plumbing-prompt.png",
+  "plumbing-infer": "/images/flow-cards/tasks/plumbing-infer.png",
+  "plumbing-connect": "/images/flow-cards/tasks/plumbing-connect.png",
+  "code-context": "/images/flow-cards/tasks/code-context.png",
+  "code-risk": "/images/flow-cards/tasks/code-risk.png",
+  "code-evidence": "/images/flow-cards/tasks/code-evidence.png",
+  "code-approve": "/images/flow-cards/tasks/code-approve.png",
+  "code-shortcut": "/images/flow-cards/tasks/code-shortcut.png",
+  "code-scan": "/images/flow-cards/tasks/code-scan.png",
+  "code-shortcut-approve": "/images/flow-cards/tasks/code-shortcut-approve.png",
+};
+
+function flowVisualFor(title: string, code: string): FlowVisualId {
+  const text = `${title} ${code}`.toLowerCase();
+  if (/(prompt|summary)/.test(text)) return "prompt";
+  if (/(incident → invariant|trace \+ db|coverage \+ policy|diff \+ intent)/.test(text)) return "evidence";
+  if (/(verify|evidence|tests|evals|fixture|request)/.test(text)) return "verify";
+  if (/(launch|watch|monitor|rollout|rollback|release)/.test(text)) return "monitor";
+  if (/(dispatch|connect|implement|patch|booking|approve)/.test(text)) return "action";
+  if (/(isolate|guess|infer|challenge|failure|scan|reconstruct|incident|first output)/.test(text)) return "investigate";
+  return "evidence";
+}
+
+function taskFlowVisualFor(scenarioId: GuardrailScenarioId, title: string, code: string): FlowVisualId {
+  const text = `${title} ${code}`.toLowerCase();
+  if (scenarioId === "plumbing-assistant") {
+    if (/(operating reality|map the service|coverage \+ policy)/.test(text)) return "plumbing-map";
+    if (/(define triage|intent \+ handoff)/.test(text)) return "plumbing-triage";
+    if (/(dispatch safely|bookingid \+ ack)/.test(text)) return "plumbing-dispatch";
+    if (/(verify operations|fixtures \+ evals)/.test(text)) return "plumbing-verify";
+    if (/(launch with signals|metrics \+ handoff)/.test(text)) return "plumbing-launch";
+    if (/(start with a prompt|prompt only|prompt → answer)/.test(text)) return "plumbing-prompt";
+    if (/(infer|model guess)/.test(text)) return "plumbing-infer";
+    if (/(connect|text → action)/.test(text)) return "plumbing-connect";
+  }
+  if (scenarioId === "code-review") {
+    if (/(review the change in context|read the change in context|diff \+ intent)/.test(text)) return "code-context";
+    if (/(challenge failure modes|edges \+ tests)/.test(text)) return "code-risk";
+    if (/(request evidence|tests \+ traces)/.test(text)) return "code-evidence";
+    if (/(approve the release|rollout \+ rollback)/.test(text)) return "code-approve";
+    if (/(generated summary|diff → summary|summary → lgtm)/.test(text)) return "code-shortcut";
+    if (/(scan|happy path)/.test(text)) return "code-scan";
+    if (/(approve|lgtm too soon)/.test(text)) return "code-shortcut-approve";
+  }
+  return flowVisualFor(title, code);
+}
 
 function BugIcon({ kind = "round", dead = false }: { kind?: "round" | "long" | "tiny" | "winged"; dead?: boolean }) {
   return <svg className={`bug-icon bug-icon-${kind} ${dead ? "bug-icon-dead" : ""}`} viewBox="0 0 70 70" aria-hidden="true">
@@ -1040,11 +1181,27 @@ function PlumbingFeedback({ variant }: { variant: "stable" | "chaos" }) {
   </div>;
 }
 
+function CodeReviewOutcomeVisual({ variant }: { variant: OutcomeVisualVariant }) {
+  const isStable = variant === "stable";
+  const checks = isStable
+    ? [["Intent ↔ diff", "aligned"], ["Failure modes", "5 checked"], ["Rollout + rollback", "owned"]]
+    : [["Intent ↔ diff", "missing"], ["Failure modes", "skipped"], ["Rollout + rollback", "unknown"]];
+
+  return <div className={`review-board review-board-${variant}`} aria-label={isStable ? "Pull request review is ready to merge" : "Pull request review is missing evidence"}>
+    <div className="review-board-top"><span className="review-board-repo"><i />PR #1842</span><span className="review-board-state">{isStable ? "READY TO MERGE" : "NEEDS EVIDENCE"}</span></div>
+    <div className="review-board-title"><span>CHANGESET</span><strong>{isStable ? "Protect invoice writes" : "Add a quick guard"}</strong></div>
+    <div className="review-board-branch"><code>feature/idempotency</code><span>→</span><code>production</code></div>
+    <div className="review-board-checks">{checks.map(([label, status]) => <div className="review-board-check" key={label}><span className="review-check-icon">{isStable ? <Check size={12} /> : "!"}</span><span>{label}</span><strong>{status}</strong></div>)}</div>
+    <div className="review-board-footer"><span>{isStable ? "3 review gates passed" : "3 questions still open"}</span><strong>{isStable ? "APPROVE" : "HOLD"}</strong></div>
+  </div>;
+}
+
 function ReviewOutcomeVisual({ scenarioId, variant }: { scenarioId: GuardrailScenarioId; variant: OutcomeVisualVariant }) {
   if (scenarioId === "plumbing-assistant") return <PlumbingOutcomeVisual variant={variant === "stable" ? "stable" : "chaos"} />;
 
   const isBugFix = scenarioId === "bug-fix";
   const isCodeReview = scenarioId === "code-review";
+  if (isCodeReview) return <CodeReviewOutcomeVisual variant={variant} />;
   const signalLabel = isBugFix ? "Errors / min" : isCodeReview ? "Review risk" : "Release risk";
   const chartPath = variant === "stable" ? "M8 25 C35 20 68 22 101 24 S122 25 132 27 L143 84 C169 85 205 85 242 85" : "M8 78 C24 41 35 84 51 57 S70 87 86 48 S105 76 121 39 S142 82 158 53 S180 72 196 36 S220 66 242 28";
   const caption = variant === "stable" ? isBugFix ? "Duplicate invoices stopped" : isCodeReview ? "Release risk bounded" : "Verified path holding" : variant === "chaos" ? isBugFix ? "New failure modes appearing" : isCodeReview ? "Review risks appearing" : "Exceptions multiplying" : "No unsafe action released";
@@ -1052,24 +1209,97 @@ function ReviewOutcomeVisual({ scenarioId, variant }: { scenarioId: GuardrailSce
   return <div className={`outcome-visual outcome-visual-${variant}`} aria-label={caption}>
     <div className="outcome-visual-head"><span><i className="outcome-signal-dot" />LIVE SIGNAL</span><strong>{signalLabel}</strong></div>
     <div className="outcome-chart"><svg viewBox="0 0 250 100" role="img" aria-label={`${signalLabel} chart`}><path className="outcome-chart-grid" d="M8 20H242M8 50H242M8 80H242" /><path className="outcome-chart-line" d={chartPath} /></svg></div>
-    {variant === "stable" && isBugFix && <span className="outcome-dead-bug"><BugIcon dead /></span>}
+    {variant === "stable" && isBugFix && <span className="outcome-caught-bug"><img src="/images/bug-in-jar.png" alt="Living bug safely caught in a glass jar" /></span>}
     {variant === "chaos" && <div className="outcome-bug-swarm"><span><BugIcon kind="tiny" /></span><span><BugIcon kind="round" /></span><span><BugIcon kind="winged" /></span><span><BugIcon kind="long" /></span><span><BugIcon kind="tiny" /></span></div>}
     {variant === "blocked" && <span className="outcome-blocked-mark"><ShieldCheck size={24} /></span>}
     <span className="outcome-visual-caption">{caption}</span>
   </div>;
 }
 
+function RandomAssignmentMachine({ isSpinning, result, onPull }: { isSpinning: boolean; result: RandomAssignmentSelection | null; onPull: () => void }) {
+  const resultScenario = result ? guardrailScenarios.find(item => item.id === result.scenarioId) : null;
+  const ownerLabel = result?.owner === "andrei" ? "Andrei" : "AI-reliant engineer";
+  return <div className={`random-assignment ${isSpinning ? "is-randomizing" : ""}`}>
+    <div className="random-assignment-head">
+      <span className="random-assignment-or"><Sparkles size={14} aria-hidden="true" />OR</span>
+      <div>
+        <strong>Random task + assignee</strong>
+        <p>Let the machine choose both. Pull the lever and watch the AI tools spin.</p>
+      </div>
+    </div>
+    <div className="random-machine-layout">
+      <div className="random-machine-visual">
+        <img className="random-machine-art" src="/images/random-task-slot-machine.png" alt="Interactive AI task slot machine" />
+        <div className="random-reels" aria-hidden="true">
+          {[0, 1, 2].map(index => {
+            const settledTool = randomToolById(result?.tools[index] ?? randomToolSymbols[index].id);
+            const reelTools = isSpinning ? [...randomToolSymbols, ...randomToolSymbols] : [settledTool];
+            return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index}`}>
+              {reelTools.map((tool, toolIndex) => { const ToolIcon = tool.icon; return <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><ToolIcon size={22} strokeWidth={2.2} /><small>{tool.label}</small></span>; })}
+            </div></div>;
+          })}
+        </div>
+        <button className="random-machine-lever" type="button" onClick={onPull} disabled={isSpinning} aria-label={isSpinning ? "Random selection in progress" : "Pull the random task and assignee lever"}><span>Pull</span></button>
+      </div>
+      <div className="random-assignment-copy">
+        <span className="random-machine-kicker"><span className="random-status-dot" />RANDOMIZER ONLINE</span>
+        <h3>Give the decision to chance.</h3>
+        <p>Three reels of AI tools create a small moment of uncertainty. The machine then registers a real review task and a real owner in the flow below.</p>
+        <button className="random-pull-button" type="button" onClick={onPull} disabled={isSpinning}><Sparkles size={17} aria-hidden="true" />{isSpinning ? "Spinning the reels…" : "Pull the lever"}</button>
+        <div className={`random-assignment-result ${result ? "has-result" : ""}`} aria-live="polite" aria-atomic="true">
+          {result && resultScenario ? <><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned to {ownerLabel}</small></> : <><span>Waiting for a pull</span><small>The selected task and developer will appear here.</small></>}
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
 function Architecture() {
+  const architectureRef = useRef<HTMLElement>(null);
   const [scenarioId, setScenarioId] = useState<GuardrailScenarioId>("bug-fix");
-  const [owner, setOwner] = useState<ReviewOwner>("andrei");
+  const [owner, setOwner] = useState<ReviewOwner | null>(null);
   const [activePhase, setActivePhase] = useState(-1);
   const [runId, setRunId] = useState(0);
-  const [view, setView] = useState<ArchitectureView>("contract");
+  const [hasEntered, setHasEntered] = useState(false);
+  const [typedAssignment, setTypedAssignment] = useState(guardrailScenarios[0].assignment);
+  const [isRandomizing, setIsRandomizing] = useState(false);
+  const [randomSelection, setRandomSelection] = useState<RandomAssignmentSelection | null>(null);
+  const randomTimer = useRef<number | null>(null);
   const scenario = guardrailScenarios.find(item => item.id === scenarioId) ?? guardrailScenarios[0];
-  const review = scenario.reviews[owner];
+  const selectedOwner = owner ?? "prompt-only";
+  const review = scenario.reviews[selectedOwner];
   const completionPhase = review.blockedStep ?? review.steps.length - 1;
   const isRunning = activePhase >= 0 && activePhase <= completionPhase;
-  const isComplete = activePhase > completionPhase;
+  const isComplete = owner !== null && activePhase > completionPhase;
+  const isTypingAssignment = typedAssignment.length < scenario.assignment.length;
+
+  useEffect(() => {
+    setTypedAssignment("");
+    let nextCharacter = 0;
+    const timer = window.setInterval(() => {
+      nextCharacter += 1;
+      setTypedAssignment(scenario.assignment.slice(0, nextCharacter));
+      if (nextCharacter >= scenario.assignment.length) window.clearInterval(timer);
+    }, 22);
+    return () => window.clearInterval(timer);
+  }, [scenario.assignment]);
+
+  useEffect(() => {
+    const section = architectureRef.current;
+    if (!section) return;
+    if (!("IntersectionObserver" in window)) {
+      setHasEntered(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setHasEntered(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.2 });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -1079,49 +1309,81 @@ function Architecture() {
     return () => window.clearTimeout(timer);
   }, [activePhase, completionPhase, isRunning, runId]);
 
+  useEffect(() => () => {
+    if (randomTimer.current !== null) window.clearTimeout(randomTimer.current);
+  }, []);
+
   const chooseScenario = (id: GuardrailScenarioId) => {
+    if (isRandomizing) return;
     setScenarioId(id);
+    setOwner(null);
     setActivePhase(-1);
+    setRandomSelection(null);
   };
 
   const chooseOwner = (nextOwner: ReviewOwner) => {
+    if (isRandomizing) return;
     setOwner(nextOwner);
-    setActivePhase(-1);
+    setActivePhase(0);
+    setRunId(value => value + 1);
+    setRandomSelection(null);
   };
 
   const runScenario = () => {
+    if (!owner) return;
     setActivePhase(0);
     setRunId(value => value + 1);
   };
 
-  return <section className="architecture-section" id="architecture">
-    <div className="architecture-mode-switcher" role="group" aria-label="Choose an interactive architecture experience">
-      <span>Explore the method</span>
-      <button className={view === "contract" ? "selected" : ""} aria-pressed={view === "contract"} onClick={() => setView("contract")}><ShieldCheck size={15} />Architecture walkthrough</button>
-      <button className={view === "goat" ? "selected goat-selected" : ""} aria-pressed={view === "goat"} onClick={() => setView("goat")}><WandSparkles size={15} />Try the puzzle</button>
-    </div>
-    {view === "goat" ? <GoatMode /> : <>
-      <div className="architecture-heading"><div><div className="section-eyebrow"><ShieldCheck size={15} />Architecture walkthrough</div><h2>Review the work.<br /><em>Protect the release.</em></h2></div><div><p>Choose a real engineering task, assign it to an experienced AI architect or a prompt-first shortcut, and watch the consequences unfold.</p><span className="architecture-label">Choose a task · choose the approach · inspect the decisions</span></div></div>
+  const pullRandomLever = () => {
+    if (isRandomizing) return;
+    const nextScenario = guardrailScenarios[Math.floor(Math.random() * guardrailScenarios.length)];
+    const nextOwner: ReviewOwner = Math.random() > 0.5 ? "andrei" : "prompt-only";
+    const tools = [0, 1, 2].map(() => randomToolSymbols[Math.floor(Math.random() * randomToolSymbols.length)].id);
+    setIsRandomizing(true);
+    setRandomSelection(null);
+    setOwner(null);
+    setActivePhase(-1);
+    randomTimer.current = window.setTimeout(() => {
+      setScenarioId(nextScenario.id);
+      setOwner(nextOwner);
+      setRandomSelection({ scenarioId: nextScenario.id, owner: nextOwner, tools });
+      setActivePhase(0);
+      setRunId(value => value + 1);
+      setIsRandomizing(false);
+      randomTimer.current = null;
+    }, 1550);
+  };
+
+  return <>
+    <section ref={architectureRef} className={`architecture-section ${hasEntered ? "is-visible" : ""}`} id="architecture">
+      <div className="architecture-heading"><div><div className="section-eyebrow"><ShieldCheck size={15} />Architecture walkthrough</div><h2>Review the work.<br /><em>Protect the release.</em></h2></div><div><p>Give the same engineering task to Andrei or to an engineer who over-relies on AI, then compare the consequences.</p><span className="architecture-label">Choose a task · assign an owner · inspect the decisions</span></div></div>
       <div className="architecture-playground">
-        <div className="task-assignment" key={scenario.id} aria-live="polite">
-          <span className="task-assignment-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager holding a task checklist" /></span>
-          <div className="task-assignment-bubble"><div className="task-assignment-meta"><strong>Engineering manager</strong><span>just now</span></div><span className="task-assignment-kicker"><MessageCircle size={13} />New assignment</span><p><strong>Hey Andrei — a new task just landed.</strong><br />{scenario.assignment}</p></div>
+        <div className="manager-message" aria-live="polite">
+          <div className="manager-avatar-column"><span className="manager-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager" /></span><span className="manager-presence"><i />online</span></div>
+          <div className="manager-bubble"><div className="manager-bubble-meta"><span><Mail size={13} />FROM YOUR ENGINEERING MANAGER</span><small>just now</small></div><strong>New task · choose an owner</strong><p>{typedAssignment}{isTypingAssignment && <span className="manager-typing-caret" aria-hidden="true" />}</p><span className="manager-bubble-tail" aria-hidden="true" /></div>
         </div>
-        <div className="playground-query"><span className="playground-kicker">TASK IN REVIEW</span><strong>“{scenario.query}”</strong><span className="playground-hint">Choose a task, then run the architecture review.</span><button className="architecture-run-button" onClick={runScenario} disabled={isRunning}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Run again" : "3 · Run architecture review"}</button></div>
-        <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><span className="scenario-switcher-label">1 · Choose the task</span>{guardrailScenarios.map((item, index) => <button key={item.id} className={`scenario-option scenario-option-${item.reviews[owner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-number">0{index + 1}</span><span>{item.label}</span></button>)}</div>
-        <div className="task-owner-picker" role="group" aria-label="Choose who handles the task"><span className="scenario-switcher-label">2 · Assign the task</span><button className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /><span><strong>Assign to Andrei</strong><small>Senior engineer + AI architect</small></span><Check size={16} aria-hidden="true" /></button><button className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Assign to another engineer</strong><small>Prompt-first approach · shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div>
+        <div className="task-assignment" aria-live="polite">
+          <div className="task-assignment-copy"><span className="task-assignment-kicker">Assignment brief <small>Same task · two possible paths</small></span><strong>{scenario.assignment}</strong><p>Who should own this task? Choose an engineer and watch the investigation unfold.</p></div>
+        </div>
+        <div className="playground-controls">
+          <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><div className="control-heading"><span className="control-heading-title"><SearchCheck size={17} aria-hidden="true" />Review task</span><p>Pick the situation you want to inspect.</p></div>{orderedGuardrailScenarios.map(item => <button key={item.id} disabled={isRandomizing} className={`scenario-option scenario-option-${item.reviews[selectedOwner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-thumb"><img src={scenarioImageSources[item.id]} alt="" aria-hidden="true" /></span><span className="scenario-option-copy"><span>{item.label}</span></span></button>)}</div>
+          <div className="review-controls"><div className="task-owner-picker" role="group" aria-label="Choose who owns the task"><div className="control-heading"><span className="control-heading-title"><Bot size={17} aria-hidden="true" />Assign the task</span><p>Choose once. The review starts immediately.</p></div><button disabled={isRandomizing} className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /><span><strong>Andrei</strong><small>Context, evidence and guardrails</small></span><Check size={16} aria-hidden="true" /></button><button disabled={isRandomizing} className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Engineer who over-relies on AI</strong><small>First answer, shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div><div className="review-action"><span>{owner ? "The decision path is ready to inspect." : "Select an owner to reveal the decision path."}</span>{owner && <button className="architecture-run-button" onClick={runScenario} disabled={isRunning || isRandomizing}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Replay this path" : "Run architecture review"}</button>}</div></div>
+          <RandomAssignmentMachine isSpinning={isRandomizing} result={randomSelection} onPull={pullRandomLever} />
+        </div>
       </div>
-      <div className={`simulation-status simulation-status-${isRunning || isComplete ? review.tone : "idle"} ${isRunning ? "is-running" : ""}`} aria-live="polite"><span className="simulation-status-dot" />{isComplete ? review.verdict : isRunning ? `RUNNING · ${review.steps[Math.min(activePhase, review.steps.length - 1)].name.toUpperCase()}` : "READY · run the architecture review"}</div>
+      <div className={`simulation-status simulation-status-${isRunning || isComplete ? review.tone : "idle"} ${isRunning ? "is-running" : ""}`} aria-live="polite"><span className="simulation-status-dot" />{isComplete ? review.verdict : isRunning ? `RUNNING · ${review.steps[Math.min(activePhase, review.steps.length - 1)].name.toUpperCase()}` : owner ? "READY · review is queued" : "WAITING · choose an owner to reveal the solution"}</div>
       <div className={`architecture-flow ${activePhase < 0 ? "architecture-flow-initial" : ""}`} aria-label="Review stages">
-        <article className="architecture-step architecture-strategy is-revealed"><span className="step-top"><span>01</span><span className="architecture-strategy-label">Initial strategy</span></span><strong>{review.strategy.title}</strong><p>{review.strategy.body}</p><code>{review.strategy.code}</code></article>
-        {activePhase < 0 ? <article className="architecture-question-card" role="status"><span className="architecture-empty-question">?</span><span className="architecture-empty-label">Run the review to reveal the approach</span></article> : <>
+        {owner === null ? <article className="architecture-question-card architecture-owner-prompt" role="status"><span className="architecture-empty-question" aria-hidden="true">?</span><span className="architecture-empty-label">Choose who owns the task<br /><small>The solution appears here next.</small></span></article> : <><article className="architecture-step architecture-strategy is-revealed"><span className="step-top"><span>01</span><span className="architecture-strategy-label">Initial strategy</span></span><span className="architecture-step-art"><img src={flowImageSources[taskFlowVisualFor(scenario.id, review.strategy.title, review.strategy.code)]} alt="" aria-hidden="true" /></span><strong>{review.strategy.title}</strong><p>{review.strategy.body}</p><code>{review.strategy.code}</code></article>
+        {activePhase < 0 ? <article className="architecture-question-card" role="status"><span className="architecture-empty-question">?</span><span className="architecture-empty-label">Run the review to reveal the full approach</span></article> : <>
           {review.steps.slice(0, Math.min(activePhase + 1, completionPhase + 1)).map((step, index, visibleSteps) => {
             const blocked = review.blockedStep === index && (activePhase >= index || isComplete);
             const processing = isRunning && activePhase === index;
             const passed = activePhase > index && !blocked;
-            return <article key={step.name} className={`architecture-step is-revealed ${processing ? "is-processing" : ""} ${passed ? "is-passed" : ""} ${blocked ? "is-blocked" : ""} ${blocked && review.tone === "unverified" ? "is-unverified" : ""}`}><span className="architecture-pulse" aria-hidden="true" /><span className="step-top"><span>0{index + 2}</span>{(!isComplete || index < visibleSteps.length - 1) && <ArrowRight size={18} />}</span><strong>{step.name}</strong><p>{step.body}</p><code>{step.code}</code>{blocked && <span className="step-verdict">{review.tone === "unverified" ? "UNVERIFIED" : "BLOCKED"}</span>}</article>;
+            return <article key={step.name} className={`architecture-step is-revealed ${processing ? "is-processing" : ""} ${passed ? "is-passed" : ""} ${blocked ? "is-blocked" : ""} ${blocked && review.tone === "unverified" ? "is-unverified" : ""}`}><span className="architecture-pulse" aria-hidden="true" /><span className="step-top"><span>0{index + 2}</span>{(!isComplete || index < visibleSteps.length - 1) && <ArrowRight size={18} />}</span><span className="architecture-step-art"><img src={flowImageSources[taskFlowVisualFor(scenario.id, step.name, step.code)]} alt="" aria-hidden="true" /></span><strong>{step.name}</strong><p>{step.body}</p><code>{step.code}</code>{blocked && <span className="step-verdict">{review.tone === "unverified" ? "UNVERIFIED" : "BLOCKED"}</span>}</article>;
           })}
           {!isComplete && <article className="architecture-question-card" role="status"><span className="architecture-empty-question">?</span><span className="architecture-empty-label">Next decision</span></article>}
+        </>}
         </>}
       </div>
       {isComplete && <div className={`review-outcome review-outcome-${review.tone}`} role="status">
@@ -1129,8 +1391,110 @@ function Architecture() {
         <ReviewOutcomeVisual scenarioId={scenario.id} variant={review.tone === "safe" ? "stable" : review.tone === "unverified" ? "chaos" : "blocked"} />
         {scenario.id === "plumbing-assistant" && <PlumbingFeedback variant={review.tone === "safe" ? "stable" : "chaos"} />}
       </div>}
-    </>}
-  </section>;
+    </section>
+    <section className="puzzle-section" id="puzzle">
+      <GoatMode />
+    </section>
+  </>;
+}
+
+function LinkedInReviewsCarousel() {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const reviewCount = linkedInReviews.length;
+  const extendedReviews = [...linkedInReviews, ...linkedInReviews, ...linkedInReviews];
+
+  const stepSize = useCallback(() => {
+    const viewport = viewportRef.current;
+    const firstCard = viewport?.querySelector<HTMLElement>(".linkedin-review-card");
+    if (!firstCard) return 0;
+    const gap = Number.parseFloat(window.getComputedStyle(firstCard.parentElement as HTMLElement).gap) || 0;
+    return firstCard.getBoundingClientRect().width + gap;
+  }, []);
+
+  const move = useCallback((direction: -1 | 1) => {
+    const viewport = viewportRef.current;
+    const step = stepSize();
+    if (!viewport || !step) return;
+    const current = Math.round(viewport.scrollLeft / step);
+    viewport.scrollTo({
+      left: (current + direction) * step,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [stepSize]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const startAtMiddleSet = () => {
+      const step = stepSize();
+      if (step) viewport.scrollLeft = step * reviewCount;
+    };
+    startAtMiddleSet();
+    const onScroll = () => {
+      const step = stepSize();
+      if (!step) return;
+      const rawIndex = Math.round(viewport.scrollLeft / step);
+      let logicalIndex = rawIndex;
+      if (rawIndex >= reviewCount * 2) {
+        logicalIndex = rawIndex - reviewCount;
+        viewport.scrollLeft = logicalIndex * step;
+      } else if (rawIndex < reviewCount) {
+        logicalIndex = rawIndex + reviewCount;
+        viewport.scrollLeft = logicalIndex * step;
+      }
+      setActiveIndex(((logicalIndex % reviewCount) + reviewCount) % reviewCount);
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", onScroll);
+  }, [reviewCount, stepSize]);
+
+  useEffect(() => {
+    if (isPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => move(1), 30000);
+    return () => window.clearInterval(timer);
+  }, [isPaused, move]);
+
+  return <div className="linkedin-carousel" role="region" aria-roledescription="carousel" aria-label="LinkedIn recommendations">
+    <div className="linkedin-carousel-toolbar">
+      <div><span className="linkedin-carousel-kicker"><BrandLogo brand="linkedin" />LinkedIn recommendations</span></div>
+      <div className="linkedin-carousel-controls">
+        <button type="button" className="linkedin-carousel-button" onClick={() => move(-1)} aria-label="Previous recommendation"><ArrowLeft size={17} /></button>
+        <button type="button" className="linkedin-carousel-button" onClick={() => move(1)} aria-label="Next recommendation"><ArrowRight size={17} /></button>
+      </div>
+    </div>
+    <div
+      className="linkedin-carousel-viewport"
+      ref={viewportRef}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsPaused(false); }}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
+    >
+      <div className="linkedin-carousel-track">
+        {extendedReviews.map((review, index) => {
+          const isClone = index < reviewCount || index >= reviewCount * 2;
+          return <article className="linkedin-review-card" key={`${review.id}-${index}`} aria-hidden={isClone || undefined} aria-roledescription="slide" aria-label={`${(index % reviewCount) + 1} of ${reviewCount}`}>
+            <div className="linkedin-review-author">
+              <a href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined} aria-label={`Open ${review.name}'s LinkedIn profile`}>
+                <img className="linkedin-review-avatar" src={review.photo} alt={`${review.name}'s LinkedIn profile photo`} />
+              </a>
+              <div className="linkedin-review-author-copy">
+                <a className="linkedin-review-name" href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined}>{review.name}</a>
+                <span className="linkedin-review-role">{review.role}</span>
+                <span className="linkedin-review-meta">{review.date} · {review.relationship}</span>
+              </div>
+            </div>
+            <p className="linkedin-review-quote">{review.quote}</p>
+          </article>;
+        })}
+      </div>
+    </div>
+    <div className="linkedin-carousel-footer"><div className="linkedin-carousel-dots" role="tablist" aria-label="Choose recommendation"><span className="sr-only">Choose recommendation</span>{linkedInReviews.map((review, index) => <button type="button" key={review.id} role="tab" aria-selected={activeIndex === index} aria-label={`Show recommendation ${index + 1}: ${review.name}`} onClick={() => { const viewport = viewportRef.current; const step = stepSize(); if (viewport && step) viewport.scrollTo({ left: (reviewCount + index) * step, behavior: "smooth" }); }}><span /></button>)}</div></div>
+  </div>;
 }
 
 export default function Home() {
@@ -1156,19 +1520,19 @@ export default function Home() {
     window.addEventListener("resize", update);
     return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
   }, []);
-  const chooseProject = (id: string) => { setActiveId(id); setAppPath("/login"); };
+  const chooseProject = (id: string) => { setActiveId(id); setAppPath(id === "hoc-v2" ? "/" : "/login"); };
   const explore = (id = activeId) => { chooseProject(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
   return <main className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER <b>×</b> PRODUCT OWNER</span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><Linkedin size={21} strokeWidth={2.1} aria-hidden="true" /><span>LinkedIn</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Github size={21} strokeWidth={2.1} aria-hidden="true" /><span>GitHub</span></a></nav></header>
-    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p></div><div className="hero-stats"><span className="section-eyebrow">Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a></div></section>
-    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick an application. <em>Make it yours.</em></h2></div></div>
+    <header className="site-header"><a className="wordmark" href="#top"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Andrei Tekhtelev" /><span>ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role">FULL-STACK ENGINEER <b>×</b> AI PRACTITIONER <b>×</b> PRODUCT OWNER</span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p></div><div className="hero-stats"><span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a><a href="#recommendations"><span className="stat-symbol"><BrandLogo brand="linkedin" /></span><span><strong>Peer recommendations</strong><small>See what teammates say about working with me.</small></span></a><a href="#puzzle"><span className="stat-symbol stat-symbol-sparkle" aria-hidden="true"><Sparkles size={26} /></span><span><strong>Fun &amp; magic</strong><small>Keep the craft rigorous and leave room for wonder.</small></span></a></div></section>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick an application. <em>Make it yours.</em></h2></div><p className="workspace-heading-note">Navigate the live app and the guide follows the route: one screen, one set of challenges, decisions and implementation details.</p></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
       <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} /></div>
     </section>
     <Architecture />
-    <section className="case-study" id="contact"><div className="case-study-heading"><div className="section-eyebrow">A closer look</div><h2>Don’t just take my <em>word</em> for it.</h2><p>Explore the work, check the boundary, then choose how to continue.</p></div><div className="case-study-content"><div className="case-grid"><article><span className="case-index">01</span><Code2 size={22} /><h3>Explore the work</h3><p>Try the live products and see how each workflow turns a real question into a useful next step.</p></article><article><span className="case-index">02</span><ShieldCheck size={22} /><h3>Know the boundary</h3><p>The guide distinguishes documented facts from claims that still need evidence.</p></article><article><span className="case-index">03</span><MessageCircle size={22} /><h3>Have a conversation</h3><p>Want to discuss a system, a team or a role? Pick the channel that works for you.</p></article></div><nav className="contact-actions" aria-label="Contact Andrei"><a className="contact-action contact-action-profile" href={contactUrl} target="_blank" rel="noreferrer"><span className="contact-action-icon"><Linkedin size={19} /></span><span className="contact-action-copy"><small>PROFILE</small><strong>LinkedIn</strong></span><ArrowUpRight size={17} /></a><a className="contact-action contact-action-email" href={emailUrl}><span className="contact-action-icon"><Mail size={19} /></span><span className="contact-action-copy"><small>EMAIL</small><strong>a.tekhtelev@gmail.com</strong></span><ArrowUpRight size={17} /></a><a className="contact-action contact-action-phone" href={phoneUrl}><span className="contact-action-icon"><Phone size={19} /></span><span className="contact-action-copy"><small>PHONE</small><strong>+1 778 883 4228</strong></span><ArrowUpRight size={17} /></a></nav></div></section>
+    <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />A closer look</div><h2 id="recommendations-heading">Don’t just take my <em>word</em> for it.</h2><p>Real recommendations from people I’ve worked with.</p></div><LinkedInReviewsCarousel /></section>
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
   </main>;
 }

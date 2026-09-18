@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptsPreviewMessage, deviceWidths, portfolioDemoMessageFor } from "./preview";
+import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "./preview";
 
 describe("live preview message boundary", () => {
   const frame = {} as Window;
@@ -24,13 +24,8 @@ describe("live preview message boundary", () => {
   it("gives the phones comparable real screen widths while preserving larger tablet and desktop frames", () => {
     expect(deviceWidths).toEqual({ iphone: 538, ipad: 768, android: 515, desktop: 1280 });
   });
-  it("provides guest credentials for all three connected apps", () => {
-    expect(portfolioDemoMessageFor("hoc-v2")).toEqual({
-      type: "portfolio:demo-credentials",
-      projectId: "hoc-v2",
-      email: "guest@commons.com",
-      password: "Guest123!",
-    });
+  it("provides guest credentials only for authenticated connected apps", () => {
+    expect(portfolioDemoMessageFor("hoc-v2")).toBeNull();
     expect(portfolioDemoMessageFor("symply-house")).toEqual({
       type: "portfolio:demo-credentials",
       projectId: "symply-house",
@@ -38,5 +33,11 @@ describe("live preview message boundary", () => {
       password: "Guest123!",
     });
     expect(portfolioDemoMessageFor("symply-budget")?.email).toBe("guest@budget.com");
+  });
+  it("creates a separate visitor session id for each portfolio visit", () => {
+    const first = createPortfolioSessionId();
+    const second = createPortfolioSessionId();
+    expect(first).toEqual(expect.any(String));
+    expect(first).not.toBe(second);
   });
 });
