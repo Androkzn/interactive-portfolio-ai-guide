@@ -583,7 +583,7 @@ const codeReviewShortcutSteps: ReviewStep[] = [
 const guardrailScenarios: GuardrailScenario[] = [
   {
     id: "plumbing-assistant",
-    label: "Build a 24/7 plumbing assistant",
+    label: "Build a 24/7 AI call-centre assistant",
     assignment: "Build a 24/7 AI call-centre assistant for a Canada-wide plumbing network.",
     query: "Build a 24/7 AI call-centre assistant for a Canada-wide plumbing network.",
     reviews: {
@@ -728,6 +728,32 @@ const scenarioImageSources: Record<GuardrailScenarioId, string> = {
   "plumbing-assistant": "/images/scenario-cards/plumbing-assistant.png",
   "code-review": "/images/scenario-cards/code-review.png",
 };
+
+const managerLuckMessages: Record<GuardrailScenarioId, string[]> = {
+  "bug-fix": [
+    "I believe this bug is ready to be found 🐞🤞",
+    "The AI gods are with us. May the retries behave 🤖✨",
+    "A little luck, a careful fix, and we’re in business 🍀🛠️",
+    "Let’s trust the spin — good luck is on call 🎲🔍",
+  ],
+  "plumbing-assistant": [
+    "The AI gods are with us 🤖✨",
+    "I have a feeling this one will flow our way 🔧🍀",
+    "May the right route appear on the first try 🙏🎲",
+    "Let’s trust the spin — luck likes a good handoff 🤞🛠️",
+  ],
+  "code-review": [
+    "I have a good feeling about this review 🤞🧪",
+    "Let’s trust the spin — may the diff be kind 🎲✨",
+    "The AI gods are with us, but evidence still wins 🤖🔎",
+    "May the right reviewer appear 🙏🛡️",
+  ],
+};
+
+function pickManagerLuckMessage(scenarioId: GuardrailScenarioId, previousMessage: string) {
+  const messages = managerLuckMessages[scenarioId].filter(message => message !== previousMessage);
+  return messages[Math.floor(Math.random() * messages.length)] ?? managerLuckMessages[scenarioId][0];
+}
 
 const randomToolSymbols = [
   { id: "gpt", label: "OpenAI", logo: "/images/ai-logos/openai.svg", className: "random-tool-gpt" },
@@ -1218,39 +1244,55 @@ function ReviewOutcomeVisual({ scenarioId, variant }: { scenarioId: GuardrailSce
   </div>;
 }
 
-function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, onPull }: { isSpinning: boolean; result: RandomAssignmentSelection | null; spinPlan: RandomReelSpin[]; hasPulled: boolean; onPull: () => void }) {
+function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, luckMessage, onPull }: { isSpinning: boolean; result: RandomAssignmentSelection | null; spinPlan: RandomReelSpin[]; hasPulled: boolean; luckMessage: string; onPull: () => void }) {
+  const [visibleLuckMessage, setVisibleLuckMessage] = useState(luckMessage);
   const resultScenario = result ? guardrailScenarios.find(item => item.id === result.scenarioId) : null;
   const ownerLabel = result?.owner === "andrei" ? "Andrei" : "AI-reliant engineer";
+  useEffect(() => {
+    if (!hasPulled) return;
+    setVisibleLuckMessage("");
+    let visible = 0;
+    const increment = Math.max(1, Math.ceil(luckMessage.length / 34));
+    const timer = window.setInterval(() => {
+      visible = Math.min(luckMessage.length, visible + increment);
+      setVisibleLuckMessage(luckMessage.slice(0, visible));
+      if (visible >= luckMessage.length) window.clearInterval(timer);
+    }, 38);
+    return () => window.clearInterval(timer);
+  }, [hasPulled, luckMessage]);
   return <div className={`random-assignment ${isSpinning ? "is-randomizing" : ""}`}>
     <div className="random-assignment-head">
       <span className="section-eyebrow"><Sparkles size={14} aria-hidden="true" />Random task + assignee</span>
       <p>Let the machine choose both. Pull the lever and watch the AI tools spin.</p>
     </div>
     <div className="random-machine-stage">
-      <div className="random-machine-visual">
-        <img className="random-machine-art" src="/images/random-task-slot-machine.png" alt="Interactive AI task slot machine" />
-        <div className="random-reels" aria-hidden="true">
-          {[0, 1, 2].map(index => {
-            const settledTool = randomToolById(result?.tools[index] ?? randomToolSymbols[index].id);
-            const settledIndex = randomToolSymbols.findIndex(tool => tool.id === settledTool.id);
-            const previousTool = randomToolSymbols[(settledIndex - 1 + randomToolSymbols.length) % randomToolSymbols.length];
-            const nextTool = randomToolSymbols[(settledIndex + 1) % randomToolSymbols.length];
-            const reelTools = isSpinning ? [...randomToolSymbols, ...randomToolSymbols, ...randomToolSymbols] : [previousTool, settledTool, nextTool];
-            const spin = spinPlan[index] ?? spinPlan[0];
-            const spinStyle = { "--random-reel-duration": `${spin.duration}s`, "--random-reel-delay": `${spin.delay}s`, "--random-reel-mid": `-${Math.round(spin.distance * 0.34)}%`, "--random-reel-near": `-${Math.round(spin.distance * 0.72)}%`, "--random-reel-late": `-${Math.round(spin.distance * 0.92)}%`, "--random-reel-distance": `-${spin.distance}%` } as CSSProperties;
-            return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index} ${isSpinning ? "" : "is-settled"}`} style={spinStyle}>
-              {reelTools.map((tool, toolIndex) => <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><img className="random-tool-logo" src={tool.logo} alt="" /><small>{tool.label}</small></span>)}
-            </div></div>;
-          })}
+      <div className="random-machine-controls">
+        <div className="random-machine-visual">
+          <img className="random-machine-art" src="/images/random-task-slot-machine.png" alt="Interactive AI task slot machine" />
+          <div className="random-reels" aria-hidden="true">
+            {[0, 1, 2].map(index => {
+              const settledTool = randomToolById(result?.tools[index] ?? randomToolSymbols[index].id);
+              const settledIndex = randomToolSymbols.findIndex(tool => tool.id === settledTool.id);
+              const previousTool = randomToolSymbols[(settledIndex - 1 + randomToolSymbols.length) % randomToolSymbols.length];
+              const nextTool = randomToolSymbols[(settledIndex + 1) % randomToolSymbols.length];
+              const reelTools = isSpinning ? [...randomToolSymbols, ...randomToolSymbols, ...randomToolSymbols] : [previousTool, settledTool, nextTool];
+              const spin = spinPlan[index] ?? spinPlan[0];
+              const spinStyle = { "--random-reel-duration": `${spin.duration}s`, "--random-reel-delay": `${spin.delay}s`, "--random-reel-mid": `-${Math.round(spin.distance * 0.34)}%`, "--random-reel-near": `-${Math.round(spin.distance * 0.72)}%`, "--random-reel-late": `-${Math.round(spin.distance * 0.92)}%`, "--random-reel-distance": `-${spin.distance}%` } as CSSProperties;
+              return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index} ${isSpinning ? "" : "is-settled"}`} style={spinStyle}>
+                {reelTools.map((tool, toolIndex) => <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><img className="random-tool-logo" src={tool.logo} alt="" /><small>{tool.label}</small></span>)}
+              </div></div>;
+            })}
+          </div>
+          <button className="random-machine-lever" type="button" onClick={onPull} disabled={isSpinning} aria-label={isSpinning ? "Random selection in progress" : hasPulled ? "Pull the random task and assignee lever again" : "Pull the random task and assignee lever"}><span>Pull</span></button>
         </div>
-        {!hasPulled && <>
-          <button className="random-machine-lever" type="button" onClick={onPull} disabled={isSpinning} aria-label={isSpinning ? "Random selection in progress" : "Pull the random task and assignee lever"}><span>Pull</span></button>
-          <button className="random-pull-button" type="button" onClick={onPull} disabled={isSpinning}><ArrowDownLeft size={16} aria-hidden="true" /><span>{isSpinning ? "Spinning…" : "Pull the lever"}</span></button>
-        </>}
+        <div className="random-machine-actions">
+          {!hasPulled && !isSpinning && <button className="random-pull-button" type="button" onClick={onPull}><ArrowDownLeft size={16} aria-hidden="true" /><span>Pull the lever</span></button>}
+          {hasPulled && !isSpinning && <button className="random-pull-button random-pull-button-again" type="button" onClick={onPull}><RotateCcw size={16} aria-hidden="true" /><span>Pull again</span></button>}
+        </div>
       </div>
       {hasPulled && <div className="random-luck-message" role="status" aria-live="polite">
         <span className="random-luck-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager" /></span>
-        <span className="random-luck-bubble"><small>ENGINEERING MANAGER</small><strong>I believe we’ll get lucky 🤞</strong><span className="random-luck-bubble-tail" aria-hidden="true" /></span>
+        <span className="random-luck-bubble"><small>ENGINEERING MANAGER</small><strong>{visibleLuckMessage || "Thinking…"}<span className="random-luck-typing-caret" aria-hidden="true" /></strong><span className="random-luck-bubble-tail" aria-hidden="true" /></span>
       </div>}
       {result && resultScenario && <div className="random-assignment-result has-result" aria-live="polite" aria-atomic="true"><div className="random-result-identity" aria-hidden="true"><span className="random-result-icon random-result-task"><img src={scenarioImageSources[resultScenario.id]} alt="" /></span><span className="random-result-plus">+</span><span className="random-result-icon random-result-developer">{result.owner === "andrei" ? <img src="/images/andrei-tekhtelev-avatar.png" alt="" /> : <Bot size={20} />}</span></div><div className="random-result-copy"><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned developer · {ownerLabel}</small></div></div>}
     </div>
@@ -1268,6 +1310,7 @@ function Architecture() {
   const [isRandomizing, setIsRandomizing] = useState(false);
   const [randomSelection, setRandomSelection] = useState<RandomAssignmentSelection | null>(null);
   const [hasPulledRandomLever, setHasPulledRandomLever] = useState(false);
+  const [randomLuckMessage, setRandomLuckMessage] = useState(managerLuckMessages["bug-fix"][0]);
   const [randomSpinPlan, setRandomSpinPlan] = useState<RandomReelSpin[]>([
     { duration: 1.72, delay: 0, distance: 60 },
     { duration: 1.96, delay: 0.12, distance: 64 },
@@ -1348,6 +1391,7 @@ function Architecture() {
     if (isRandomizing) return;
     setHasPulledRandomLever(true);
     const nextScenario = guardrailScenarios[Math.floor(Math.random() * guardrailScenarios.length)];
+    setRandomLuckMessage(current => pickManagerLuckMessage(nextScenario.id, current));
     const nextOwner: ReviewOwner = Math.random() > 0.5 ? "andrei" : "prompt-only";
     const tools = [0, 1, 2].map(() => randomToolSymbols[Math.floor(Math.random() * randomToolSymbols.length)].id);
     const nextSpinPlan = [0, 1, 2].map(index => ({
@@ -1384,7 +1428,7 @@ function Architecture() {
           <div className="task-assignment-copy"><span className="task-assignment-kicker">Assignment brief <small>Same task · two possible paths</small></span><strong>{scenario.assignment}</strong><p>Who should own this task? Choose an engineer and watch the investigation unfold.</p></div>
         </div>
         <div className="playground-controls">
-          <RandomAssignmentMachine isSpinning={isRandomizing} result={randomSelection} spinPlan={randomSpinPlan} hasPulled={hasPulledRandomLever} onPull={pullRandomLever} />
+          <RandomAssignmentMachine isSpinning={isRandomizing} result={randomSelection} spinPlan={randomSpinPlan} hasPulled={hasPulledRandomLever} luckMessage={randomLuckMessage} onPull={pullRandomLever} />
           <div className="manual-assignment">
             <div className="playground-divider" aria-hidden="true"><span>OR</span></div>
             <div className="manual-assignment-heading"><span className="section-eyebrow"><SearchCheck size={14} />Choose manually</span><p>Select the task and owner yourself, then start the review.</p></div>
