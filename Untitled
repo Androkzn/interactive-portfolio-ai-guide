@@ -1,0 +1,171 @@
+Да. Теперь, когда я вижу всю страницу целиком, концепция мне нравится очень сильно, но я бы изменил позиционирование и информационную архитектуру. Сейчас сайт отлично показывает product/UI engineering, но заметно хуже доказывает backend / architecture / production AI / quality engineering — то есть как раз то, куда мы сейчас двигаем LinkedIn.
+1. Hero — поменял бы верхние labels
+Сейчас наверху:
+FULL-STACK ENGINEER • AI PRACTITIONER • PRODUCT OWNER
+
+AI Practitioner слабее твоего нынешнего позиционирования, а Product Owner немного уводит в сторону.
+Я бы сделал:
+FULL-STACK ENGINEER • APPLIED AI • QUALITY ENGINEERING
+
+или:
+FULL-STACK ENGINEER • AI-ENABLED DEVELOPMENT • APPLIED AI
+
+А маленький badge:
+AI-ENABLED PRODUCT ENGINEER
+
+можно оставить — он хороший.
+Сам headline:
+Fast with AI.
+Serious about quality.
+
+оставить обязательно. Это самая запоминающаяся часть сайта.
+Но description я бы усилил. Сейчас:
+I use AI to move faster, then build the quality, reliability, efficiency, and stability that real users and teams can depend on.
+
+Лучше:
+I use AI to move faster — then engineer the architecture, validation, observability, and reliability that production software depends on.
+
+Это сразу делает тебя не просто product developer.
+2. Самая большая проблема — проекты выглядят слишком UI-centric
+Сейчас recruiter видит огромный iPhone и красивое приложение.
+Первое впечатление:
+«Хороший mobile/frontend developer.»
+
+Но мы хотим:
+«Этот человек умеет проектировать systems.»
+
+Поэтому справа я бы добавил переключатель:
+Product | Architecture | Quality | AI Workflow
+Например, для Symply House.
+Product — то, что сейчас.
+Architecture:
+React Native → Local Store → Mutation Queue → Sync Engine → API → Backend
+с объяснением offline-first решения.
+Quality:
+Requirements → Test scenarios → Implementation → Validation → CI → Monitoring
+AI Workflow:
+Spec → Implementation Agent → Tests → Independent Review → Verification
+Вот тогда твой portfolio становится совершенно другим по уровню.
+3. Challenge → Decision → Solution → Impact — оставить
+Это очень удачная структура.
+Но сейчас Impact:
+The workflow survives the network
+
+хорошо звучит, но это скорее outcome, чем evidence.
+Где возможно, добавляй доказательство:
+Impact
+- Works fully offline
+- Queued mutations survive app restarts
+- Automatic reconciliation after reconnect
+- Account-scoped data isolation
+- Tested against interrupted-network scenarios
+Не обязательно везде иметь проценты. Главное — показать как ты знаешь, что решение работает.
+Это отлично поддерживает Serious about quality.
+4. AI Guide нужно сделать гораздо заметнее
+Сейчас поле:
+Ask about this screen...
+
+выглядит почти как второстепенный chatbot.
+А это потенциально главная уникальная фича портфолио.
+Я бы назвал его:
+Ask Andrei's AI Guide
+
+И placeholder:
+Ask about the architecture, trade-offs, implementation, or testing...
+
+Quick questions:
+Why this architecture?
+What were the trade-offs?
+How did you test this?
+Show me the data flow
+Причём ответ AI должен уметь управлять portfolio UI.
+Например recruiter спрашивает:
+How does offline synchronization work?
+
+AI отвечает и автоматически переключает правую панель на Architecture → Sync.
+Вот это уже будет очень впечатляющая демонстрация agentic UI.
+5. Не хватает твоего профессионального опыта
+Это, пожалуй, самое важное.
+Сейчас:
+Hero → personal projects → recommendations → конец.
+А где 6+ лет коммерческого engineering experience?
+Человек может подумать, что это portfolio человека с тремя pet projects.
+Я бы между Projects и Recommendations добавил:
+Production engineering
+И там 3–4 case studies без раскрытия proprietary code:
+Personalization Architecture
+10+ real-time data sources → precomputed intelligence snapshot → major latency reduction
+Production AI Coach
+RAG → contextual retrieval → streaming → function calling → safety
+AI Video Pipeline
+Video → frames/transcript → AI analysis → structured output → validation
+Production Observability
+CloudWatch + Crashlytics → alerts → investigation → incident workflow
+Вот здесь твой реальный опыт начинает работать на portfolio.
+Например Coach Intelligence — прекрасный case study: ты обнаружил real-time aggregation более чем из 10 DynamoDB tables и заменил его precomputed snapshot architecture. В твоих STAR материалах зафиксировано до 78% уменьшения response time. Proud project _ successful feature.docxDOCX
+6. Добавил бы отдельный блок «How I engineer with AI»
+Вот это особенно важно после нашего сегодняшнего разговора.
+Например:
+AI makes coding faster.
+Engineering still makes it reliable.
+И визуальный pipeline:
+Problem
+→ Requirements
+→ Implementation Plan
+→ AI-assisted Build
+→ Automated Tests
+→ Independent Validation
+→ CI/CD
+→ Production Observability
+→ Feedback
+А под ним твой bug-fix workflow:
+Production evidence → Reproduce → Baseline → Root cause → Challenge hypothesis → Fix → Verify → Monitor
+Это будет очень сильный блок и для AI Software Engineer, и для Principal Quality Architect.
+Причём твой собственный learning story хорошо объясняет, почему: ты уже описывал переход от чрезмерного доверия AI-output к BRD/TRD, explicit contract validation и rollout review. Failure _ mistake _ learning (1).docxDOCX
+7. Recommendations — оставить, но сделать компактнее
+Сама идея отличная.
+Особенно потому, что рекомендации подтверждают то, что ты говоришь о себе.
+Но сейчас этот section занимает огромную высоту относительно количества информации.
+Я бы сделал его примерно на 30–40% ниже.
+И заголовок:
+People I've worked with.
+
+мне нравится. Он гораздо человечнее, чем Testimonials.
+8. Не хватает CTA в самом конце
+Сейчас после recommendations фактически footer.
+Нужен финальный блок:
+Let's build something reliable.
+I'm interested in full-stack, applied AI, AI-enabled engineering, and quality-focused engineering roles.
+[LinkedIn] [Email me] [GitHub]
+
+А если хочется более нейтрально:
+Interested in how I work?
+Let's talk about software, AI, architecture, or engineering quality.
+
+В итоге структура сайта стала бы такой
+Hero
+Fast with AI. Serious about quality.
+↓
+Interactive Projects
+реально попробовать твои продукты
+↓
+Production Engineering
+реальные commercial architecture stories
+↓
+How I Engineer with AI
+твоя methodology / quality system
+↓
+AI Guide
+по сути интерактивное интервью с тобой
+↓
+People I've Worked With
+social proof
+↓
+Let's Talk
+CTA
+И вот тогда сайт отвечает на четыре разных вопроса recruiter/hiring manager:
+Can he build? → попробуй приложения.
+Can he architect? → посмотри architecture case studies.
+Does he actually understand AI? → посмотри production AI + AI engineering workflow.
+Can I trust him with production systems? → quality, observability, measurable results + recommendations.
+Сейчас сайт уже красивый и необычный. Но после этих изменений он будет продавать не только твои приложения — он будет продавать твой способ инженерного мышления. Именно это я бы сделал его основной задачей.

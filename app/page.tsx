@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, Volume2, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 
@@ -21,6 +21,7 @@ type LinkedInReview = {
   relationship: string;
   date: string;
   quote: string;
+  excerpt: string;
   href: string;
   photo: string;
 };
@@ -33,6 +34,7 @@ const linkedInReviews: LinkedInReview[] = [
     relationship: "Worked with Andrei on the same team",
     date: "September 12, 2026",
     quote: "I worked with Andrei on the same software engineering team at step.co. He has a remarkably proactive, self-driven approach: he would quickly prototype AI-powered features, propose them to the team, and ship several of them into the product. His expertise is unusually broad, spanning mobile and web, front end to back end and infrastructure, and whatever design or debugging challenge came up, he was always collaborative and offered the kind of support that actually moved us toward a solution. In a fast-changing, demanding environment, Andrei is a model of how an engineer should operate, and I would gladly work with him again.",
+    excerpt: "He has a remarkably proactive, self-driven approach: he would quickly prototype AI-powered features, propose them to the team, and ship several of them into the product.",
     href: "https://www.linkedin.com/in/kentaro-kojima/",
     photo: "/images/linkedin-reviews/kentaro-kojima.jpg",
   },
@@ -43,6 +45,7 @@ const linkedInReviews: LinkedInReview[] = [
     relationship: "Worked with Andrei on the same team",
     date: "September 11, 2026",
     quote: "I had the pleasure of working with Andrei at Step, and he was always someone I could count on. He is incredibly detail-oriented, efficient, creative, and thoughtful in the way he approaches his work. From a cross-functional perspective, I especially appreciated his strong work ethic, responsiveness, and ability to turn ideas into solutions quickly while still paying close attention to the details. He is also a great team player and very easy to work with. Andrei would be a great choice to any team looking for a talented, dependable, and highly capable engineer.",
+    excerpt: "He is incredibly detail-oriented, efficient, creative, and thoughtful in the way he approaches his work.",
     href: "https://www.linkedin.com/in/irene-zhu-78427919/",
     photo: "/images/linkedin-reviews/irene-zhu.jpg",
   },
@@ -53,6 +56,7 @@ const linkedInReviews: LinkedInReview[] = [
     relationship: "Andrei was Andrei’s mentor",
     date: "September 10, 2026",
     quote: "Andrei and I are friends, and I've mentored him occasionally during his professional journey. What I appreciate most is that he takes feedback seriously without taking it personally. He's got the range (backend, frontend web, iOS, AI) and the work ethic. Hard-working, curious, and a great person to have around. Any team would be lucky to have him.",
+    excerpt: "What I appreciate most is that he takes feedback seriously without taking it personally.",
     href: "https://www.linkedin.com/in/andreichernykh/",
     photo: "/images/linkedin-reviews/andrei-chernykh.jpg",
   },
@@ -63,6 +67,7 @@ const linkedInReviews: LinkedInReview[] = [
     relationship: "Worked with Andrei on the same team",
     date: "September 10, 2026",
     quote: "Andrei consistently delivered exceptional work as a Software Developer during our time at Fortify. He has a rare talent for turning complex requirements into clean, scalable, and reliable code. While working on 'Brij - The Social FastPass,' Andrei took complete ownership of the architecture, anticipated bottlenecks, and ensured seamless integration across teams. He is not only technically brilliant but also a fantastic communicator and a great team player. I highly recommend Andrei for any future development role or technical challenge.",
+    excerpt: "He has a rare talent for turning complex requirements into clean, scalable, and reliable code.",
     href: "https://www.linkedin.com/in/olenatomanova/",
     photo: "/images/linkedin-reviews/olena-tomanova.jpg",
   },
@@ -73,6 +78,7 @@ const linkedInReviews: LinkedInReview[] = [
     relationship: "Worked with Andrei but on different teams",
     date: "September 9, 2026",
     quote: "I highly recommend Andrei. He was kind, approachable, and always supportive. He helped me a lot while I was learning Swift, especially with Xcode and AWS architecture, and explained things in a clear, practical way. He is someone who makes the team environment better while also being technically knowledgeable and genuinely helpful.",
+    excerpt: "He helped me a lot while I was learning Swift, especially with Xcode and AWS architecture, and explained things in a clear, practical way.",
     href: "https://www.linkedin.com/in/tandinwangchen/",
     photo: "/images/linkedin-reviews/tandin-wangchen.jpg",
   },
@@ -216,9 +222,10 @@ function guideContextFor(project: Project, pathname: string): LiveGuideContext {
     insight,
   });
   return context([
-    { label: "What was the challenge?", answer: `**${insight.challenge.title}**\n\n${insight.challenge.body}` },
-    { label: "What did you decide?", answer: `**${insight.decision.title}**\n\n${insight.decision.body}` },
-    { label: "How is it implemented?", answer: `**${insight.solution.title}**\n\n${insight.solution.body}\n\n${insight.implementation}` },
+    { label: "Why this architecture?", answer: `**${insight.decision.title}**\n\n${insight.decision.body}\n\nThe Architecture view maps that decision to the system boundary.` },
+    { label: "What were the trade-offs?", answer: `**${insight.challenge.title}**\n\n${insight.challenge.body}\n\n**Decision:** ${insight.decision.body}` },
+    { label: "How did you test this?", answer: `**Evidence before confidence**\n\nThe Quality view shows the verification path used for this project. Where the public source does not yet prove a project-specific test claim, I leave that claim unpublished.` },
+    { label: "Show me the data flow", answer: `**${insight.solution.title}**\n\n${insight.implementation}\n\nOpen the Architecture view for the end-to-end flow and system boundaries.` },
   ]);
 }
 
@@ -250,6 +257,91 @@ function GuideReply({ message }: { message: Message }) {
     {!done && <span className="typing-indicator" role="status" aria-label="Revealing prepared answer"><i /><i /><i /></span>}
     <span className="sr-only" role="status">{done && message.animate ? message.text.replaceAll("**", "") : ""}</span>
   </div>;
+}
+
+type ProjectGuideMode = "product" | "architecture" | "quality" | "ai-workflow";
+
+const projectGuideModes: { id: ProjectGuideMode; label: string }[] = [
+  { id: "product", label: "Product" },
+  { id: "architecture", label: "Architecture" },
+  { id: "quality", label: "Quality" },
+  { id: "ai-workflow", label: "AI workflow" },
+];
+
+function guideModeForQuestion(question: string): ProjectGuideMode {
+  const lower = question.toLowerCase();
+  if (lower.includes("test") || lower.includes("quality") || lower.includes("verify") || lower.includes("validation")) return "quality";
+  if (lower.includes("ai workflow") || lower.includes("ai-assisted") || lower.includes("agent")) return "ai-workflow";
+  if (lower.includes("architecture") || lower.includes("data flow") || lower.includes("sync") || lower.includes("trade-off") || lower.includes("tradeoff")) return "architecture";
+  return "product";
+}
+
+function guideModeContentFor(project: Project, mode: Exclude<ProjectGuideMode, "product">) {
+  if (mode === "architecture") {
+    if (project.id === "symply-house") {
+      return { kicker: "System boundary", title: "Offline-first state with controlled sync", summary: "The device stays useful first; the backend remains an explicit identity, sync and recovery boundary.", steps: ["React Native surfaces", "Local household store", "Queued mutations", "Sync and API boundary", "Account-scoped recovery"] };
+    }
+    if (project.id === "symply-budget") {
+      return { kicker: "System boundary", title: "A local ledger with a narrow backend", summary: "Budget decisions happen locally while authentication, encrypted sync and recovery stay deliberately bounded.", steps: ["Local ledger", "Typed projections", "Budget workflows", "Worker sync boundary", "Recovery and identity"] };
+    }
+    return { kicker: "System boundary", title: "Public data with visible evidence", summary: "The interface keeps the citizen question simple while typed services, official links and account boundaries stay inspectable.", steps: ["Accessible client", "Typed API boundary", "Public data services", "Evidence and provenance", "Optional account state"] };
+  }
+  if (mode === "quality") {
+    return { kicker: "Quality loop", title: "Evidence before confidence", summary: "Quality is a delivery path: define the contract, test the failure modes, validate the result and monitor what ships.", steps: ["Requirements and contract", "Test scenarios", "Implementation", "Independent validation", "CI and monitoring"] };
+  }
+  return { kicker: "AI-enabled development", title: "AI makes coding faster. Engineering makes it reliable.", summary: "AI can accelerate implementation, but the system still needs explicit requirements, tests, review and production feedback.", steps: ["Problem and evidence", "Implementation plan", "AI-assisted build", "Automated tests", "Independent review", "Verification and feedback"] };
+}
+
+function EngineeringModeCard({ project, mode }: { project: Project; mode: Exclude<ProjectGuideMode, "product"> }) {
+  if (project.id === "symply-house" && mode === "architecture") {
+    const flow = [
+      ["01", "Edit a task", "The UI commits the change without waiting for a network round trip."],
+      ["02", "Persist locally", "The household ledger stores the operation on the device first."],
+      ["03", "Schedule sync", "A local-write trigger batches nearby edits and queues one sync run."],
+      ["04", "Exchange operations", "The mailbox boundary moves signed operations between enrolled devices."],
+      ["05", "Apply in scope", "The receiving device verifies and projects the change into the same household."],
+    ];
+    return <section className="guide-mode-card guide-mode-card-specific" aria-labelledby="guide-mode-architecture">
+      <div className="guide-mode-card-heading"><span className="screen-insight-kicker"><Code2 size={13} />Concrete data flow</span><code>offline task edit</code></div>
+      <h3 id="guide-mode-architecture">A local write that reaches the right household.</h3>
+      <p>The useful boundary is not “mobile versus backend.” It is what happens to one task edit while the device is offline, reconnects, and exchanges operations with an enrolled peer.</p>
+      <ol className="project-data-flow">{flow.map(([number, title, detail], index) => <li key={title}><span>{number}</span><div><strong>{title}</strong><p>{detail}</p></div>{index < flow.length - 1 && <ArrowDown size={16} aria-hidden="true" />}</li>)}</ol>
+      <p className="guide-source-note"><FileCheck2 size={15} />Source trace: local ledger, auto-sync trigger, mailbox engine, multi-member projection.</p>
+    </section>;
+  }
+  if (project.id === "symply-house" && mode === "quality") {
+    return <section className="guide-mode-card guide-mode-card-specific" aria-labelledby="guide-mode-quality">
+      <div className="guide-mode-card-heading"><span className="screen-insight-kicker"><ShieldCheck size={13} />Concrete risk</span><code>automated + planned</code></div>
+      <h3 id="guide-mode-quality">Does an offline task survive and sync once?</h3>
+      <div className="quality-scenario">
+        <p><span>Scenario</span>A member creates a task locally; the network returns and another enrolled device receives the change.</p>
+        <p><span>Expected</span>The local task remains available, sync is scheduled automatically, and the peer projects one operation into the same household.</p>
+        <p><span>Automated evidence</span>Local task round-trip, local-write sync trigger, duplicate signal collapse, multi-member task projection.</p>
+        <p className="quality-evidence-pending"><span>Planned evidence</span>A recorded full-device offline → close → reopen → reconnect walkthrough. No result is published yet.</p>
+      </div>
+    </section>;
+  }
+  if (project.id === "symply-house" && mode === "ai-workflow") {
+    return <section className="guide-mode-card guide-mode-card-specific" aria-labelledby="guide-mode-ai-workflow">
+      <div className="guide-mode-card-heading"><span className="screen-insight-kicker"><Bot size={13} />Project review record</span><code>sync trigger bug</code></div>
+      <h3 id="guide-mode-ai-workflow">The engine worked. Nothing called it.</h3>
+      <p>A concrete failure is more useful than another generic AI process diagram. The local operation log was correct, but a task edit could sit on one phone until relaunch or manual sync.</p>
+      <ol className="ai-case-flow">
+        <li><span>Agent task</span><strong>Trace the write-to-sync path and identify the missing trigger.</strong></li>
+        <li><span>Failure found</span><strong>A local write appended an operation but did not schedule property-scoped sync.</strong></li>
+        <li><span>Verification</span><strong>Tests assert debounce, property isolation, session-close safety, and duplicate signal collapse.</strong></li>
+        <li><span>Human decision</span><strong>Keep sync automatic but bounded: one run per burst and no work after sign-out.</strong></li>
+      </ol>
+      <p className="guide-source-note"><FileCheck2 size={15} />Evidence: repository test suite and implementation comments; no private prompt transcript is presented as proof.</p>
+    </section>;
+  }
+  const content = guideModeContentFor(project, mode);
+  return <section className="guide-mode-card" aria-labelledby={`guide-mode-${mode}`}>
+    <div className="guide-mode-card-heading"><span className="screen-insight-kicker"><Code2 size={13} />{content.kicker}</span><code>{project.name}</code></div>
+    <h3 id={`guide-mode-${mode}`}>{content.title}</h3>
+    <p>{content.summary}</p>
+    <ol className="guide-mode-flow">{content.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><strong>{step}</strong></li>)}</ol>
+  </section>;
 }
 
 function Avatar({ active }: { active: boolean }) {
@@ -285,8 +377,9 @@ function ScreenInsightCard({ insight }: { insight: ScreenInsight }) {
   return <section className="screen-insight" aria-labelledby={`screen-insight-${insight.id}`}>
     <div className="screen-insight-header"><span className="screen-insight-kicker"><Code2 size={13} />{insight.id === "budget-login" ? "Local Device-First Strategy" : insight.id === "house-login" ? "Offline-First / Privacy" : "Screen teardown"}</span><code>{insight.route}</code></div>
     <h3 id={`screen-insight-${insight.id}`}>{insight.title}</h3>
-    <div className="screen-insight-grid">{blocks.map(block => <article key={block.label} className={`screen-insight-block ${block.className}`}><span className="screen-insight-number">{block.number}</span><div><span className="screen-insight-label">{block.label}</span><strong>{block.title}</strong><p>{block.body}</p></div></article>)}</div>
-    {impact && <article className="screen-insight-impact"><span className="screen-insight-number">{impact.number}</span><div><span className="screen-insight-label">{impact.label}</span><strong>{impact.title}</strong><p>{impact.body}</p></div></article>}
+    <p className="screen-insight-summary">{insight.summary}</p>
+    <div className="screen-insight-grid">{blocks.map(block => <details key={block.label} className={`screen-insight-block ${block.className}`}><summary><span className="screen-insight-number">{block.number}</span><span><span className="screen-insight-label">{block.label}</span><strong>{block.title}</strong></span></summary><p>{block.body}</p></details>)}</div>
+    {impact && <details className="screen-insight-impact"><summary><span className="screen-insight-number">{impact.number}</span><span><span className="screen-insight-label">{impact.label}</span><strong>{impact.title}</strong></span></summary><p>{impact.body}</p></details>}
     <div className="screen-insight-implementation"><div><span className="screen-insight-label">Implementation</span><p>{insight.implementation}</p></div><div className="screen-insight-stack" aria-label="Implementation stack">{insight.stack.map(item => <span key={item}>{item}</span>)}</div></div>
   </section>;
 }
@@ -397,8 +490,8 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
 
 const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { project: Project; appPath: string; onCoreFlow: () => void }) {
   const [input, setInput] = useState("");
+  const [guideMode, setGuideMode] = useState<ProjectGuideMode>("product");
   const [speaking, setSpeaking] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "guide", text: initialGuideMessage(project) }]);
@@ -436,6 +529,9 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
   }, [messages]);
   const context = guideContextFor(project, appPath);
   useEffect(() => {
+    setGuideMode("product");
+  }, [project.id]);
+  useEffect(() => {
     window.speechSynthesis?.cancel();
     speech.current = null;
     setSpeaking(false);
@@ -445,12 +541,14 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
   const ask = (text: string) => {
     stop();
     if (text.toLowerCase().includes("core flow")) onCoreFlow();
+    setGuideMode(guideModeForQuestion(text));
     const replyId = nextId.current++;
     setActiveAction(text);
     setMessages([{ id: replyId, role: "guide", text: makeGuideReply(text, project, appPath), animate: true }]);
   };
   const chooseAction = (action: LiveGuideAction) => {
     stop();
+    setGuideMode(guideModeForQuestion(action.label));
     setActiveAction(action.label);
     setMessages([{ id: nextId.current++, role: "guide", text: action.answer, animate: true }]);
   };
@@ -481,24 +579,12 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
-  useEffect(() => {
-    if (muted || !voiceAvailable) return;
-    speak();
-  }, [messages, muted, voiceAvailable]);
-  const toggleMute = () => {
-    if (muted) {
-      setMuted(false);
-      return;
-    }
-    setMuted(true);
-    stop();
-  };
-  return <aside className="guide-panel" id="guide" aria-label="Andrei’s project guide">
-    <div className="guide-live-head"><Avatar active={speaking} /><button className="voice-button" disabled={!voiceAvailable} onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? "Unmute guide voice" : "Mute guide voice"}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}<span>{muted ? "Muted" : "Mute"}</span></button></div>
-    <div className="guide-context-card" aria-live="polite" aria-atomic="true"><div className="guide-card-heading"><span className="heading-icon" aria-hidden="true"><Sparkles size={18} /></span><h2>{context.title}</h2></div><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>
-    <ScreenInsightCard insight={context.insight} />
-    <div className="guide-actions" aria-label="Suggested questions">{context.actions.map(action => <button key={action.label} className={activeAction === action.label ? "active" : ""} onClick={() => chooseAction(action)}>{action.label}</button>)}</div>
-    <form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about this screen…" aria-label="Ask about this screen" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form>
+  return <aside className="guide-panel" id="guide" aria-label="Andrei’s AI Guide">
+    <div className="guide-live-head"><Avatar active={speaking} /><div className="guide-live-copy"><strong>AI project guide</strong><span>Prepared, source-linked walkthroughs</span></div><button className="voice-button" disabled={!voiceAvailable} onClick={speaking ? stop : speak} aria-pressed={speaking} aria-label={speaking ? "Stop audio commentary" : "Play audio commentary"}>{speaking ? <VolumeX size={16} /> : <Play size={16} />}<span>{speaking ? "Stop audio" : "Play commentary"}</span></button></div>
+    <div className="guide-modes" role="tablist" aria-label="Project view"><span className="sr-only">Project view</span>{projectGuideModes.map(mode => <button key={mode.id} type="button" role="tab" aria-selected={guideMode === mode.id} onClick={() => { stop(); setGuideMode(mode.id); setActiveAction(null); }}>{mode.label}</button>)}</div>
+    <div className="guide-mode-content" role="tabpanel" aria-live="polite">{guideMode === "product" ? <ScreenInsightCard insight={context.insight} /> : <EngineeringModeCard project={project} mode={guideMode} />}</div>
+    {activeAction && <div className="guide-context-card guide-answer-card" aria-live="polite" aria-atomic="true"><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>}
+    <section className="guide-interactive" aria-labelledby="guide-interactive-title"><div className="guide-interactive-heading"><strong id="guide-interactive-title">Ask the project guide</strong><span>Interactive, prepared answers grounded in the project evidence above.</span></div><div className="guide-actions" aria-label="Suggested questions">{context.actions.map(action => <button key={action.label} className={activeAction === action.label ? "active" : ""} onClick={() => chooseAction(action)}>{action.label}</button>)}</div><form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about architecture, trade-offs, implementation, or testing…" aria-label="Ask Andrei’s AI Guide" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form></section>
   </aside>;
 });
 
@@ -1463,6 +1549,72 @@ function Architecture() {
   </>;
 }
 
+function ProductionEngineering() {
+  const caseStudies = [
+    {
+      label: "Cloud architecture",
+      qualifier: "24-hour production snapshot",
+      metric: "~970K",
+      metricLabel: "Lambda invocations in a measured 24-hour production window",
+      title: "Operating a serverless platform at production scale",
+      body: "I helped design and operate a 160-function AWS backend across AppSync, DynamoDB Streams, SQS, EventBridge and Cognito, with 147 functions deployed in production.",
+      proof: "4 errors · 0 throttles · 2026-09-04 snapshot",
+    },
+    {
+      label: "Performance",
+      qualifier: "Measured in staging",
+      metric: "24.3s → 0.5s",
+      metricLabel: "staging-verified invite acceptance path",
+      title: "Moving fan-out away from the critical path",
+      body: "A field-scoped mutation and deferred fan-out replaced work that did not belong in the synchronous request, turning a multi-second interaction into a sub-second response.",
+      proof: "Measured on staging · production window pending",
+    },
+    {
+      label: "Production AI",
+      qualifier: "Latency removed",
+      metric: "300–500ms",
+      metricLabel: "removed from roughly 90% of chat messages",
+      title: "Retrieval only when the model actually needs it",
+      body: "I changed always-on RAG into an on-demand tool, then combined streaming, function calling and output validation so model behaviour stayed inside an explicit application contract.",
+      proof: "Gemini · Vertex AI · RAG · structured tools",
+    },
+    {
+      label: "Quality engineering",
+      qualifier: "Crash-free users · Apr–May 2026",
+      metric: "99.91%",
+      metricLabel: "crash-free users during the Apr–May 2026 measurement window",
+      title: "Release confidence backed by repeatable checks",
+      body: "Requirements, technical plans, automated tests, staged releases and production investigation form one delivery system—not separate activities at the end of a feature.",
+      proof: "3 crashes · 2 affected users · separately: 629 UI tests and 398 unit tests",
+    },
+  ];
+  return <section className="engineering-section" id="production-engineering" aria-labelledby="production-engineering-title">
+    <div className="engineering-section-heading"><div><div className="section-eyebrow"><ShieldCheck size={14} />Production engineering</div><h2 id="production-engineering-title">Systems that hold up<br /><em>after they ship.</em></h2></div><p>Selected commercial engineering work from Step.co. Each number is tied to a measured environment and window.</p></div>
+    <div className="engineering-case-grid">{caseStudies.map((card, index) => <article className="engineering-case-card" key={card.label}>
+      <div className="engineering-case-meta"><span className="engineering-case-number">0{index + 1}</span><span className="engineering-case-label">{card.label}</span></div>
+      <span className="engineering-case-qualifier">{card.qualifier}</span>
+      <div className="engineering-case-metric"><strong>{card.metric}</strong><span>{card.metricLabel}</span></div>
+      <h3>{card.title}</h3><p>{card.body}</p><code>{card.proof}</code>
+    </article>)}</div>
+  </section>;
+}
+
+function AiEngineeringWorkflow() {
+  const steps = ["Evidence + requirements", "Plan + AI-assisted build", "Automated checks", "Independent review", "Ship, observe, learn"];
+  return <section className="ai-workflow-section" id="ai-engineering" aria-labelledby="ai-engineering-title">
+    <div className="ai-workflow-heading"><div><div className="section-eyebrow"><Bot size={14} />Engineering workflow</div><h2 id="ai-engineering-title">From evidence<br /><em>to production.</em></h2></div><p>A compact delivery loop: AI helps with implementation, while requirements, tests, review and production feedback keep the result accountable.</p></div>
+    <ol className="ai-workflow-steps">{steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><strong>{step}</strong>{index < steps.length - 1 && <ArrowRight size={17} aria-hidden="true" />}</li>)}</ol>
+    <div className="ai-workflow-evidence"><p className="ai-workflow-note"><FileCheck2 size={16} aria-hidden="true" /><span><strong>Bug-fix loop</strong>Production evidence → reproduce → baseline → root cause → challenge the hypothesis → fix → verify → monitor</span></p><p><strong>11 agent eval cases</strong><span>The engineering tools are regression-tested against failures from real planning and review cycles.</span></p></div>
+  </section>;
+}
+
+function FinalCallToAction() {
+  return <section className="final-cta" aria-labelledby="final-cta-title">
+    <div><div className="section-eyebrow"><ArrowUpRight size={14} />Let’s talk</div><h2 id="final-cta-title">Let’s build something <em>reliable.</em></h2><p>I’m interested in full-stack, applied AI, AI-enabled development and quality-focused engineering roles.</p></div>
+    <div className="final-cta-actions"><a className="final-cta-primary" href={emailUrl}><Mail size={19} /><span>Email me</span><ArrowUpRight size={17} /></a><div className="final-cta-secondary"><a href={contactUrl} target="_blank" rel="noreferrer">LinkedIn <ArrowUpRight size={14} /></a><a href={githubUrl} target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={14} /></a></div></div>
+  </section>;
+}
+
 function LinkedInReviewsCarousel() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -1553,7 +1705,8 @@ function LinkedInReviewsCarousel() {
                 <span className="linkedin-review-meta">{review.date} · {review.relationship}</span>
               </div>
             </div>
-            <p className="linkedin-review-quote">{review.quote}</p>
+            <p className="linkedin-review-quote">{review.excerpt}</p>
+            <a className="linkedin-review-more" href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined}>Read full recommendation <ArrowUpRight size={14} /></a>
           </article>;
         })}
       </div>
@@ -1590,14 +1743,29 @@ export default function Home() {
   return <main className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, AI practitioner, product owner"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">AI PRACTITIONER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">PRODUCT OWNER</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
-    <section className="intro" aria-labelledby="hero-title"><div className="intro-main"><div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Products for real decisions</div><h1 id="hero-title">Work that holds<br /><em>up to <a className="question-link" href="#guide">questions<span className="hero-tooltip">Ask about ownership, trade-offs or verification <ArrowUpRight size={14} /></span></a>.</em></h1><p className="hero-description">Three live products for moments when the next step matters: plan a home project, take control of your budget, or make Parliament easier to navigate.</p></div><div className="hero-stats"><span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Choose your next move</span><button onClick={() => explore("hoc-v2")}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Live applications</strong><small>Start with a real workflow, not a slide.</small></span></button><a href="#architecture"><span className="stat-symbol"><ShieldCheck size={26} /></span><span><strong>AI with guardrails</strong><small>Trace the evidence, trade-offs and boundaries.</small></span></a><a href="#recommendations"><span className="stat-symbol"><BrandLogo brand="linkedin" /></span><span><strong>Peer recommendations</strong><small>See what teammates say about working with me.</small></span></a><a href="#puzzle"><span className="stat-symbol stat-symbol-sparkle" aria-hidden="true"><Sparkles size={26} /></span><span><strong>Fun &amp; magic</strong><small>Keep the craft rigorous and leave room for wonder.</small></span></a></div></section>
-    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />Hands-on, not a slideshow</div><h2 id="lab-heading">Pick an application. <em>Make it yours.</em></h2></div><p className="workspace-heading-note">Navigate the live app and the guide follows the route: one screen, one set of challenges, decisions and implementation details.</p></div>
+    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <section className="intro" aria-labelledby="hero-title">
+      <div className="intro-main">
+        <div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />AI-enabled product engineer</div>
+        <h1 id="hero-title">Fast with AI.<br /><em>Serious about quality.</em></h1>
+        <p className="hero-description">I build web, mobile, and AI-powered products — combining AI-assisted development with thoughtful architecture, testing, and production reliability.</p>
+      </div>
+      <div className="hero-stats">
+        <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
+        <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
+        <a href="#production-engineering"><span className="stat-symbol" aria-hidden="true"><ShieldCheck size={24} /></span><span><strong>See production work</strong><small>Measured commercial systems, performance and reliability.</small></span></a>
+      </div>
+    </section>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2></div><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
       <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} /></div>
     </section>
-    <Architecture />
-    <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />A closer look</div><h2 id="recommendations-heading">Don’t just take my <em>word</em> for it.</h2><p>Real recommendations from people I’ve worked with.</p></div><LinkedInReviewsCarousel /></section>
+    {/* Temporarily hidden: AI with guardrails / Fun & magic sections. */}
+    {/* <Architecture /> */}
+    <ProductionEngineering />
+    <AiEngineeringWorkflow />
+    <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve <em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
+    <FinalCallToAction />
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
   </main>;
 }

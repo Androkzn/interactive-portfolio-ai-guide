@@ -7,11 +7,40 @@ await Promise.all([
   "pixel-7-pro-obsidian.png",
 ].map((asset) => access(new URL(`../out/images/device-frames/${asset}`, import.meta.url))));
 const html = await readFile(new URL("../out/index.html", import.meta.url), "utf8");
-const requiredMarkers = ["Work that holds", "House of Commons Citizen Companion", "Symply Budget", "Symply House", "Build a 24/7 plumbing assistant", "duplicate invoices", "Architecture walkthrough", "?", "Run the review to reveal the approach", "Assign to Andrei", "Assign to another engineer", "manager-assignment-avatar.png", "App theme", "iphone-16-pro-black-titanium.png", "andrei-talking-lips-web.webm", "andrei-talking-lips-web-60fps.mp4", "https://symply-house-web.pages.dev/?portfolioDemo=1"];
+const requiredMarkers = [
+  "Fast with AI",
+  "Serious about quality",
+  "House of Commons Citizen Companion",
+  "Symply Budget",
+  "Symply House",
+  "Architecture",
+  "Quality",
+  "AI workflow",
+  "AI project guide",
+  "Play commentary",
+  "Ask the project guide",
+  "I build web, mobile, and AI-powered products",
+  "Read full recommendation",
+  "Production engineering",
+  "Systems that hold up",
+  "24-hour production snapshot",
+  "Measured in staging",
+  "Latency removed",
+  "Engineering workflow",
+  "From evidence",
+  "People I’ve",
+  "worked with.",
+  "Let’s build something",
+  "Live application preview",
+  "andrei-talking-lips-web.webm",
+  "andrei-talking-lips-web-60fps.mp4",
+];
+const forbiddenMarkers = ["AI with guardrails", "Fun &amp; magic", "Architecture walkthrough", ">Muted<"];
 const missing = requiredMarkers.filter((marker) => !html.includes(marker));
-if (missing.length) {
-  console.error(JSON.stringify({ ok: false, missing }, null, 2));
+const unexpected = forbiddenMarkers.filter((marker) => html.includes(marker));
+if (missing.length || unexpected.length) {
+  console.error(JSON.stringify({ ok: false, missing, unexpected }, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ ok: true, export: "out/index.html", markers: requiredMarkers.length }, null, 2));
+  console.log(JSON.stringify({ ok: true, export: "out/index.html", requiredMarkers: requiredMarkers.length, forbiddenMarkers: forbiddenMarkers.length }, null, 2));
 }
