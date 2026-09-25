@@ -23,3 +23,36 @@ jobs:
       - run: npm run build
       - run: node scripts/verify-static-export.mjs
       - run: npx wrangler deploy --env="" --config apps/guide-api/wrangler.jsonc --dry-run
+
+  # The Pages project has no Git integration, so a push to main published
+  # nothing on its own: production sat ten commits behind for a week before
+  # anyone noticed. This job is what makes a merged change reach the site.
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/verify-static-export.mjs
+      - name: Publish to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning title=Deploy skipped::CLOUDFLARE_API_TOKEN is not set, so the site was not published. Add the repository secret to enable automatic deploys."
+            exit 0
+          fi
+          npx wrangler pages deploy out \
+            --project-name=interactive-portfolio-ai-guide \
+            --branch=main \
+            --commit-dirty=true
