@@ -15,7 +15,7 @@
     {
       "id": "hoc-v2",
       "name": "House of Commons Citizen Companion",
-      "challenge": "Make parliamentary data usable in plain language while preserving evidence, accessibility and cross-platform constraints.",
+      "challenge": "Make parliamentary data usable in plain language while preserving evidence, accessibility and platform constraints.",
       "boundary": "The portfolio preview needs no account, sends no demo flag and involves no credentials anywhere in the chain — neither the portfolio nor the app bundle carries any: the embedded Web build reads public parliamentary data from its deployed public API. It does not impersonate a user or claim to run a native binary in the browser.",
       "sources": ["hoc-v2.app-access", "hoc-v2.platform-matrix", "hoc-v2.demo-boundary"]
     },
