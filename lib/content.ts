@@ -58,20 +58,20 @@ export const projects: Project[] = [
     checkpoints: [
       { title: "Context before chores", detail: "Make the next household action legible without turning the home surface into a noisy task list." },
       { title: "Shared responsibility", detail: "Represent ownership and timing as product state that can survive multiple people and platforms." },
-      { title: "Authenticated completion", detail: "The demo login is pre-filled and you submit it yourself — a real production authentication call. The household behind it is synthetic and lives only in this tab." },
+      { title: "Authenticated completion", detail: "The app pre-fills a shared demo login from a flag it reads off its own URL, and you submit it yourself — a real production authentication call. The account is public; the household behind it is synthetic, editable and lives only in this tab." },
     ],
-    challenge: { title: "Keep a shared home calm and useful", body: "The portfolio opens the normal authenticated product with a shared demo login, pre-filled for the visitor to submit. Sign-in is a real request against the production API, but the address, home photo, floor plan, renovation projects, budgets and tasks are synthetic records seeded into a per-visit local session that stays in the browser tab and is never synced." },
+    challenge: { title: "Keep a shared home calm and useful", body: "The portfolio opens the normal authenticated product. The app itself reads a demo flag off its own URL and pre-fills a shared demo login for the visitor to submit; the portfolio no longer carries those credentials, but the app's own public bundle does, so the account stays public. Sign-in is a real request against the production API, while the address, home photo, floor plan, renovation projects, budgets and tasks are synthetic, editable records that live only in that browser tab and are never persisted or synced." },
     evidence: [
       { label: "Source repository", type: "verified", detail: "Androkzn/symply-house · public source project." },
       { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Web, based on the connected Expo source." },
-      { label: "Live boundary", type: "runtime", detail: "A shared demo account, whose credentials ship in the portfolio bundle, signs in against the production API. The household content is synthetic, scoped to a per-visit local session and never persisted or synced, so no personal or production household is exposed." },
+      { label: "Live boundary", type: "runtime", detail: "A shared demo account signs in against the production API. The portfolio ships no credentials: the app reads a demo flag off its own URL and pre-fills the login itself, and the same credentials sit in that app's public bundle, so the account remains public. The household content is synthetic, editable, confined to the visitor's browser tab and never persisted or synced, so no personal or production household is exposed." },
     ],
     screenInsights: [
       {
         id: "house-login", route: "/login", match: ["/login", "login"], label: "OFFLINE-FIRST / PRIVACY", title: "Keep the home useful offline",
         summary: "Household tasks, plans and notes stay useful when the connection drops. Local-first state lets people browse and update the home offline, then sync deliberately when the network returns.",
         challenge: { title: "Keep a shared home usable without a connection", body: "Wi-Fi is not guaranteed when someone is checking a task, opening a project or reviewing a floor plan. The app should keep the household workflow available offline while keeping private home data inside its account and device boundary." },
-        decision: { title: "Make the device the first place data lives", body: "Read and write the working household state locally, queue changes when offline and make sync status explicit. For the portfolio, sign in with a shared demo account and seed synthetic content into a per-visit local session, so no personal household records are exposed." },
+        decision: { title: "Make the device the first place data lives", body: "Read and write the working household state locally, queue changes when offline and make sync status explicit. For the portfolio, sign in with a shared public demo account — pre-filled by the app from a flag in its own URL, not by the portfolio — and keep the synthetic content in that browser tab alone, so no personal household records are exposed." },
         solution: { title: "Offline workflows with controlled sync", body: "The app stays navigable and actionable without a network, then reconciles account-scoped changes when connectivity returns. The backend supports sync and identity; it does not turn the public portfolio into a window onto private homes." },
         impact: { title: "The workflow survives the network", body: "People can check plans and update household work offline, then reconcile changes when connected. The result is a calmer, more private product boundary: local work first, controlled sync second." },
         implementation: "local household store + queued mutations + visible sync state + origin-checked guest bridge",
@@ -207,13 +207,13 @@ export const projects: Project[] = [
     checkpoints: [
       { title: "Local-first state", detail: "Keep the core budgeting experience useful while making sync and recovery explicit system boundaries." },
       { title: "Financial intent", detail: "Separate an understandable household decision from integrations, permissions and provider failures." },
-      { title: "Controlled handoff", detail: "The portfolio ships a shared demo login and pre-fills it; you submit it against the production API. The ledger you then browse is synthetic and lives only in this tab." },
+      { title: "Controlled handoff", detail: "The app pre-fills a shared demo login from a flag in its own URL; the portfolio ships no credentials, though the account is still public because the app's bundle carries them. You submit the sign-in against the production API, and the ledger you then browse is synthetic, editable and lives only in this tab." },
     ],
-    challenge: { title: "Design for trust when data is personal", body: "The Web build keeps the normal authenticated product flow. The portfolio pre-fills a shared demo login for the visitor to submit, so the interface, navigation and authentication remain real while every figure on screen is synthetic and personal financial data stays out of scope." },
+    challenge: { title: "Design for trust when data is personal", body: "The Web build keeps the normal authenticated product flow. The app pre-fills a shared demo login from a flag it reads off its own URL and the visitor submits it, so the interface, navigation and authentication remain real while every figure on screen is synthetic and editable, held in that browser tab, never synced, and personal financial data stays out of scope." },
     evidence: [
       { label: "Source repository", type: "verified", detail: "Androkzn/symply-budget · public source project." },
       { label: "Native matrix", type: "runtime", detail: "iPhone · iPad · Android, with iPad support declared in the Expo configuration." },
-      { label: "Live boundary", type: "runtime", detail: "The demo login is a real production account and its credentials ship in the portfolio bundle, so treat it as public. The budget data is synthetic, scoped to a per-visit local session and never persisted or synced, so no personal financial identity or production record is exposed." },
+      { label: "Live boundary", type: "runtime", detail: "The demo login is a real production account and still a public one, because its credentials sit in the app's own public bundle; the portfolio no longer ships them, and the app pre-fills the form from a flag it reads off its own URL. The budget data is synthetic, editable, confined to the visitor's browser tab and never persisted or synced, so no personal financial identity or production record is exposed." },
     ],
     screenInsights: [
       {
@@ -286,7 +286,7 @@ export const quickPrompts = [
 
 export const tourSteps = [
   { title: "Start with the product question", detail: "Pick the experience that best matches the kind of work you want to inspect." },
-  { title: "Try the core interaction", detail: "The app opens its real Web runtime. Where it requires a sign-in, the demo login is already filled in and you submit it yourself." },
+  { title: "Try the core interaction", detail: "The app opens its real Web runtime. Where it requires a sign-in, the app itself pre-fills a shared public demo login from a flag in its own URL and you submit it yourself." },
   { title: "Inspect the trade-off", detail: "Open a challenge card to see the boundary, alternatives and what still needs verification." },
 ];
 

@@ -200,16 +200,9 @@ function makeGuideReply(question: string, project: Project, pathname: string) {
     return "**AI assists; evidence decides.**\n\n- Prepared answers stay within the approved project material.\n- The apps run independently of this guide.\n- Unsupported contribution or impact claims stay unpublished.\n\nThis panel uses curated responses, not a live model. Explore the architecture below for the intended contract.";
   }
   if (lower.includes("show") || lower.includes("flow") || lower.includes("покаж")) {
-    return `**Try ${project.name}**\n\n- The app opens on its own login screen with a shared demo account pre-filled.\n- Signing in is a real login against the product's production API — you tap Sign In yourself.\n- The content you then browse is synthetic and kept only in this browser tab.\n\nThe demo password ships in this page's JavaScript, so treat the account as public.`;
+    return `**Try ${project.name}**\n\n- The app opens on its own login screen with a shared demo account pre-filled.\n- Signing in is a real login against the product's production API — you tap Sign In yourself.\n- The content you then browse is synthetic and kept only in this browser tab.\n\nThe demo account is shared, and its credentials ship in the app's own public build — so treat it as a public account, not a private one.`;
   }
   return `**${insight.title}**\n\n${insight.summary}\n\nAsk about the challenge, decision or implementation for this screen. I’ll keep the answer tied to the source trace and call out anything that still needs verification.`;
-}
-
-function initialGuideMessage(project: Project) {
-  if (project.id === "symply-house" || project.id === "symply-budget") {
-    return `**A shared demo account is pre-filled.**\n\n${project.name} opens on its own login screen with the demo email and password already in the fields. Tap Sign In — nothing signs in for you. What you browse afterwards is synthetic data that lives only in this tab.`;
-  }
-  return "**No account needed.**\n\nStart exploring the live civic app on the left. Then ask about the decisions behind it; I’ll separate documented facts from what still needs evidence.";
 }
 
 type LiveGuideAction = { label: string; answer: string };
@@ -235,7 +228,9 @@ function guideContextFor(project: Project, pathname: string): LiveGuideContext {
   return context([
     { label: "Why this architecture?", answer: `**${insight.decision.title}**\n\n${insight.decision.body}\n\nThe Architecture view maps that decision to the system boundary.` },
     { label: "What were the trade-offs?", answer: `**${insight.challenge.title}**\n\n${insight.challenge.body}\n\n**Decision:** ${insight.decision.body}` },
-    { label: "How did you test this?", answer: `**Evidence before confidence**\n\nThe Quality view shows the verification path used for this project. Where the public source does not yet prove a project-specific test claim, I leave that claim unpublished.` },
+    // Answer from this project's own approved evidence entries rather than one
+    // generic paragraph reused for every project.
+    { label: "How did you test this?", answer: `**What can actually be checked for ${project.name}**\n\n${project.evidence.map(item => `- ${item.label}: ${item.detail}`).join("\n")}\n\nThe Quality view shows the verification path. Where the public source does not yet prove a project-specific test claim, that claim stays unpublished.` },
     { label: "Show me the data flow", answer: `**${insight.solution.title}**\n\n${insight.implementation}\n\nOpen the Architecture view for the end-to-end flow and system boundaries.` },
   ]);
 }
@@ -399,6 +394,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
   const frame = useRef<HTMLIFrameElement>(null);
   const [portfolioSessionId, setPortfolioSessionId] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const loaded = useRef(false);
   const [theme, setTheme] = useState<Theme>("light");
   const [appliedTheme, setAppliedTheme] = useState<Theme | null>(null);
   const [themeReady, setThemeReady] = useState(false);
@@ -422,11 +418,14 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     : undefined;
   useEffect(() => {
     if (!url) return;
+    loaded.current = false;
     onPreviewState("loading");
     const origin = new URL(url).origin;
     let retries = 0;
-    const requestTheme = () => frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
-    const requestDemo = () => { if (demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin); };
+    // Posting before the frame has reached the target origin is rejected by the
+    // browser and only produces console noise, so wait for its load event.
+    const requestTheme = () => { if (loaded.current) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin); };
+    const requestDemo = () => { if (loaded.current && demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin); };
     const handshake = window.setInterval(() => {
       requestTheme();
       requestDemo();
@@ -467,6 +466,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
   const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
     // The load event proves the frame fetched something, nothing more. A demo
     // hand-off is only reported once the app itself acknowledges it.
+    loaded.current = true;
     onPreviewState("loaded");
     const origin = new URL(url).origin;
     frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
@@ -499,7 +499,6 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
           <div className="device-live-screen">
             <DeviceStatusBar device={device} />
             <div className="device-app-viewport">{liveFrame}</div>
-            <div className={`device-home-indicator device-home-indicator-${device}`} aria-hidden="true" />
           </div>
           <img className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
           <span className="sr-only">Previewed in a {frameAsset?.model} frame.</span>
@@ -516,7 +515,9 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow, prev
   const [speaking, setSpeaking] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "guide", text: initialGuideMessage(project) }]);
+  // Starts empty on purpose: the thread only becomes visible once the visitor
+  // picks a question, and every path that shows it sets its own message.
+  const [messages, setMessages] = useState<Message[]>([]);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const nextId = useRef(1);
   const thread = useRef<HTMLDivElement>(null);
@@ -1706,7 +1707,31 @@ export default function Home() {
     window.addEventListener("resize", update);
     return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
   }, []);
-  const chooseProject = (id: string) => { setActiveId(id); setAppPath(id === "hoc-v2" ? "/" : "/login"); };
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("portfolio:project");
+      if (saved && saved !== DEFAULT_PROJECT_ID && projects.some(project => project.id === saved)) {
+        setActiveId(saved);
+        setAppPath(saved === "hoc-v2" ? "/" : "/login");
+      }
+    } catch { /* private mode */ }
+  }, []);
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" as const : "smooth" as const;
+    // The section above this one grows as the live preview loads, so a single
+    // scroll on arrival lands short. Re-settle it a couple of times instead.
+    const timers = [120, 600, 1400].map(delay => window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior, block: "start" });
+    }, delay));
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, []);
+  const chooseProject = (id: string) => {
+    setActiveId(id);
+    setAppPath(id === "hoc-v2" ? "/" : "/login");
+    try { sessionStorage.setItem("portfolio:project", id); } catch { /* private mode: selection just is not remembered */ }
+  };
   const explore = (id = activeId) => { chooseProject(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
   return <div className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>

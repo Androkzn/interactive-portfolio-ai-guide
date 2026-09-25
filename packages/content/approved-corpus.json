@@ -1,5 +1,5 @@
 {
-  "corpusVersion": "0.3.1",
+  "corpusVersion": "0.3.2",
   "reviewStatus": "three-project-corpus",
   "positioning": {
     "headline": "Build systems around models, not demos around prompts.",
@@ -16,21 +16,21 @@
       "id": "hoc-v2",
       "name": "House of Commons Citizen Companion",
       "challenge": "Make parliamentary data usable in plain language while preserving evidence, accessibility and cross-platform constraints.",
-      "boundary": "The portfolio preview needs no account and ships no demo credentials: the embedded Web build reads public parliamentary data from its deployed public API. It does not impersonate a user or claim to run a native binary in the browser.",
+      "boundary": "The portfolio preview needs no account, sends no demo flag and involves no credentials anywhere in the chain — neither the portfolio nor the app bundle carries any: the embedded Web build reads public parliamentary data from its deployed public API. It does not impersonate a user or claim to run a native binary in the browser.",
       "sources": ["hoc-v2.source-repository", "hoc-v2.platform-matrix", "hoc-v2.demo-boundary"]
     },
     {
       "id": "symply-budget",
       "name": "Symply Budget",
       "challenge": "Design a trustworthy local-first budgeting system around native capabilities, sync boundaries and sensitive financial data.",
-      "boundary": "The portfolio preview opens the real product with a shared demo login whose credentials ship in the portfolio bundle, and the visitor submits it as a real authentication against the production API. Every figure is synthetic and editable inside a per-visit session held in that browser tab, never persisted and never synced, so no personal financial record is exposed.",
+      "boundary": "The portfolio preview opens the real product; the deployed app reads a portfolioDemo flag off its own URL and pre-fills a shared demo login, which the visitor submits as a real authentication against the production API. The portfolio itself no longer carries those credentials, but the account is still a public one, because the app's own public JavaScript bundle contains them. Every figure is synthetic and editable inside a session held in that browser tab, never persisted and never synced, so no personal financial record is exposed.",
       "sources": ["symply-budget.source-repository", "symply-budget.platform-matrix", "symply-budget.demo-boundary"]
     },
     {
       "id": "symply-house",
       "name": "Symply House",
       "challenge": "Turn shared household context into calm, actionable routines across iPhone, iPad, Android and Web.",
-      "boundary": "The portfolio preview opens the real product with a shared demo login whose credentials ship in the portfolio bundle, and the visitor submits it as a real authentication against the production API. The household content is synthetic and editable inside a per-visit session held in that browser tab, never persisted and never synced, and the Web build does not claim to run a native binary.",
+      "boundary": "The portfolio preview opens the real product; the deployed app reads a portfolioDemo flag off its own URL and pre-fills a shared demo login, which the visitor submits as a real authentication against the production API. The portfolio itself no longer carries those credentials, but the account is still a public one, because the app's own public JavaScript bundle contains them. The household content is synthetic and editable inside a session held in that browser tab, never persisted and never synced, and the Web build does not claim to run a native binary.",
       "sources": ["symply-house.source-repository", "symply-house.platform-matrix", "symply-house.demo-boundary"]
     }
   ],

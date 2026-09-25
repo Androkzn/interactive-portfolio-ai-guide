@@ -587,7 +587,7 @@ export const caseStudies: CaseStudy[] = [
         { id: "03", title: "The event is classified", detail: "The handler decides whether this change represents a confirmed activity worth publishing — across every event type that can carry that confirmation, not just the expected one." },
         { id: "04", title: "The audience is resolved", detail: "Circle membership and visibility are read on the backend to determine who is allowed to see this activity, at this moment." },
         { id: "05", title: "The card is written once", detail: "Feed entries are written with a deterministic identity and a guarded write, so a repeated event resolves to the same card instead of a duplicate." },
-        { id: "06", title: "Clients read the feed", detail: "The iOS app requests the feed it is entitled to and renders it optimistically, with rollback if the write does not hold. It does not compute entitlement." },
+        { id: "06", title: "Clients read the feed", detail: "The iOS app requests the feed it is entitled to and renders it. Its own actions — a reaction, a comment — apply optimistically and roll back if the write does not hold. It never computes entitlement." },
       ],
       flowCaption:
         "Six responsibilities, and the important thing is where they sit: the user's request ends at step 1. Everything from the change stream to the written card happens asynchronously on the backend, which is why a missed or repeated event is a correctness problem rather than a visible error.",

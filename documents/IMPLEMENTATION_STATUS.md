@@ -4,7 +4,23 @@ Updated: 2026-09-24
 
 This tracker is updated as implementation blocks are completed. It separates what is working in this repository from source material and project inputs that still need owner verification.
 
-## Correction — 2026-09-24: the portfolio does embed demo credentials
+## Correction — 2026-09-24 (later the same day): the credentials have been removed from the portfolio
+
+The correction below described the portfolio accurately when it was written earlier today. It no longer does, and the difference matters, so both entries are kept. Established by a live browser probe of the deployed apps on 2026-09-24:
+
+- `lib/preview.ts` no longer contains a demo email or password. The message it posts into the iframe is now `{type: "portfolio:demo", projectId}` and carries no credential. `lib/preview.test.ts` fails if a credential is reintroduced, so the removal is pinned rather than merely done.
+- The pre-fill still works, because the embedded app does it itself: the deployed build reads the `portfolioDemo=1` query parameter off its own URL and fills its login fields before it even registers a message listener. Verified live — with the flag both fields are pre-filled, without it they are empty. The pre-fill now depends solely on that query parameter staying on the preview URL.
+- **The demo account is still public.** The same credentials remain embedded in each app's own public JavaScript bundle, so the account must still be described as shared and public. What changed is only that the portfolio no longer republishes them — one publicly readable copy fewer. The credentials are not secret, rotated, scoped, rate-limited or otherwise protected. The remaining exposure lives in the app repositories (the portfolio demo service in the shared Symply monorepo); ending publicly readable demo credentials altogether still requires a change there, not here.
+- Sign-in is still a real authentication request against that product's production API, performed by the visitor. Nothing auto-submits — re-confirmed.
+- The household and budget content the visitor then browses is synthetic, editable, lives only in that browser tab and is never persisted or synced.
+- **`portfolioSession` is inert.** The deployed app builds contain zero references to it. The claim in the entry below that the records are "seeded per visit into an ephemeral local session keyed by `portfolioSession`" and that "the app skips auto-sync while a `portfolioSession` is present" is therefore false for the currently deployed builds. The portfolio still appends the parameter, but only for its own bookkeeping; `lib/preview.ts` has had its own comment corrected. The in-tab, never-synced property is verified independently of that id, so the per-visit-session wording has been dropped from `lib/content.ts` and `packages/content/approved-corpus.json` rather than repeated.
+- House of Commons Citizen Companion is unchanged and remains credential-free on both sides: no credentials, no demo flag, public data from a deployed public API.
+
+Downstream wording updated with this entry: `lib/content.ts` (Symply House and Symply Budget checkpoints, challenge bodies, live-boundary evidence and the shared tour step) and `packages/content/approved-corpus.json` (all three project boundaries, corpus version `0.3.2`).
+
+## Correction — 2026-09-24 (earlier, superseded in part): the portfolio does embed demo credentials
+
+Kept for the record, unedited. Read it as history, not current state: the entry above removes the embedded credentials described in the first two bullets, and shows the `portfolioSession` behaviour described in the fourth bullet to be absent from the deployed app builds. The closing paragraph's "the portfolio can stop shipping them" has since happened; the app-repository half of it has not.
 
 Two earlier claims in this tracker — that "no credentials were embedded or submitted" and that "the portfolio embeds no credentials" — were false. They are corrected in the entries below. What the code actually does:
 
@@ -37,7 +53,7 @@ Removing the embedded credentials is not a portfolio-only change. The portfolio 
 - **Project cleanup:** the former Swiper, Brij, WiFi Map, One Dialer and Pixalere entries, corpus records, guide fallback and connected bridge files were removed from the portfolio application. Their external source folders were intentionally preserved.
 - **Device Lab:** iPhone, iPad, Android and Desktop shells remain selectable and labeled with their dimensions. Symply House, HoC v2 and Symply Budget load independently deployed production Web builds inside a sandboxed iframe; each remains explicitly labeled as Web, not native.
 - **Connected Web deployments:** [symply-house-web.pages.dev](https://symply-house-web.pages.dev/), [hoc-v2-web.pages.dev](https://hoc-v2-web.pages.dev/) and [symply-budget-web.pages.dev](https://symply-budget-web.pages.dev/). The builds use the source repositories' production API/auth configuration and were deployed independently on 2026-09-16; Citizen Companion includes a web-only style-flattening fix required by React Native Web.
-- **Source Web verification:** House and Budget render their own production login screens; HoC renders Home and receives live MP/ranking data from its production public API. Cache-busted browser smoke passed for all three builds. House and Budget are opened with a shared demo login that the portfolio embeds and pre-fills; the visitor submits it, and the resulting content is synthetic and confined to a per-visit local session. HoC uses no credentials and no demo flag.
+- **Source Web verification:** House and Budget render their own production login screens; HoC renders Home and receives live MP/ranking data from its production public API. Cache-busted browser smoke passed for all three builds. House and Budget are opened with a shared demo login that the deployed app pre-fills itself from the `portfolioDemo` URL flag; the portfolio no longer embeds those credentials, though the account stays public because the app's own bundle carries them. The visitor submits the sign-in, and the resulting content is synthetic, editable and confined to that browser tab. HoC uses no credentials and no demo flag.
 - **Source test boundary:** Budget TypeScript passed and focused local-first/task tests passed 18/18. HoC Web build passed; its repository-wide type/test commands still expose pre-existing missing legacy modules, API-shape drift and contract fixtures (recorded as baseline debt, not hidden by the portfolio release).
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
@@ -72,7 +88,7 @@ Removing the embedded credentials is not a portfolio-only change. The portfolio 
 | --- | --- | --- |
 | BR-04 / C1 / C4 | Manifest-driven project workspace and case content | Implemented for exactly three approved projects |
 | BR-05 / A2 | Multi-platform source evidence and explicit Web/native preview labels | Web source builds connected for all three projects; real native streaming remains pending |
-| BR-06 / C5 | Clear runtime boundary and safe account handoff | Live builds use production APIs; the portfolio embeds a shared demo login for House and Budget and pre-fills it, the visitor submits the sign-in, and demo content stays in a per-visit local session (see the 2026-09-24 correction) |
+| BR-06 / C5 | Clear runtime boundary and safe account handoff | Live builds use production APIs; House and Budget pre-fill a shared, still-public demo login from the `portfolioDemo` URL flag the app reads itself, the portfolio ships no credentials, the visitor submits the sign-in, and demo content stays in that browser tab only (see both 2026-09-24 corrections) |
 | BR-07 / F2 | Static shell and curated guide do not require AI quota | Implemented for first slice |
 | BR-10 / D1–D6 | Project-aware local guide, mode state and interruption-safe new turns | First slice implemented; Worker grounding pending |
 | BR-11 / B4 | Guide can request/open a project in the shared player | Implemented for the three-project connected Web player |

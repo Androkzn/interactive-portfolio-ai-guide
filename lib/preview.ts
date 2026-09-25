@@ -2,15 +2,32 @@ import type { DevicePreview } from "./content";
 
 export const deviceWidths: Record<DevicePreview, number> = { iphone: 538, ipad: 768, android: 515, desktop: 1280 };
 
-export type PortfolioDemoCredentialsMessage = {
-  type: "portfolio:demo-credentials";
-  projectId: "symply-house" | "symply-budget";
-  email: string;
-  password: string;
+export type PortfolioDemoProjectId = "symply-house" | "symply-budget";
+
+/**
+ * Announces that this frame is the portfolio's embedded demo. It deliberately
+ * carries NO credentials.
+ *
+ * The portfolio used to hardcode the demo email and password and post them into
+ * the frame, which meant shipping them in this site's public JavaScript. That
+ * was unnecessary: the embedded apps derive the pre-fill themselves from the
+ * `portfolioDemo=1` query parameter on their own URL, before they even register
+ * a message listener. Verified against the deployed builds on 2026-09-24 — with
+ * the flag both login fields are pre-filled, without it they are empty — so the
+ * portfolio no longer needs to know, or ship, any credential.
+ *
+ * The consequence to keep in mind: the pre-fill depends on the `portfolioDemo`
+ * query parameter staying on the iframe URL. Remove that and the demo stops
+ * pre-filling.
+ */
+export type PortfolioDemoMessage = {
+  type: "portfolio:demo";
+  projectId: PortfolioDemoProjectId;
 };
 
-/** A fresh id is attached to every portfolio page visit. The embedded apps use
- * it to discard the previous visitor's local-first ledger before bootstrapping. */
+/** A fresh id is attached to every portfolio page visit, so one visitor's demo
+ * browsing cannot be confused with another's. Note: the currently deployed app
+ * builds do not read it — it is sent for the host's own bookkeeping only. */
 export type PortfolioDemoSessionId = string;
 
 export type PortfolioPreviewMessage =
@@ -19,17 +36,12 @@ export type PortfolioPreviewMessage =
   | { type: "portfolio:demo-ready"; projectId: string }
   | { type: "portfolio:navigation"; projectId: string; pathname: string };
 
-const demoCredentials: Record<PortfolioDemoCredentialsMessage["projectId"], Omit<PortfolioDemoCredentialsMessage, "type" | "projectId">> = {
-  "symply-house": { email: "guest@house.com", password: "Guest123!" },
-  "symply-budget": { email: "guest@budget.com", password: "Guest123!" },
-};
-
-export function portfolioDemoMessageFor(projectId: string): PortfolioDemoCredentialsMessage | null {
+export function portfolioDemoMessageFor(projectId: string): PortfolioDemoMessage | null {
   // Citizen Companion is a public, unauthenticated flow. Do not add the
   // portfolioDemo query to it: its own Web entry treats that flag as a request
   // for the login screen, which would contradict the public-data experience.
   if (projectId !== "symply-house" && projectId !== "symply-budget") return null;
-  return { type: "portfolio:demo-credentials", projectId, ...demoCredentials[projectId] };
+  return { type: "portfolio:demo", projectId };
 }
 
 export function createPortfolioSessionId(): PortfolioDemoSessionId {
