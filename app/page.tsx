@@ -156,6 +156,7 @@ function selectBestMaleVoice(voices: SpeechSynthesisVoice[]) {
 const projectLogoSources: Record<Project["id"], string> = {
   "symply-house": "/images/apps/symply-house.png",
   "hoc-v2": "/images/apps/house-of-commons-main.png",
+  "symply-health": "/images/apps/symply-health.png",
   "symply-budget": "/images/apps/symply-budget.png",
 };
 
@@ -292,6 +293,11 @@ function guideModeContentFor(project: Project, mode: Exclude<ProjectGuideMode, "
     if (project.id === "symply-budget") {
       return { kicker: "System boundary", title: "A local ledger with a narrow backend", summary: "Budget decisions happen locally while authentication, encrypted sync and recovery stay deliberately bounded.", steps: ["Local ledger", "Typed projections", "Budget workflows", "Worker sync boundary", "Recovery and identity"] };
     }
+    if (project.id === "symply-health") {
+      return { kicker: "System boundary", title: "Read-only import, device-side state", summary: "Health data is imported read-only in the background; the working state stays on the device and the safety checks sit ahead of the model, not inside it.", steps: ["Native read-only import", "Device-side store", "Write outbox", "Worker and data boundary", "Safety check before the model"] };
+    }
+    // hoc-v2 and anything added later: name it rather than inheriting another
+    // project's architecture by accident.
     return { kicker: "System boundary", title: "Public data with visible evidence", summary: "The interface keeps the citizen question simple while typed services, official links and account boundaries stay inspectable.", steps: ["Accessible client", "Typed API boundary", "Public data services", "Evidence and provenance", "Optional account state"] };
   }
   if (mode === "quality") {
@@ -464,7 +470,12 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     setTheme(next);
     if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
   };
-  if (!url) return <p>Live preview unavailable.</p>;
+  if (!url) return <div className="preview-empty" role="note">
+    <span className="preview-empty-icon" aria-hidden="true"><Smartphone size={22} /></span>
+    <strong>No embedded preview for this one.</strong>
+    <p>The other projects here run a real Web build of the product inside the frame. {project.name} ships to iOS and Android only — there is no Web build to embed, so this panel stays empty rather than showing a mock-up of an app you cannot actually open.</p>
+    <p className="preview-empty-note">The engineering teardown beside this panel is the same depth as the others.</p>
+  </div>;
   const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
     // The load event proves the frame fetched something, nothing more. A demo
     // hand-off is only reported once the app itself acknowledges it.

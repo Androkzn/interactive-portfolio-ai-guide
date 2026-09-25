@@ -6,7 +6,7 @@ const errors = [];
 const ids = new Set();
 
 if (!/^\d+\.\d+\.\d+$/.test(corpus.corpusVersion)) errors.push("corpusVersion must use semver");
-if (!Array.isArray(corpus.projects) || corpus.projects.length !== 3) errors.push("expected exactly three approved project manifests");
+if (!Array.isArray(corpus.projects) || corpus.projects.length !== 4) errors.push("expected exactly four approved project manifests");
 for (const project of corpus.projects ?? []) {
   if (!project.id || ids.has(project.id)) errors.push(`duplicate or missing project id: ${project.id ?? "<missing>"}`);
   ids.add(project.id);

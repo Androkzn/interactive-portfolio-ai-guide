@@ -11,10 +11,13 @@ describe("default project", () => {
     const house = projectById("symply-house");
     const budget = projectById("symply-budget");
     const civic = projectById("hoc-v2");
+    const health = projectById("symply-health");
 
     expect(screenInsightFor(house, "/projects").id).toBe("house-projects");
     expect(screenInsightFor(budget, "/spending").id).toBe("budget-spending");
     expect(screenInsightFor(civic, "/mp/30552").id).toBe("civic-mp-detail");
     expect(screenInsightFor(civic, "/login").id).toBe("civic-login");
+    expect(screenInsightFor(health, "/coach").id).toBe("health-coach");
+    expect(screenInsightFor(health, "/sync").id).toBe("health-outbox");
   });
 });

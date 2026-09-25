@@ -15,6 +15,7 @@ const requiredMarkers = [
   "House of Commons Citizen Companion",
   "Symply Budget",
   "Symply House",
+  "Symply Health",
   "Architecture",
   "Quality",
   "AI workflow",
