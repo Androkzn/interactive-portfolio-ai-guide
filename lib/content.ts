@@ -262,7 +262,7 @@ export const projects: Project[] = [
     accent: "lime",
     originalPlatforms: ["iPhone", "iPad", "Android", "Web"],
     runtimeLabel: "Connected Expo Web build · shared demo login · synthetic in-tab ledger",
-    webPreviewUrl: "https://symply-budget-web.pages.dev/?portfolioDemo=1",
+    webPreviewUrl: "https://symply-budget-web-portfolio.pages.dev/?portfolioDemo=1",
     status: "source verified",
     scenario: { title: "Review a household budget", description: "Open the live budgeting flow from context to a safe, inspectable decision.", action: "Start budget flow" },
     checkpoints: [
