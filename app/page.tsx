@@ -10,6 +10,19 @@ import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
+/**
+ * What the portfolio has actually observed about the embedded app. Only
+ * "confirmed" means the app itself acknowledged the demo hand-off — the visitor
+ * is never told a demo is ready on the strength of a button press or a project
+ * id alone.
+ */
+type PreviewState = "idle" | "loading" | "loaded" | "confirmed";
+const previewStateCopy: Record<PreviewState, string> = {
+  idle: "Preparing the demo session…",
+  loading: "Loading the live app…",
+  loaded: "App loaded. Waiting for it to confirm the demo login is filled in.",
+  confirmed: "The app confirmed the demo login is filled in. Tap Sign In in the app.",
+};
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
 type LinkedInReview = {
@@ -187,14 +200,14 @@ function makeGuideReply(question: string, project: Project, pathname: string) {
     return "**AI assists; evidence decides.**\n\n- Prepared answers stay within the approved project material.\n- The apps run independently of this guide.\n- Unsupported contribution or impact claims stay unpublished.\n\nThis panel uses curated responses, not a live model. Explore the architecture below for the intended contract.";
   }
   if (lower.includes("show") || lower.includes("flow") || lower.includes("покаж")) {
-    return `**Try ${project.name}**\n\n- Guest email and password are already filled in.\n- Tap Sign In in the live app.\n- Explore the product and try its core flows.\n\nThe guest account is reserved for this portfolio demo.`;
+    return `**Try ${project.name}**\n\n- The app opens on its own login screen with a shared demo account pre-filled.\n- Signing in is a real login against the product's production API — you tap Sign In yourself.\n- The content you then browse is synthetic and kept only in this browser tab.\n\nThe demo password ships in this page's JavaScript, so treat the account as public.`;
   }
   return `**${insight.title}**\n\n${insight.summary}\n\nAsk about the challenge, decision or implementation for this screen. I’ll keep the answer tied to the source trace and call out anything that still needs verification.`;
 }
 
 function initialGuideMessage(project: Project) {
   if (project.id === "symply-house" || project.id === "symply-budget") {
-    return `**Guest access is ready.**\n\nThe email and password are already filled in for ${project.name}. Tap Sign In in the live app to start exploring.`;
+    return `**A shared demo account is pre-filled.**\n\n${project.name} opens on its own login screen with the demo email and password already in the fields. Tap Sign In — nothing signs in for you. What you browse afterwards is synthetic data that lives only in this tab.`;
   }
   return "**No account needed.**\n\nStart exploring the live civic app on the left. Then ask about the decisions behind it; I’ll separate documented facts from what still needs evidence.";
 }
@@ -382,7 +395,7 @@ function ScreenInsightCard({ insight }: { insight: ScreenInsight }) {
   </section>;
 }
 
-const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, device, onDeviceChange, onNavigate }: { project: Project; device: DevicePreview; onDeviceChange: (device: DevicePreview) => void; onNavigate: (pathname: string) => void }) {
+const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, device, onDeviceChange, onNavigate, onPreviewState }: { project: Project; device: DevicePreview; onDeviceChange: (device: DevicePreview) => void; onNavigate: (pathname: string) => void; onPreviewState: (state: PreviewState) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [portfolioSessionId, setPortfolioSessionId] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -409,6 +422,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     : undefined;
   useEffect(() => {
     if (!url) return;
+    onPreviewState("loading");
     const origin = new URL(url).origin;
     let retries = 0;
     const requestTheme = () => frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
@@ -430,6 +444,9 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
         window.clearInterval(handshake);
       }
       if (event.data.type === "portfolio:demo-ready" && event.data.projectId === project.id) {
+        // The app itself confirmed it handled the demo hand-off. This is the only
+        // signal that justifies telling the visitor the pre-fill happened.
+        onPreviewState("confirmed");
         requestDemo();
         requestTheme();
       }
@@ -441,13 +458,16 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     requestTheme();
     requestDemo();
     return () => { window.removeEventListener("message", receive); window.clearInterval(handshake); };
-  }, [project.id, url, attempt, onNavigate]);
+  }, [project.id, url, attempt, onNavigate, onPreviewState]);
   const changeTheme = (next: Theme) => {
     setTheme(next);
     if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
   };
   if (!url) return <p>Live preview unavailable.</p>;
   const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
+    // The load event proves the frame fetched something, nothing more. A demo
+    // hand-off is only reported once the app itself acknowledges it.
+    onPreviewState("loaded");
     const origin = new URL(url).origin;
     frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
     const demoMessage = portfolioDemoMessageFor(project.id);
@@ -465,6 +485,9 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
         </div>
         <div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button className={`viewport-option viewport-option-${value}`} key={value} aria-pressed={device === value} onClick={() => onDeviceChange(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div>
         <button className="preview-reload" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button>
+        <a className="preview-new-tab" href={url} target="_blank" rel="noreferrer">
+          <ArrowUpRight size={13} />Open demo in new tab
+        </a>
       </div>
     </div>
     <div className="device-stage">
@@ -486,7 +509,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
   </div>;
 });
 
-const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { project: Project; appPath: string; onCoreFlow: () => void }) {
+const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow, previewState }: { project: Project; appPath: string; onCoreFlow: () => void; previewState: PreviewState }) {
   const [input, setInput] = useState("");
   const [guideMode, setGuideMode] = useState<ProjectGuideMode>("product");
   const [speaking, setSpeaking] = useState(false);
@@ -579,6 +602,9 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow }: { 
   };
   return <aside className="guide-panel" id="guide" aria-label="Andrei’s AI Guide">
     <div className="guide-live-head"><Avatar active={speaking} /><div className="guide-live-copy"><strong>AI project guide</strong><span>Prepared, source-linked walkthroughs</span></div><button className="voice-button" disabled={!voiceAvailable} onClick={speaking ? stop : speak} aria-pressed={speaking} aria-label={speaking ? "Stop audio commentary" : "Play audio commentary"}>{speaking ? <VolumeX size={16} /> : <Play size={16} />}<span>{speaking ? "Stop audio" : "Play commentary"}</span></button></div>
+    {portfolioDemoMessageFor(project.id) && <p className={`guide-demo-state guide-demo-state-${previewState}`} role="status">
+      <span className="guide-demo-dot" aria-hidden="true" />{previewStateCopy[previewState]}
+    </p>}
     <div className="guide-modes" role="tablist" aria-label="Project view"><span className="sr-only">Project view</span>{projectGuideModes.map(mode => <button key={mode.id} type="button" role="tab" aria-selected={guideMode === mode.id} onClick={() => { stop(); setGuideMode(mode.id); setActiveAction(null); }}>{mode.label}</button>)}</div>
     <div className="guide-mode-content" role="tabpanel" aria-live="polite">{guideMode === "product" ? <ScreenInsightCard insight={context.insight} /> : <EngineeringModeCard project={project} mode={guideMode} />}</div>
     {activeAction && <div className="guide-context-card guide-answer-card" aria-live="polite" aria-atomic="true"><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>}
@@ -1659,6 +1685,8 @@ export default function Home() {
   const [device, setDevice] = useState<DevicePreview>("iphone");
   const [appPath, setAppPath] = useState("/login");
   const [progress, setProgress] = useState(0);
+  const [previewState, setPreviewState] = useState<PreviewState>("idle");
+  const handlePreviewState = useCallback((state: PreviewState) => setPreviewState(state), []);
   const project = projectById(activeId);
   const focusLivePreview = useCallback(() => {
     document.querySelector<HTMLIFrameElement>(".connected-preview-frame")?.focus();
@@ -1697,7 +1725,7 @@ export default function Home() {
     </section>
     <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2></div><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
-      <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} /></div>
+      <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} onPreviewState={handlePreviewState} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} previewState={previewState} /></div>
     </section>
     {/* Temporarily hidden: AI with guardrails / Fun & magic sections. */}
     {/* <Architecture /> */}

@@ -1,8 +1,20 @@
 # Implementation status
 
-Updated: 2026-09-16
+Updated: 2026-09-24
 
 This tracker is updated as implementation blocks are completed. It separates what is working in this repository from source material and project inputs that still need owner verification.
+
+## Correction — 2026-09-24: the portfolio does embed demo credentials
+
+Two earlier claims in this tracker — that "no credentials were embedded or submitted" and that "the portfolio embeds no credentials" — were false. They are corrected in the entries below. What the code actually does:
+
+- `lib/preview.ts` hardcodes a demo email and password for `symply-house` and `symply-budget`, and those strings are present in the static export under `out/_next/static/chunks/`. The same password string is reused for both accounts, so both must be treated as public.
+- The portfolio sends the pair to the embedded app by `postMessage`, targeted at the app's exact origin, and appends `?portfolioDemo=1&portfolioSession=<uuid>` to the preview URL.
+- The embedded app pre-fills its own login form and does not auto-submit. The visitor taps Sign In, which performs a real authentication request against that product's production API with a genuine production account.
+- The household and budget records the visitor then browses are synthetic, seeded per visit into an ephemeral local session keyed by `portfolioSession`, kept only in that browser tab and never synced (the app skips auto-sync while a `portfolioSession` is present). Real account, real production auth, non-persisted content.
+- House of Commons Citizen Companion uses no credentials and no demo flag; its "public data, no account" boundary is accurate.
+
+Removing the embedded credentials is not a portfolio-only change. The portfolio can stop shipping them because the app already derives the pre-fill from the `portfolioDemo` URL flag alone (`portfolioDemoCredentialsFromLocation`), but the app repository holds its own copy of the guest credential map, so ending publicly readable demo credentials altogether requires a change there.
 
 ## Online release
 
@@ -21,11 +33,11 @@ This tracker is updated as implementation blocks are completed. It separates wha
 - **Repository:** created public GitHub repository [Androkzn/interactive-portfolio-ai-guide](https://github.com/Androkzn/interactive-portfolio-ai-guide).
 - **Static shell:** Next.js App Router with `output: export`, responsive layout, and no required runtime server.
 - **Portfolio workspace:** one active project player with live Web source builds; account-scoped actions remain behind each app's normal authentication.
-- **Approved project set:** exactly three projects are now published in presentation order: [Androkzn/symply-house](https://github.com/Androkzn/symply-house), sourced from `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Simply Ecosystem-house/`; [Androkzn/hocv2](https://github.com/Androkzn/hocv2), sourced from `/Users/andreitekhtelev/Desktop/DEVELOPMENT/HoC-v2/`; and [Androkzn/symply-budget](https://github.com/Androkzn/symply-budget), sourced from `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Symply Budget/`.
+- **Approved project set:** exactly three projects are now published in presentation order: [Androkzn/symply-house](https://github.com/Androkzn/symply-house), sourced from the shared Symply brand monorepo at `/Users/andreitekhtelev/Desktop/Symply Ecosystem/Simply Ecosystem-budget/` (which carries both the `symply-house` and `symply-budget` brands, and the portfolio demo service used by each); [Androkzn/hocv2](https://github.com/Androkzn/hocv2), sourced from `/Users/andreitekhtelev/Desktop/DEVELOPMENT/HoC-v2/`; and [Androkzn/symply-budget](https://github.com/Androkzn/symply-budget), sourced from the same monorepo clone.
 - **Project cleanup:** the former Swiper, Brij, WiFi Map, One Dialer and Pixalere entries, corpus records, guide fallback and connected bridge files were removed from the portfolio application. Their external source folders were intentionally preserved.
 - **Device Lab:** iPhone, iPad, Android and Desktop shells remain selectable and labeled with their dimensions. Symply House, HoC v2 and Symply Budget load independently deployed production Web builds inside a sandboxed iframe; each remains explicitly labeled as Web, not native.
 - **Connected Web deployments:** [symply-house-web.pages.dev](https://symply-house-web.pages.dev/), [hoc-v2-web.pages.dev](https://hoc-v2-web.pages.dev/) and [symply-budget-web.pages.dev](https://symply-budget-web.pages.dev/). The builds use the source repositories' production API/auth configuration and were deployed independently on 2026-09-16; Citizen Companion includes a web-only style-flattening fix required by React Native Web.
-- **Source Web verification:** House and Budget render their own production login screens; HoC renders Home and receives live MP/ranking data from its production public API. Cache-busted browser smoke passed for all three builds; no credentials were embedded or submitted.
+- **Source Web verification:** House and Budget render their own production login screens; HoC renders Home and receives live MP/ranking data from its production public API. Cache-busted browser smoke passed for all three builds. House and Budget are opened with a shared demo login that the portfolio embeds and pre-fills; the visitor submits it, and the resulting content is synthetic and confined to a per-visit local session. HoC uses no credentials and no demo flag.
 - **Source test boundary:** Budget TypeScript passed and focused local-first/task tests passed 18/18. HoC Web build passed; its repository-wide type/test commands still expose pre-existing missing legacy modules, API-shape drift and contract fixtures (recorded as baseline debt, not hidden by the portfolio release).
 - **Guide modes:** Explore, Tour and Interview tabs share the same in-tab conversation state.
 - **Curated guide:** local responses cover personal contribution, technical challenge, AI verification, opening a project and unknown/pending facts. No paid AI key is required.
@@ -60,7 +72,7 @@ This tracker is updated as implementation blocks are completed. It separates wha
 | --- | --- | --- |
 | BR-04 / C1 / C4 | Manifest-driven project workspace and case content | Implemented for exactly three approved projects |
 | BR-05 / A2 | Multi-platform source evidence and explicit Web/native preview labels | Web source builds connected for all three projects; real native streaming remains pending |
-| BR-06 / C5 | Clear runtime boundary and safe account handoff | Live builds use production APIs; the portfolio embeds no credentials and does not submit account actions |
+| BR-06 / C5 | Clear runtime boundary and safe account handoff | Live builds use production APIs; the portfolio embeds a shared demo login for House and Budget and pre-fills it, the visitor submits the sign-in, and demo content stays in a per-visit local session (see the 2026-09-24 correction) |
 | BR-07 / F2 | Static shell and curated guide do not require AI quota | Implemented for first slice |
 | BR-10 / D1–D6 | Project-aware local guide, mode state and interruption-safe new turns | First slice implemented; Worker grounding pending |
 | BR-11 / B4 | Guide can request/open a project in the shared player | Implemented for the three-project connected Web player |

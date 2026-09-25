@@ -459,7 +459,7 @@ export const engineeringWorkCards: EngineeringWorkCard[] = [
     contribution: "AI integration, backend and client delivery, output validation, and performance investigation.",
     decision: "Use retrieval as a tool instead of an unconditional step on every message.",
     signal: {
-      label: "Author-reported, not an independent benchmark",
+      label: "Author-reported estimate, not a measurement",
       value: "~300–500 ms of retrieval overhead removed from about 90% of messages",
     },
     cta: "Read case study",
@@ -518,7 +518,7 @@ export const caseStudies: CaseStudy[] = [
     role: {
       title: "My role",
       intro:
-        "Step's social features were built by a team. This is the part I can speak for, split by what I actually did rather than by what the feature list looks like.",
+        "Step's social features were built by a small team — two to three engineers plus the founder and QA — and roughly a quarter of the repository's commits are other people's. This is the part I can speak for, split by what I actually did rather than by what the feature list looks like. I am not converting a commit share into a share of the thinking.",
       items: [
         {
           kind: "implemented",
@@ -551,35 +551,38 @@ export const caseStudies: CaseStudy[] = [
     howItWorks: {
       title: "How it works",
       intro:
-        "The path below is the one that matters for this case study: a confirmed workout becoming a card in the right people's feeds. It is drawn at the level of responsibility, because that is the level I can state accurately — the exact internal routing for this particular flow is not something I am publishing here.",
+        "The path below is the one that matters for this case study: a confirmed workout becoming a card in the right people's feeds. Feed cards are generated from database change streams rather than from a request the app makes, which is what gives this flow its failure modes. It is drawn at the level of responsibility — I am naming the mechanism, not publishing the internal wiring.",
       flow: [
-        { id: "01", title: "Activity is confirmed", detail: "A workout is recorded or imported, and the backend receives the event that confirms it." },
-        { id: "02", title: "The event is classified", detail: "The handler decides whether this event represents a confirmed activity worth publishing — across every event type that can carry that confirmation, not just the expected one." },
-        { id: "03", title: "The audience is resolved", detail: "Membership and circle visibility are read on the backend to determine who is allowed to see this activity, at this moment." },
-        { id: "04", title: "The card is written once", detail: "Feed entries are written so that a repeated event resolves to the same card instead of a duplicate." },
-        { id: "05", title: "Clients read the feed", detail: "The iOS app requests the feed it is entitled to and renders it; it does not compute entitlement." },
+        { id: "01", title: "Activity is confirmed", detail: "A workout is recorded in the app or imported from Apple Health, and the confirmation lands as a change in the database." },
+        { id: "02", title: "A change stream carries the event", detail: "Stream triggers pick the change up and hand it to the aggregator that builds feed cards. Nothing in the user's request waits for this." },
+        { id: "03", title: "The event is classified", detail: "The handler decides whether this change represents a confirmed activity worth publishing — across every event type that can carry that confirmation, not just the expected one." },
+        { id: "04", title: "The audience is resolved", detail: "Circle membership and visibility are read on the backend to determine who is allowed to see this activity, at this moment." },
+        { id: "05", title: "The card is written once", detail: "Feed entries are written with a deterministic identity and a guarded write, so a repeated event resolves to the same card instead of a duplicate." },
+        { id: "06", title: "Clients read the feed", detail: "The iOS app requests the feed it is entitled to and renders it optimistically, with rollback if the write does not hold. It does not compute entitlement." },
       ],
       flowCaption:
-        "Five responsibilities, not five services: confirmation, classification, audience resolution, idempotent write, client read. Each step names who decides — the backend decides steps 2 to 4.",
+        "Six responsibilities, and the important thing is where they sit: the user's request ends at step 1. Everything from the change stream to the written card happens asynchronously on the backend, which is why a missed or repeated event is a correctness problem rather than a visible error.",
       narrative: [
         "Reading it as prose: the backend learns that an activity is confirmed, decides whether that confirmation is the kind that belongs in a feed, works out who may see it, writes the card in a way that survives the same event arriving again, and then the app simply asks for what it is allowed to read. The client's job is deliberately small.",
-        "The one step that turned out to be interesting in production was step 2 — classification. It is also the step that produced the bug worth telling you about.",
+        "The step that turned out to be interesting in production was classification. It is also the step that produced the bug worth telling you about.",
       ],
       disclosures: [
         {
           summary: "The bug: a confirmation that the feed rule did not recognise",
           body: [
-            "A workout imported from HealthKit was not confirmed the way a workout recorded in the app was. The import path produced its confirmation as a MODIFY event — the record already existed, and confirmation changed it. The feed rule matched on INSERT.",
-            "The result was not an error. Nothing crashed, nothing logged a failure, and every test that created a workout the ordinary way passed. The activity was simply never considered for the feed, so for the people whose workouts came from HealthKit the feed was quietly incomplete.",
-            "The fix had three parts. First, handling was widened so that a confirmation is a confirmation regardless of which event type carries it — the rule now matches on what the event means, not on the one shape it happened to have first. Second, because activity had already been missed, there was a reconciliation path to find confirmed activity with no corresponding card and produce the missing ones. Third, that backfill had to be safe to run: it can revisit the same activity without producing a second card, because the write is keyed on the activity rather than on the event that triggered it.",
-            "What this is not: it is not an exactly-once guarantee for the platform. It is one class of event handled correctly, with duplicate-safe writes on that path. Other paths have their own assumptions, and I am not claiming they were all audited.",
+            "A workout imported from Apple Health was not confirmed the way a workout recorded in the app was. The import path produced its confirmation as a MODIFY event — the record already existed, and confirmation changed it. The feed rule fired on INSERT.",
+            "The result was not an error. Nothing crashed, nothing logged a failure, and every test that created a workout the ordinary way passed. The activity was simply never considered for the feed, so for the people whose workouts came from Apple Health the feed was quietly incomplete. This is the characteristic failure of the asynchronous path above: when the work that builds the card happens outside the user's request, work that never happens looks exactly like nothing happening.",
+            "The fix had three parts. First, handling was widened so that a confirmation is a confirmation regardless of which event type carries it — the rule now matches on what the event means, not on the one shape it happened to have first. Second, because activity had already been missed, a scheduled reconciliation job looks for confirmed activity with no corresponding card and produces the missing ones, so the same class of gap repairs itself rather than needing to be noticed. Third, that backfill had to be safe to run repeatedly: it can revisit the same activity without producing a second card, and it has an undo counterpart.",
+            "How well it worked, stated carefully: my account is that this eliminated the class of missed cards and that the reconciliation job now finds nothing left to backfill in normal operation. That steady-state observation is the one claim in this story with no source record behind it, so read it as my report rather than as a measurement — and note that a reconciliation job reporting nothing to fix is only as good as the query it uses to look.",
+            "What this is not: it is not an exactly-once guarantee for the platform. It is one class of event handled correctly, with duplicate-safe writes and a reconciliation net on that path. Roughly a fifth of the backend's functions carry explicit idempotency machinery, not all of them, and I am not claiming the rest were audited.",
           ],
         },
         {
           summary: "Why duplicate suppression lives in the write, not in a filter",
           body: [
             "Deduplicating when reading the feed would have been easier to ship: fetch, group, drop repeats. It also means the duplicate exists in storage, so every future reader has to know about it, and any process that counts or notifies sees two things where there was one.",
-            "Keying the write on the activity instead pushes the constraint to the moment the card is created, which is the only place that can enforce it once for everyone. The trade-off is that the key has to be chosen correctly up front — a key that is too narrow lets duplicates through, and a key that is too broad collapses activity that should have produced separate cards.",
+            "Pushing the constraint into the write is the only place that can enforce it once for everyone. Concretely that meant deriving the card's identity deterministically from the activity rather than from the event that triggered it, guarding the write so a second attempt cannot create a second row, and using tombstones for deletes so a removed card cannot be resurrected by a late event.",
+            "The trade-off is that the identity has to be chosen correctly up front — too narrow and duplicates slip through, too broad and activity that deserved separate cards collapses into one. That choice is not reversible cheaply once cards exist, which is why it belonged in the design rather than in a later patch.",
           ],
         },
       ],
@@ -591,30 +594,30 @@ export const caseStudies: CaseStudy[] = [
       checks: [
         {
           status: "documented",
-          title: "195 test cases authored in Xray for the social features",
+          title: "195 acceptance test cases for Circles V2, generated from the requirements",
           detail:
-            "These are cases written and stored in the test-management tool, covering membership, invitation and feed scenarios. It is a count of authored cases — not of executions, and not of passes. No execution report for this set is published here.",
+            "A generator turned the Circles V2 requirement documents into 195 acceptance cases and imported them into the test-management tool. Three things that matters for: they were generated rather than hand-written, they cover Circles V2 rather than the feed, and a count of imported cases is not a count of passing tests. No execution report for this set is presented here.",
           claimId: "step-social-xray-cases",
         },
         {
           status: "historical-run",
-          title: "A coverage audit: 108 of 155 reviewed scenarios mapped to tests, 47 gaps recorded",
+          title: "A static code-vs-matrix audit: 108 of 155 checks satisfied, 47 gaps",
           detail:
-            "A point-in-time comparison of documented scenarios against existing tests. It is a historical artifact that shows where coverage was thin at that moment. It is not the output of a full test run, and this page does not claim the 47 gaps were all subsequently closed.",
+            "On 2026-07-30 the acceptance matrix was compared against the code as it then stood: 108 checks satisfied, 47 not, which is about 70% implemented at that moment. The gaps became a fix backlog. This is a code audit rather than a test run, its 155 checks are a different artifact from the 195 imported cases, and nothing here claims all 47 gaps were later closed.",
           claimId: "step-social-coverage-audit",
         },
         {
           status: "documented",
-          title: "The MODIFY/INSERT defect and its fix",
+          title: "The MODIFY/INSERT defect, its fix and the reconciliation net",
           detail:
-            "Described from my own account of the work: the missed event type, the widened handling, the reconciliation pass and the duplicate-safe backfill. No repository, log or test output for it is published on this site.",
+            "The missed event type, the widened handling, the scheduled reconciliation job and the idempotent backfill are recorded in my own write-up of the work. The claim that nothing is left to backfill in steady state has no source record behind it even there — it is my observation, not a measurement, and no repository, log or test output for any of it is published on this site.",
           claimId: "step-feed-modify-insert",
         },
         {
           status: "not-run",
           title: "A current automated run of the social suite",
           detail:
-            "Not presented. I do not have a published run of that suite to point at for this write-up, so there is no pass/fail figure for it here.",
+            "Not presented. I have no published run of that suite to point at for this write-up, so there is no pass/fail figure for it here, and the audit above should not be read as one.",
         },
       ],
     },
@@ -623,13 +626,14 @@ export const caseStudies: CaseStudy[] = [
       results: [
         "Circles and the Movement Feed shipped: people can create a circle, invite members, post, comment and react, and see each other's confirmed activity.",
         "Visibility has one implementation, on the backend. A client with stale membership data can render an out-of-date list, but it cannot grant itself access it does not have.",
-        "Activity confirmed through an event type the feed rule had not covered now reaches the feed, and the backfill that repaired the already-missed activity could be run without creating duplicate cards.",
-        "Load context for the backend this feature runs on: 969,821 Lambda invocations with 4 Lambda errors in one measured 24-hour production window (2026-09-04). That describes the traffic the system carried, not the success of the feature.",
+        "Activity confirmed through an event type the feed rule had not covered now reaches the feed, and the backfill that repaired the already-missed activity could be re-run without creating duplicate cards.",
+        "Load context, feature-scoped: the feed aggregator runs on the order of 34,000 times a day. That says how often the machinery turns over, not how many people the feature served and not whether it worked for them.",
       ],
       limitations: [
-        "No engagement, retention or revenue effect is claimed. I do not have those numbers, and a feed shipping is not evidence that it changed behaviour.",
-        "The invocation figure is a single 24-hour snapshot of the whole backend, not a feed-specific metric and not measured against a defined SLO.",
-        "The event fix covers the confirmation path described above. It is not a platform-wide exactly-once guarantee.",
+        "No engagement, retention or revenue effect is claimed. I do not have those numbers, and a feed shipping is not evidence that it changed anyone's behaviour.",
+        "The invocation figure is load context with no source row of its own in my write-up. It is not a usage metric and not a success metric.",
+        "The event fix covers the confirmation path described above. It is not a platform-wide exactly-once guarantee, and explicit idempotency machinery exists in a minority of the backend's functions rather than all of them.",
+        "A related piece of work — moving the notification step out of the comment and reaction path, where it accounted for most of the latency — is described in my own notes both as shipped and as still in flight. Because I cannot resolve that contradiction from the sources I have, it is left out of this page rather than claimed.",
         "This was team work. The parts I list under \"My role\" are mine; design, product scope and release approval were not.",
       ],
     },
@@ -647,21 +651,21 @@ export const caseStudies: CaseStudy[] = [
         {
           kind: "technical-write-up",
           availability: "private",
-          label: "Step Experience Master Document (§3.A, §3.C, §3.E, §4.6, Appendix C)",
-          note: "An internal write-up of the work, held by me. Not published: it contains internal paths and operational detail.",
+          label: "My own experience document for this work (§3.C, §3.E, §4, Appendices C, D, F)",
+          note: "A detailed internal write-up I keep, inspected while writing this page. Not published: it contains internal paths and operational detail.",
         },
         {
           kind: "test-run",
           availability: "private",
-          label: "Xray test cases and the coverage audit",
-          note: "Counts of authored cases and a point-in-time audit, quoted above. The tool and its reports are internal.",
+          label: "The Circles V2 acceptance matrix and the 2026-07-30 code audit",
+          note: "The source of the 195 imported cases and the 108 / 47 / 155 audit figures. Both are internal artifacts.",
         },
       ],
       claimIds: [
         "step-social-xray-cases",
         "step-social-coverage-audit",
         "step-feed-modify-insert",
-        "step-backend-invocations-24h",
+        "step-feed-aggregator-volume",
       ],
     },
   },
@@ -724,7 +728,7 @@ export const caseStudies: CaseStudy[] = [
         body: [
           "Removing work from the critical path made responses faster on most messages. That is a latency result, and a latency result is not a quality result. Faster is not evidence that answers stayed as good.",
           "The failure mode this decision introduces is specific and worth naming: retrieval that should have happened and did not. Always-on retrieval cannot make that mistake — it wastes time instead. On-demand retrieval can, and when it does the answer is not an error message, it is a confident answer built on less than it should have been. That is harder to notice than a slow reply.",
-          "What checks it: a retrieval-quality harness exists for exactly this question — does the answer hold up on inputs whose answers depend on stored knowledge. I do not have its results to show here, so I am not claiming the question is settled. It is the open item on this case study, stated rather than answered.",
+          "What would check it: a retrieval-quality harness exists for exactly this question — four scenarios, twenty queries, scored on whether what came back contains the content it should. But when I looked at it for this write-up, it prints its results to the terminal and has no code path that writes them anywhere, it is not wired into the build, and neither its repository history nor my own notes record a single run. So the honest position is that the check was built and never turned into evidence. This is the open item on this case study.",
         ],
       },
     },
@@ -734,9 +738,9 @@ export const caseStudies: CaseStudy[] = [
         "A simplified request path. It is drawn to show where the boundaries are — which component may decide what — rather than to document the internal wiring, which I am not publishing.",
       flow: [
         { id: "01", title: "Client sends the message", detail: "The app sends the user's message and the conversation it belongs to." },
-        { id: "02", title: "Backend handler prepares the request", detail: "The handler assembles the request for the model and declares which tools are available on this call." },
+        { id: "02", title: "Backend handler prepares the request", detail: "The handler assembles the request for the model and declares the small set of tools available on this call — content search, knowledge retrieval, a read of the user's own precomputed insights, and a workout suggestion." },
         { id: "03", title: "Retrieval, only if requested", detail: "If the model calls the retrieval tool, the application executes it with validated arguments and returns the result. On most messages this step does not happen." },
-        { id: "04", title: "Output is validated", detail: "The response is checked against the shape the product expects before any of it is used." },
+        { id: "04", title: "Output is validated", detail: "The response is checked against the shape the product expects before any of it is used, and a validation failure is recorded as its own signal rather than passed through." },
         { id: "05", title: "Response streams back", detail: "Validated output streams to the client so reading can start before generation finishes." },
       ],
       flowCaption:
@@ -761,22 +765,22 @@ export const caseStudies: CaseStudy[] = [
       checks: [
         {
           status: "automated",
-          title: "Output validation on the response path",
+          title: "Schema validation on the response path",
           detail:
-            "Model output is validated against the expected shape before the product uses it, so a malformed or unexpected response fails a check instead of reaching the UI. This runs on every response, by construction.",
+            "Model output is validated against the expected shape before the product uses it, so a malformed or unexpected response fails a check instead of reaching the UI, and the failure is recorded as its own telemetry. This runs on every response, by construction — it is the one check here that does not depend on anybody remembering to run it.",
         },
         {
           status: "documented",
           title: "~300–500 ms of retrieval overhead removed from about 90% of messages",
           detail:
-            "This is my own reported figure for the retrieval step's own cost on messages that no longer trigger it. It is not total response latency and not time-to-first-token, and it is not an independently reproduced benchmark. The ~90% is the reported share of messages that do not need retrieval.",
+            "Read this as a design estimate, not a measurement. It describes the retrieval step's own cost on messages that no longer trigger it — not total response latency, not time-to-first-token. When I traced it back to its source for this page, it rests on the design decision record for the change rather than on a benchmark or a monitoring query, unlike neighbouring figures in the same notes that cite staging-verified measurements. The ~90% is the reported share of messages that do not need retrieval.",
           claimId: "step-retrieval-overhead-removed",
         },
         {
           status: "open-question",
           title: "Is retrieval ever skipped when it was needed?",
           detail:
-            "This is the risk the decision introduces, and it is the check that matters most. A retrieval-quality harness exists for it; its results were not available for this write-up. Stated as open rather than answered.",
+            "The risk this decision introduces, and the check that matters most. A harness for it exists — four scenarios, twenty queries, scored on expected content — but it writes nothing, runs in no pipeline, and has no recorded execution. Built, never turned into evidence. Stated as open rather than answered.",
           claimId: "step-retrieval-quality-harness",
         },
         {
@@ -793,13 +797,13 @@ export const caseStudies: CaseStudy[] = [
         "Coaching shipped as part of the product, with retrieval, streaming responses and tool use working together inside an explicit application contract.",
         "Retrieval became conditional and visible: it is a call that either happened or did not, on the conversations that need it.",
         "Model output is validated before it is used, so the product's behaviour does not depend on the model being well-behaved.",
-        "Reported effect: roughly 300–500 ms of retrieval overhead removed from about 90% of messages — author-reported, defined above, and not independently benchmarked.",
+        "Reported effect: roughly 300–500 ms of retrieval overhead removed from about 90% of messages — my own design estimate, defined above, and not a benchmark.",
       ],
       limitations: [
-        "The latency figure is mine, not a measurement you can inspect here. It describes the retrieval step's overhead, not end-to-end response time or time-to-first-token.",
-        "Answer quality after the change is not demonstrated on this page. The harness that would demonstrate it exists; its results are not presented.",
+        "The latency figure is an estimate from the design decision, not a measurement you or I can inspect. It describes the retrieval step's overhead, not end-to-end response time or time-to-first-token.",
+        "Answer quality after the change is not demonstrated. The harness that would demonstrate it exists but has never produced a recorded result, which is a gap in my work rather than a detail of presentation.",
         "The internal routing is described at the boundary level only. I am not publishing the exact services or rules.",
-        "Targets that existed for this path (p99 under 50 ms, time-to-first-token under 200 ms) are targets. No measurement against them is presented, so they are not published as results.",
+        "Targets that existed for this path — a p99 under 50 ms on the precomputed read, time-to-first-token under 200 ms — are targets. No measurement against them is presented, so they are not published as results.",
       ],
     },
     sources: {
@@ -815,14 +819,20 @@ export const caseStudies: CaseStudy[] = [
         {
           kind: "technical-write-up",
           availability: "private",
-          label: "Step Experience Master Document (§3.B, §4.4, Appendix A8, G8)",
-          note: "Internal write-up including the reported latency figure and the retrieval-quality harness.",
+          label: "My own experience document for this work (§3.B, Appendices A, G)",
+          note: "Inspected while writing this page. It is where the latency estimate and the harness are recorded — and where I confirmed that the estimate traces to a design decision rather than a measurement.",
+        },
+        {
+          kind: "source-code",
+          availability: "private",
+          label: "The retrieval-quality harness itself",
+          note: "Exists in the app repository: four scenarios, twenty queries, keyword scoring. Inspected for this page. It prints to the terminal and stores nothing, so there is no result to cite.",
         },
         {
           kind: "test-run",
           availability: "private",
-          label: "Retrieval-quality harness results",
-          note: "Not available for this write-up. This is the missing artifact behind the open question above.",
+          label: "A retrieval-quality result",
+          note: "Does not exist — not in the repository, not in the build pipeline, not in my notes. This is the missing artifact behind the open question above.",
         },
       ],
       claimIds: ["step-retrieval-overhead-removed", "step-retrieval-quality-harness", "step-coach-latency-targets"],
@@ -868,13 +878,13 @@ export const caseStudies: CaseStudy[] = [
         "Turn recurring review failures into regression cases instead of adding untested prompt rules.",
         "A prompt rule is cheap to write and impossible to evaluate. Once there are a dozen, nobody knows which ones still matter, which ones conflict, and which were never doing anything. Worse, the rule usually gets added right after the failure it was written for — so it looks effective precisely because nobody tests it.",
         "A case is more expensive. It needs a plan, an expected finding, and a judgement about what counts as catching it. In exchange it can fail. When a skill changes, the cases say whether the thing that was broken is now caught, and whether something that used to be caught no longer is.",
-        "The operating rule that comes with it: if a plan needs more than two review cycles to converge, that is a signal to add a case. It is a rule about when to invest in a case — not a claim that plans now converge in two cycles.",
+        "The operating rule that comes with it has two halves, and the second one is the one that does the work: if a plan needs more than two review cycles to converge, add it as a case — and trace its failure back to a specific rule in a specific skill. Without the second half you accumulate cases without ever learning why the reviewer missed anything. It is a rule about when to invest in a case, not a claim that plans now converge in two cycles.",
       ],
     },
     howItWorks: {
       title: "How it works",
       intro:
-        "The loop below is the one that turns a failure into a case. The example in it is a real recurring failure class from my own reviews — a reviewer accepting a reference to a git object that does not exist — not a fabricated production incident.",
+        "The loop below is the one that turns a failure into a case. The example in it is a real recurring failure class from my own reviews — a reviewer accepting a reference to a git object that does not exist — and it is one of twelve such anti-patterns I ended up writing down. It is not a fabricated production incident.",
       flow: [
         { id: "01", title: "A plan with a known defect", detail: "A plan that references a specific commit as the basis for a change." },
         { id: "02", title: "Expected flag", detail: "The reviewer should report that the reference cannot be confirmed — the object is not there to check against." },
@@ -893,19 +903,20 @@ export const caseStudies: CaseStudy[] = [
         {
           summary: "The five reviewer roles, and what each one has to produce",
           body: [
-            "Codebase Validator — asks whether the plan's claims about the code are true. Input: the plan plus the repository. Expected confirmation: every referenced file, symbol and object either confirmed against the codebase or reported as unconfirmable.",
-            "Architecture & Risk Reviewer — asks what this design costs and where it breaks. Input: the plan plus the surrounding system. Expected confirmation: named risks and affected boundaries, not a general approval.",
-            "Modern Practices Researcher — asks whether the approach is current for the libraries and platform in use. Input: the plan plus the actual dependency versions. Expected confirmation: a practice cited against the version in use, not from memory.",
-            "Premise Adversarial Validator — asks whether the stated reason for the work is established. Input: the plan's premises and whatever is offered as support. Expected confirmation: each premise marked as supported or unsupported, with the unsupported ones named.",
-            "Execution Validator — asks whether what was reported as done is actually done. Input: the plan's status claims plus the evidence for them. Expected confirmation: each completed step tied to something that shows it, or flagged as unconfirmed.",
-            "Five passes, each with a different question, so that a plan is not reviewed five times from the same angle. This is a description of a process I run, not an autonomous system that runs itself.",
+            "Codebase Validator — verifies every file, line and claim in the plan against the actual checkout. Expected output: each reference either confirmed against the code or reported as unconfirmable. This is the pass the git-object example belongs to.",
+            "Architecture & Risk Reviewer — patterns, scope, memory and retain-cycle risks, whether the change fits the schema. Expected output: named risks and affected boundaries, not a general approval.",
+            "Modern Practices Research — whether the approach matches current platform and SDK guidance rather than remembered guidance. Expected output: a practice tied to what the project actually depends on.",
+            "Premise Adversarial Validator — attacks the plan's stated reason for existing: is the thing already implemented, is the cause unverified, is the evidence cherry-picked. Expected output: premises marked supported or unsupported, with the unsupported ones named.",
+            "Execution Validator — whether the plan can actually be carried out step by step as written. Expected output: steps that are executable as described, or the point at which they stop being.",
+            "Five different questions, so a plan is not reviewed five times from the same angle, run for up to five cycles and treated as finished only when a fresh pass comes back with nothing. This is a process I run, not an autonomous system that runs itself.",
           ],
         },
         {
           summary: "Cross-model review, and what it does not give you",
           body: [
-            "Running a review through a different model is an additional source of criticism. Different training and different habits mean it sometimes objects where the first reviewer did not, which is useful.",
-            "What it does not do is guarantee independence. Models trained on overlapping data share blind spots, so two reviewers can miss the same thing for the same reason and produce agreement that looks like confirmation. Agreement between agents is not evidence of correctness — it is the absence of one kind of disagreement. The cases exist precisely because agreement cannot be trusted as a verdict.",
+            "One of the five — the Premise Adversarial Validator, the pass that attacks the reason for the work — deliberately runs on a different model from the others. Different training and different habits mean it sometimes objects where the first reviewer did not, which is the point.",
+            "Two honest caveats. First, I have no measurement showing that this role in particular benefits from a different model; it is a reasoned choice, not a demonstrated one, and I am not going to dress it up as the latter. Second, a different model does not guarantee independence: models trained on overlapping data share blind spots, so two reviewers can miss the same thing for the same reason and produce agreement that reads like confirmation.",
+            "Which is the whole argument for the cases. Agreement between agents is the absence of one kind of disagreement, not evidence of correctness. A case that fails tells you something; two agents nodding does not.",
           ],
         },
       ],
@@ -917,45 +928,45 @@ export const caseStudies: CaseStudy[] = [
       checks: [
         {
           status: "documented",
-          title: "11 regression cases built from real review failures",
+          title: "11 regression cases, each from a plan that really did go wrong",
           detail:
-            "The size of the set. Each case pairs a plan with the finding a reviewer is expected to raise. A set of 11 cases is not 11 passing checks.",
+            "Every case holds the earliest version of a real plan — ones that had taken between nine and eighteen review iterations to settle — together with the findings a reviewer must raise, a minimum severity for each, and the properties the review output has to have. Fourteen rule changes are logged as coming out of them. It is the size of a set: 11 cases is not 11 passing checks.",
           claimId: "agent-eval-case-count",
         },
         {
           status: "historical-run",
           title: "Recorded run, 2026-05-28: 6 pass, 2 fail, 2 partial, 1 fixture defect",
           detail:
-            "The outcomes of one execution of the set on that date. 'Partial' means the reviewer raised the issue but missed part of the expected finding. 'Fixture defect' means the case itself was wrong — the expected behaviour was mis-specified, so the result said nothing about the reviewer.",
+            "The outcomes of one execution of the set on that date. 'Partial' means the reviewer raised the issue but missed part of the expected finding. 'Fixture defect' means the case itself was mis-specified, so its result said nothing about the reviewer at all — worth reporting rather than quietly excluding, because a bad case is its own kind of failure. Two reviewer roles were patched afterwards and the broken case was fixed.",
           claimId: "agent-eval-run-2026-05-28",
         },
         {
           status: "not-run",
-          title: "A later full run of the eval set",
+          title: "The re-run that would show whether those fixes worked",
           detail:
-            "Not presented. I am not showing a subsequent run with a skill version, model and report attached, so the 2026-05-28 result stands as the last one published here. The failing and partial cases should be assumed still open.",
+            "Missing. The policy attached to those fixes was explicitly 'fail before the fix, pass after', but no post-fix run is recorded anywhere I can point to — not in my notes, not as a report. So the 2026-05-28 result stands as the last one I can show, and the two failures and two partials should be treated as open. This is the weakest point in this case study and I would rather name it than round it up.",
         },
         {
           status: "documented",
-          title: "Operating rule: more than two review cycles means add a case",
+          title: "Operating rule: more than two review cycles means add a case and find the rule that missed it",
           detail:
-            "A rule about when to invest in a new case. It is not evidence that plans now converge within two cycles, and no cycle-count measurement is published here.",
+            "A rule about when to invest in a new case, not a measurement. It is not evidence that plans now converge within two cycles; no cycle-count measurement is published here, and the 'converges in two cycles' phrasing that appears in my own notes is a statement of the rule, not of an observed rate.",
         },
       ],
     },
     outcome: {
       title: "Outcome & limitations",
       results: [
-        "Review became a defined protocol with five passes, each with its own question and its own expected form of confirmation, instead of one general request for feedback.",
-        "Recurring failures became cases that can fail, so a change to a skill can be checked rather than believed.",
+        "Review became a defined protocol with five passes, each with its own question, instead of one general request for feedback.",
+        "Recurring failures became cases that can fail, so a change to a skill can be checked rather than believed — and twelve specific review anti-patterns got written down instead of being rediscovered.",
         "One concrete example is documented end to end above: a reviewer accepting an unconfirmable git reference, the missing validation step, the skill change and the re-check.",
-        "The recorded run is published as it came out — 6 pass, 2 fail, 2 partial, 1 fixture defect — including the case that was wrong itself.",
+        "The recorded run is published as it came out — 6 pass, 2 fail, 2 partial, 1 fixture defect — including the case that turned out to be wrong itself.",
       ],
       limitations: [
         "This is an engineering process I run, not an autonomous review runtime. The judgement about what should have been caught is mine, case by case.",
-        "The last run I can point at is from 2026-05-28 and it was not all green. No later full run is presented, so the open cases stay open here.",
-        "Cross-model review adds criticism, not independence. Agreement between reviewers is not proof that a plan is sound.",
-        "The skills, cases and run logs are my own working files and are not published on this site, so the run result is my report of it rather than an artifact you can open.",
+        "The last run I can point at is 2026-05-28 and it was not green. The fixes that followed it have no recorded re-run, so their effect is unestablished and the open cases stay open here.",
+        "Cross-model review adds criticism, not independence, and I have no measurement that the one role running on a different model catches more because of it.",
+        "The skills, cases and run logs are my own working files and are not published, so the run result is my report of it rather than an artifact you can open.",
       ],
     },
     sources: {
@@ -977,8 +988,8 @@ export const caseStudies: CaseStudy[] = [
         {
           kind: "technical-write-up",
           availability: "private",
-          label: "Step Experience Master Document (§3.K, §4.9, Appendix G2–G5)",
-          note: "Internal write-up of the protocol, the five roles and the eval set.",
+          label: "My own experience document for this work (§3.K, Appendix G)",
+          note: "Where the protocol, the five roles, the eval set and the 2026-05-28 run are recorded. Inspected while writing this page.",
         },
         {
           kind: "source-code",

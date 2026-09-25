@@ -1,5 +1,5 @@
 {
-  "corpusVersion": "0.3.0",
+  "corpusVersion": "0.3.1",
   "reviewStatus": "three-project-corpus",
   "positioning": {
     "headline": "Build systems around models, not demos around prompts.",
@@ -16,21 +16,21 @@
       "id": "hoc-v2",
       "name": "House of Commons Citizen Companion",
       "challenge": "Make parliamentary data usable in plain language while preserving evidence, accessibility and cross-platform constraints.",
-      "boundary": "The portfolio preview uses deterministic local data. It does not call live civic services or claim to run a native binary in the browser.",
+      "boundary": "The portfolio preview needs no account and ships no demo credentials: the embedded Web build reads public parliamentary data from its deployed public API. It does not impersonate a user or claim to run a native binary in the browser.",
       "sources": ["hoc-v2.source-repository", "hoc-v2.platform-matrix", "hoc-v2.demo-boundary"]
     },
     {
       "id": "symply-budget",
       "name": "Symply Budget",
       "challenge": "Design a trustworthy local-first budgeting system around native capabilities, sync boundaries and sensitive financial data.",
-      "boundary": "The portfolio preview is synthetic and read-only. It does not expose accounts, financial records, credentials or production services.",
+      "boundary": "The portfolio preview opens the real product with a shared demo login whose credentials ship in the portfolio bundle, and the visitor submits it as a real authentication against the production API. Every figure is synthetic and editable inside a per-visit session held in that browser tab, never persisted and never synced, so no personal financial record is exposed.",
       "sources": ["symply-budget.source-repository", "symply-budget.platform-matrix", "symply-budget.demo-boundary"]
     },
     {
       "id": "symply-house",
       "name": "Symply House",
       "challenge": "Turn shared household context into calm, actionable routines across iPhone, iPad, Android and Web.",
-      "boundary": "The portfolio preview uses deterministic local data. It does not expose accounts, notifications or production writes, and does not claim to run a native binary in the browser.",
+      "boundary": "The portfolio preview opens the real product with a shared demo login whose credentials ship in the portfolio bundle, and the visitor submits it as a real authentication against the production API. The household content is synthetic and editable inside a per-visit session held in that browser tab, never persisted and never synced, and the Web build does not claim to run a native binary.",
       "sources": ["symply-house.source-repository", "symply-house.platform-matrix", "symply-house.demo-boundary"]
     }
   ],
