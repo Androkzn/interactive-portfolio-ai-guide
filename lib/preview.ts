@@ -2,7 +2,7 @@ import type { DevicePreview } from "./content";
 
 export const deviceWidths: Record<DevicePreview, number> = { iphone: 538, ipad: 768, android: 515, desktop: 1280 };
 
-export type PortfolioDemoProjectId = "symply-house" | "symply-budget";
+export type PortfolioDemoProjectId = "symply-house" | "symply-budget" | "symply-health";
 
 /**
  * Announces that this frame is the portfolio's embedded demo. It deliberately
@@ -40,7 +40,7 @@ export function portfolioDemoMessageFor(projectId: string): PortfolioDemoMessage
   // Citizen Companion is a public, unauthenticated flow. Do not add the
   // portfolioDemo query to it: its own Web entry treats that flag as a request
   // for the login screen, which would contradict the public-data experience.
-  if (projectId !== "symply-house" && projectId !== "symply-budget") return null;
+  if (projectId !== "symply-house" && projectId !== "symply-budget" && projectId !== "symply-health") return null;
   return { type: "portfolio:demo", projectId };
 }
 

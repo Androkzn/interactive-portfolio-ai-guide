@@ -30,7 +30,7 @@
       "id": "symply-health",
       "name": "Symply Health",
       "challenge": "Track personal health across iPhone, iPad, Android and Apple Watch while keeping the data read-only at the source and the safety-critical checks independent of the model.",
-      "boundary": "There is no embedded preview for this project: the app has no Web build, so nothing is framed, no demo flag is sent and no credentials exist anywhere in the chain. The portfolio describes the work rather than running it, and the local-first encrypted ledger described in the teardown ships disabled — it is complete at the engine layer and awaiting cutover, not live for users.",
+      "boundary": "The portfolio preview opens a Web build of the real product against its production API. That build exists for this preview and is not a shipping target: the app ships to iOS and Android, and the read-only HealthKit import it is built around has no browser equivalent, so the preview cannot read anyone's health record. The app pre-fills a shared demo login from the portfolioDemo flag on its own URL; the portfolio carries no credentials, but the account is public because the app's own bundle contains it. Every figure behind that login is synthetic. The local-first encrypted ledger described in the teardown ships disabled — it is complete at the engine layer and awaiting cutover, not live for users.",
       "sources": ["symply-health.app-access", "symply-health.platform-matrix", "symply-health.demo-boundary"]
     },
     {

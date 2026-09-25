@@ -197,18 +197,19 @@ export const projects: Project[] = [
     color: "#ff8a8a",
     accent: "coral",
     originalPlatforms: ["iPhone", "iPad", "Android", "Apple Watch"],
-    runtimeLabel: "Native iOS and Android build · no Web target, so no embedded preview",
+    runtimeLabel: "Connected Expo Web build · shared demo login · HealthKit import stays iOS-only",
+    webPreviewUrl: "https://symply-health-web-portfolio.pages.dev/?portfolioDemo=1",
     status: "pilot",
     scenario: { title: "Trace a safety decision", description: "Follow one coach message from arrival to the deterministic check that runs before any model sees it.", action: "Read the teardown" },
     checkpoints: [
       { title: "Read-only at the source", detail: "The HealthKit module asks for read scopes and never for permission to share, so the app cannot write back into a person's health record." },
       { title: "One person, several devices", detail: "A household here is one user with several devices rather than a family, and the backend refuses a second account outright." },
-      { title: "No embedded preview", detail: "This app has no Web build, so the portfolio does not frame one and does not mock one in its place." },
+      { title: "The preview cannot read your health data", detail: "The embedded build runs in a browser, where the HealthKit import does not exist at all. The frame shows the product and its production API; the device-only import stays on iOS." },
     ],
     challenge: { title: "Keep health data private while the device still does the work", body: "Health data is the most sensitive category the ecosystem touches. The app imports it read-only, keeps the working state on the device, and treats the safety-critical checks as something that must not depend on a model behaving well." },
     evidence: [
-      { label: "What you can inspect", type: "verified", detail: "The teardown on this page. This app ships to iOS and Android only, so there is no Web build to embed and explore from here." },
-      { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Apple Watch, plus an iOS home-screen widget. There is no Web build, which is why this project has no embedded preview." },
+      { label: "What you can inspect", type: "verified", detail: "The teardown on this page, plus the embedded Web build running against the production API with a shared demo login. Every figure behind that login is synthetic." },
+      { label: "Platform matrix", type: "runtime", detail: "iPhone · iPad · Android · Apple Watch, plus an iOS home-screen widget. The Web build exists for this preview only; it is not a shipping target, and the HealthKit import it is built around has no browser equivalent." },
       { label: "Verification boundary", type: "verified", detail: "166 test files are authored under the health feature and 81 single-device Maestro flows exist; a generated matrix puts end-to-end element coverage at 48% and calls that figure a floor rather than a score. These are authored counts — I did not execute them for this write-up, so they are not a passing run. The 25 two-device sync flows have never been run at all." },
     ],
     screenInsights: [
