@@ -14,7 +14,6 @@
   --text-title:clamp(1.875rem,3.35vw,3.125rem);
   --text-panel:clamp(1.75rem,2.8vw,2.5625rem);
   --text-section:clamp(2.375rem,4.4vw,4.125rem);
-  --text-display:clamp(3rem,6.7vw,6.375rem);
   --text-step:1.375rem;
  --ink:#20211f; --paper:#f7f5f0; --muted:#62645f; --line:#d8d9d0; --panel:#efeee8; --violet:#5142d9; --lime:#d4ff76; --corner-radius:14px; }
 * { box-sizing:border-box; }
@@ -76,7 +75,8 @@ p { line-height:1.65; }
 .intro-main,.hero-stats { min-width:0; }
 .section-eyebrow { font-family:var(--font-ui); font-size:var(--text-meta); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 .section-eyebrow { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
-.intro h1 { font-family:var(--font-display); font-size:var(--text-display); line-height:1; letter-spacing:-.025em; font-weight:700; margin:0; }
+.intro-main { container-type:inline-size; }
+.intro h1 { font-family:var(--font-display); font-size:min(4.5rem,8.73cqw); line-height:1.02; letter-spacing:-.025em; font-weight:700; margin:0; text-wrap:balance; }
 h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var(--violet); }
 .question-link { position:relative; text-decoration:underline; text-decoration-color:#b6b0ec; text-decoration-thickness:2px; text-underline-offset:8px; }
 .question-link:hover,.question-link:focus-visible { color:var(--violet); text-decoration-color:var(--violet); }
@@ -102,10 +102,19 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 .hero-stats strong { display:block; font-size:var(--text-small); }
 .hero-stats small { display:block; font-size:var(--text-caption); color:var(--muted); margin-top:5px; }
 .hero-stats > p { font-size:var(--text-caption); color:var(--muted); margin:12px 0 0; max-width:310px; }
+/* The three products "Explore projects" opens, as bare round marks: the app
+   artwork is already transparent, so no plate or tint is drawn behind it. */
+.hero-app-logos { display:flex; align-items:center; gap:10px; margin:0; padding:4px 0; }
+.hero-app-logo { display:grid; place-items:center; width:32px; height:32px; padding:0; background:transparent; border:1px solid transparent; border-radius:50%; transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease; }
+.hero-app-logo { position:relative; }
+/* The mark is half-size by request, so the tap target is widened around it. */
+.hero-app-logo::after { content:""; position:absolute; inset:-6px; border-radius:50%; }
+.hero-app-logo:hover,.hero-app-logo:focus-visible { border-color:#c9c0ee; box-shadow:0 8px 18px #5142d91c; transform:translateY(-2px); }
+.hero-app-logo .project-logo { width:100%; height:100%; padding:0; background:transparent; border:0; border-radius:50%; box-shadow:none; }
 .workspace-section { min-width:0; margin:0 4.5vw 90px; scroll-margin-top:20px; }
-.workspace-section-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:28px; margin:0 0 24px; }
+.workspace-section-heading { display:block; margin:0 0 24px; }
 .workspace-section-heading h2 { font-size:var(--text-title); letter-spacing:-.025em; margin:0; }
-.workspace-heading-note { max-width:360px; margin:4px 0 0; color:var(--muted); font-size:var(--text-small); line-height:1.55; }
+.workspace-heading-note { max-width:560px; margin:12px 0 0; color:var(--muted); font-size:var(--text-small); line-height:1.55; }
 @keyframes demo-callout-pulse { 50% { box-shadow:0 14px 34px #5142d940,0 0 0 8px #5142d915; } }
 @keyframes demo-callout-arrow { 50% { transform:translateY(4px); } }
 .project-rail { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
@@ -136,7 +145,9 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 .preview-bar-actions { display:grid; grid-template-columns:minmax(max-content,1fr) auto minmax(max-content,1fr); align-items:center; gap:clamp(8px,2vw,22px); width:100%; min-width:0; }
 .preview-bar-actions .app-theme-controls { max-width:none; flex-wrap:nowrap; white-space:nowrap; }
 .preview-bar-actions .app-theme-controls { justify-self:start; }
-.preview-bar-actions .viewport-switcher { justify-self:center; }
+.preview-device-row { display:flex; align-items:center; gap:10px; min-width:0; }
+.preview-device-row .preview-open-web { margin-left:2px; }
+.preview-bar-actions .preview-device-row { justify-self:center; }
 .preview-bar-actions .preview-bar-tools { display:flex; align-items:center; flex-wrap:wrap; gap:7px; justify-self:end; }
 .viewport-switcher { display:inline-flex; align-items:center; flex-wrap:wrap; gap:3px; width:max-content; max-width:100%; padding:3px; border:1px solid #d0d1c7; border-radius:13px; background:linear-gradient(135deg,#e9e8e1,#dfded6); box-shadow:inset 0 1px #ffffff9c,0 5px 14px #252a1710; }
 .viewport-switcher button { position:relative; isolation:isolate; display:flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:4px 9px 4px 5px; background:transparent; border:1px solid transparent; border-radius:9px; font-size:var(--text-caption); color:#5c6158; white-space:nowrap; }
@@ -186,7 +197,6 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 .device-desktop-title { position:absolute; left:50%; transform:translateX(-50%); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#61655e; }
 .device-desktop-menu { letter-spacing:2px; color:#8a8d87; }
 .app-theme-controls { display:flex; align-items:center; justify-content:flex-end; gap:3px; width:max-content; max-width:100%; margin:0; padding:3px; background:rgba(255,255,255,.68); color:#555b54; border:1px solid #d0d2c7; border-radius:13px; box-shadow:inset 0 1px #fff,0 5px 13px #5142d912; }
-.app-theme-controls > span { font:600 var(--text-caption)/1.5 var(--font-ui); letter-spacing:.01em; padding:0 8px 0 9px; color:#72786e; white-space:nowrap; }
 .app-theme-controls button { display:flex; align-items:center; gap:5px; padding:6px 10px; min-height:34px; font-size:var(--text-caption); background:transparent; color:#596057; border:1px solid transparent; border-radius:9px; }
 .app-theme-controls button:hover:not(:disabled) { color:#4031a7; background:#ffffffb3; border-color:#d4cef0; transform:translateY(-1px); }
 .app-theme-controls [aria-pressed=true] { background:linear-gradient(135deg,#eeeaff,#dcd6ff); color:#4031a7; border-color:#c4baf5; box-shadow:0 3px 9px #0000001f,inset 0 1px #fff; }
@@ -212,9 +222,6 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 .avatar-shell.is-playing .avatar-video { opacity:1; }
 .guide-bio strong { font-size:var(--text-small); }
 .guide-bio p { font-size:var(--text-body); color:var(--muted); margin:7px 0 12px; }
-.voice-button { display:inline-flex; align-items:center; gap:6px; min-height:34px; background:transparent; border:1px solid #bab4cd; color:#57506c; font-size:var(--text-small); font-weight:700; padding:8px 10px; border-radius:6px; }
-.voice-button:hover { background:#f0edf8; border-color:var(--violet); color:var(--violet); }
-.voice-button[aria-pressed=true] { border-color:var(--violet); color:var(--violet); }
 .guide-bio > small { display:block; margin-top:7px; font-size:var(--text-caption); line-height:1.5; color:var(--muted); }
 .guide-context { display:flex; gap:7px; align-items:center; font-size:var(--text-caption); color:var(--muted); border-top:1px solid var(--line); padding:14px 0; }
 .guide-context strong { font-weight:600; color:var(--ink); }
@@ -255,7 +262,6 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 .tour-card button { display:flex; gap:10px; align-items:center; background:transparent; font-size:var(--text-small); padding:8px 0 0; color:var(--violet); }
 .guide-live-head { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:13px; padding-bottom:20px; border-bottom:1px solid var(--line); }
 .guide-live-head .avatar-shell { width:68px; height:68px; flex-basis:68px; border-radius:50%; align-self:center; }
-.guide-live-head .voice-button { justify-self:end; min-height:38px; border-radius:999px; padding:8px 12px; }
 .guide-context-card { margin-top:12px; padding:22px; border:1px solid #d8d4e9; border-radius:16px; background:linear-gradient(145deg,#f5f2ff,#fff 62%); box-shadow:0 10px 25px #2923440b; }
 .guide-card-heading { display:flex; align-items:center; gap:11px; margin-bottom:13px; }
 .heading-icon { display:grid; place-items:center; width:34px; height:34px; flex:0 0 34px; color:var(--violet); border:1px solid #c9c0f1; border-radius:10px; background:#eeeafd; }
@@ -765,7 +771,6 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 @media (max-width:1100px) {
   .header-role { display:none; }
   .intro { padding:70px 5vw; gap:35px; grid-template-columns:1fr; }
-  .intro h1 { font-size:clamp(3.25rem,10vw,5rem); }
   .workspace { grid-template-columns:1fr; }
   .guide-panel { border-left:0; border-top:1px solid var(--ink); padding:28px; }
   .playground-controls { grid-template-columns:1fr; gap:0; }
@@ -794,7 +799,6 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
 }
 @media (max-width:1000px) {
   .intro { grid-template-columns:1fr; padding:65px 6vw; }
-  .intro h1 { font-size:clamp(3.25rem,10vw,5rem); }
   .hero-description { max-width:540px; }
   .workspace-section { margin-inline:6vw; }
   .workspace-section-heading { flex-direction:column; align-items:stretch; }
@@ -825,9 +829,9 @@ h1 em,h2 em { font-family:inherit; font-style:normal; font-weight:600; color:var
   .header-contact { display:grid; grid-template-columns:repeat(2,44px); gap:6px; }
   .header-contact a { width:44px; padding:0; }.header-contact a span { display:none; }
   .preview-bar-actions { grid-template-columns:1fr; grid-template-areas:"theme" "devices" "reload"; justify-items:center; }
-  .preview-bar-actions .app-theme-controls,.preview-bar-actions .viewport-switcher,.preview-bar-actions .preview-bar-tools { justify-self:center; }
+  .preview-bar-actions .app-theme-controls,.preview-bar-actions .preview-device-row,.preview-bar-actions .preview-bar-tools { justify-self:center; }
   .intro { padding:48px 24px 50px; gap:34px; }
-  .intro h1 { font-size:clamp(2.6875rem,10.4vw,3.6875rem); }.hero-description { font-size:var(--text-body); margin-top:25px; }.hero-tooltip { width:200px; left:auto; right:0; }
+.hero-description { font-size:var(--text-body); margin-top:25px; }.hero-tooltip { width:200px; left:auto; right:0; }
   .hero-stats { grid-template-columns:1fr; gap:10px; }.hero-stats > a,.hero-stats > button { padding:14px 0; grid-template-columns:1fr; }.hero-stats > a > svg,.hero-stats > button > svg { display:none; }
   .stat-value { font-size:1.75rem; }.hero-stats small { line-height:1.5; }.hero-stats > p { font-size:var(--text-caption); }
   .workspace-section { margin:0 24px 50px; }.workspace-section-heading { padding:0; }.workspace-section-heading .section-eyebrow { font-size:var(--text-meta); }.portfolio-demo-callout { align-self:stretch; width:auto; }
@@ -868,7 +872,7 @@ button > svg,a > svg { flex-shrink:0; }
 .guide-context,.connected-preview-bar,.preview-footer,.app-theme-controls { flex-wrap:wrap; }
 .connected-preview-bar { font-size:var(--text-small); }
 .device-chrome { min-height:28px; height:auto; padding-block:4px; }
-.app-theme-controls button,.voice-button { min-height:40px; }
+.app-theme-controls button { min-height:40px; }
 .preview-footer button { min-height:40px; }
 .guide-bio { min-width:0; }
 .guide-bio strong,.hero-stats strong,.project-rail strong,.case-grid h3 { font-size:var(--text-body); }
@@ -911,7 +915,7 @@ button > svg,a > svg { flex-shrink:0; }
   .outcome-visual { width:100%; min-width:0; max-width:420px; }
   .preview-bar-actions { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"theme reload" "devices devices"; gap:8px clamp(8px,2vw,16px); }
   .preview-bar-actions .app-theme-controls { grid-area:theme; }
-  .preview-bar-actions .viewport-switcher { grid-area:devices; justify-self:center; }
+  .preview-bar-actions .preview-device-row { grid-area:devices; justify-self:center; }
   .preview-bar-actions .preview-bar-tools { grid-area:reload; }
   .screen-insight-grid { grid-template-columns:1fr; }
   .screen-insight-block p { max-width: none; }
@@ -1532,7 +1536,7 @@ button > svg,a > svg { flex-shrink:0; }
   .engineering-work-heading h2 { font-size:clamp(2.1rem,10.5vw,3rem); }
   .final-cta h2 { font-size:clamp(2.35rem,12vw,3.35rem); }
   .preview-bar-actions { grid-template-columns:1fr; grid-template-areas:"theme" "devices" "reload"; justify-items:center; }
-  .preview-bar-actions .app-theme-controls,.preview-bar-actions .viewport-switcher,.preview-bar-actions .preview-bar-tools { justify-self:center; }
+  .preview-bar-actions .app-theme-controls,.preview-bar-actions .preview-device-row,.preview-bar-actions .preview-bar-tools { justify-self:center; }
 }
 
 /* Focus pass: one useful demo, one concrete engineering story, less repetition. */
@@ -1546,11 +1550,9 @@ button > svg,a > svg { flex-shrink:0; }
 .portfolio-demo-callout button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:42px; flex:0 0 auto; padding:9px 13px; color:#fff; border-radius:10px; background:var(--violet); font-size:var(--text-caption); font-weight:700; box-shadow:0 7px 16px #5142d92a; }
 .portfolio-demo-callout button:hover,.portfolio-demo-callout button:focus-visible { background:#4031b8; transform:translateY(-1px); }
 
-.guide-live-head { grid-template-columns:68px minmax(0,1fr) auto; }
 .guide-live-copy { display:flex; min-width:0; flex-direction:column; gap:3px; }
 .guide-live-copy strong { font-size:var(--text-small); line-height:1.25; }
 .guide-live-copy span { color:var(--muted); font-size:var(--text-caption); line-height:1.35; }
-.guide-live-head .voice-button { justify-self:auto; }
 .guide-answer-card { padding:16px; }
 .guide-answer-card .guide-thread { min-height:0; max-height:190px; }
 .guide-interactive { margin-top:16px; padding:15px; border:1px solid #d5cfee; border-radius:15px; background:linear-gradient(145deg,#f3f0ff,#faf8ff); }
@@ -1611,7 +1613,7 @@ button > svg,a > svg { flex-shrink:0; }
 @container (max-width:980px) {
   .preview-bar-actions { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"theme reload" "devices devices"; gap:8px 12px; }
   .preview-bar-actions .app-theme-controls { grid-area:theme; }
-  .preview-bar-actions .viewport-switcher { grid-area:devices; justify-self:center; }
+  .preview-bar-actions .preview-device-row { grid-area:devices; justify-self:center; }
   .preview-bar-actions .preview-bar-tools { grid-area:reload; }
 }
 
@@ -1632,13 +1634,13 @@ button > svg,a > svg { flex-shrink:0; }
   .portfolio-demo-callout button { width:100%; }
   .guide-live-head { grid-template-columns:58px minmax(0,1fr); }
   .guide-live-head .avatar-shell { width:58px; height:58px; flex-basis:58px; }
-  .guide-live-head .voice-button { grid-column:1/-1; width:100%; justify-content:center; }
   .ai-case-flow { grid-template-columns:1fr; }
   .final-cta-secondary { justify-content:flex-start; }
 }
 
 @media (max-width:560px) {
-  .viewport-switcher { width:100%; }
+  .preview-device-row { width:100%; }
+  .viewport-switcher { flex:1 1 auto; width:auto; }
   .viewport-switcher button { min-width:0; flex:1 1 70px; padding-inline:4px; }
   .screen-insight-block summary,.screen-insight-impact summary { grid-template-columns:30px minmax(0,1fr) 18px; padding:11px; }
   .screen-insight-block > p,.screen-insight-impact > p { padding:0 40px 12px 51px; }
@@ -1805,8 +1807,12 @@ button > svg,a > svg { flex-shrink:0; }
 .guide-demo-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#a8ab9f; }
 .guide-demo-state-confirmed { color:#3c6a33; border-color:#c4d8bb; background:#f2f8ee; }
 .guide-demo-state-confirmed .guide-demo-dot { background:#5d8b4f; }
-.preview-new-tab { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:7px 10px; color:#5142b7; border:1px solid #d6d7ce; border-radius:9px; background:rgba(255,255,255,.7); font-size:var(--text-caption); font-weight:700; white-space:nowrap; }
-.preview-new-tab:hover,.preview-new-tab:focus-visible { color:#32249d; border-color:#a99be8; background:#f5f2ff; }
+/* Web is a link, not a frame: it carries the platform pill's look so it still
+   reads as one of the targets, plus the arrow that promises a new tab. */
+.preview-open-web { display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:6px 10px; color:#5c5140; border:1px solid #d6d7ce; border-radius:11px; background:rgba(255,255,255,.7); font-size:var(--text-caption); font-weight:700; white-space:nowrap; box-shadow:inset 0 1px #fff,0 4px 10px #252a170f; }
+.preview-open-web:hover,.preview-open-web:focus-visible { color:#7a5312; border-color:#d8b887; background:#fff; transform:translateY(-1px); }
+.preview-open-web:hover .preview-device-icon,.preview-open-web:focus-visible .preview-device-icon { transform:translateY(-1px) rotate(-2deg); box-shadow:inset 0 1px #ffffffd9,0 5px 10px color-mix(in srgb,var(--device-accent) 20%,transparent); }
+.preview-open-web:hover .preview-device-icon-glow,.preview-open-web:focus-visible .preview-device-icon-glow { transform:scale(1.8); opacity:.2; }
 
 /* ── Text-zoom safety ─────────────────────────────────────────────────────────
    Mirrors the phone stacking, but keyed to TEXT size rather than viewport px,
@@ -1816,3 +1822,35 @@ button > svg,a > svg { flex-shrink:0; }
   .case-meta-item { grid-template-columns:1fr; gap:4px; }
   .case-claim-fields > div { grid-template-columns:1fr; gap:3px; }
 }
+
+/* ── Section gutters ──────────────────────────────────────────────────────────
+   The hero carried its own max-width plus a 4.5vw padding, so on wide screens
+   it started ~76px further in than the projects section below it. Hero and
+   workspace now share one measure, so their left edges line up.          ── */
+.intro { width:calc(100% - 9vw); max-width:1540px; margin-inline:auto; padding-inline:0; }
+@media (max-width:1000px) { .intro,.workspace-section { width:calc(100% - 12vw); } }
+@media (max-width:560px) { .intro,.workspace-section { width:calc(100% - 48px); } }
+
+/* ── Hero: app marks beside "Explore projects" ────────────────────────────────
+   On desktop the stats column is a two-column grid so the three marks sit in
+   the right-hand slot of the "Explore projects" row; the eyebrow and the
+   engineering link keep the full measure. Once the column stacks, the marks
+   take a row of their own rather than squeezing the card copy.           ── */
+@media (min-width:1001px) {
+  .hero-stats { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:14px; }
+  .hero-stats > .section-eyebrow,.hero-stats > a,.hero-stats > p { grid-column:1/-1; }
+}
+@media (min-width:761px) and (max-width:1000px) {
+  .hero-stats > button { grid-column:1; grid-row:2; }
+  .hero-stats > a { grid-column:2; grid-row:2; }
+  .hero-app-logos { grid-column:1/-1; grid-row:3; }
+}
+
+/* ── "People I’ve / worked with." ─────────────────────────────────────────────
+   The heading is fixed at two lines on every screen: the break is explicit and
+   the second line never wraps, because its size is capped against the heading
+   column itself (16cqw) as well as the viewport.                          ── */
+.linkedin-reviews-section .case-study-heading { container-type:inline-size; }
+.linkedin-reviews-section h2 { max-width:none; font-size:min(clamp(3rem,4.5vw,4.5rem),16cqw); }
+.linkedin-reviews-section h2 em { white-space:nowrap; }
+@media (max-width:1000px) { .linkedin-reviews-section h2 { font-size:min(2.75rem,16cqw); } }

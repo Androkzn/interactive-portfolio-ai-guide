@@ -2,11 +2,11 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, VolumeX, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
-import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
+import { contactUrl, emailUrl, githubUrl, phoneUrl, recommendationsUrl } from "@/lib/site-links";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
@@ -23,7 +23,9 @@ const previewStateCopy: Record<PreviewState, string> = {
   loaded: "App loaded. Waiting for it to confirm the demo login is filled in.",
   confirmed: "The app confirmed the demo login is filled in. Tap Sign In in the app.",
 };
-const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
+// Web is not one of these: it is not an embedded frame but a link that opens
+// the real app in a new tab, so it sits with the tools on the right.
+const devices: DevicePreview[] = ["iphone", "ipad", "android"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
 type LinkedInReview = {
   id: string;
@@ -479,14 +481,12 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     <div className="connected-preview-bar">
       <div className="preview-bar-actions">
         <div className="app-theme-controls" role="group" aria-label="Live app appearance">
-          <span>App theme</span>
           <button disabled={!themeReady} aria-pressed={appliedTheme === "light"} onClick={() => changeTheme("light")}><Sun size={13} />Light</button>
           <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
         </div>
-        <div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button className={`viewport-option viewport-option-${value}`} key={value} aria-pressed={device === value} onClick={() => onDeviceChange(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div>
+        <div className="preview-device-row"><div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button className={`viewport-option viewport-option-${value}`} key={value} aria-pressed={device === value} onClick={() => onDeviceChange(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div><a className="preview-open-web viewport-option-desktop" href={url} target="_blank" rel="noreferrer" title={`Open the ${project.name} Web app in a new tab`}><PreviewDeviceIcon device="desktop" />{deviceNames.desktop}<ArrowUpRight size={13} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a></div>
         <div className="preview-bar-tools">
           <button className="preview-reload" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button>
-          <a className="preview-new-tab" href={url} target="_blank" rel="noreferrer"><ArrowUpRight size={13} />Open in new tab</a>
         </div>
       </div>
     </div>
@@ -505,40 +505,18 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
         </>}
       </div>
     </div>
-    {!portfolioDemoMessageFor(project.id) && <div className="preview-footer"><span>Public data · explore without an account</span></div>}
   </div>;
 });
 
 const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow, previewState }: { project: Project; appPath: string; onCoreFlow: () => void; previewState: PreviewState }) {
   const [input, setInput] = useState("");
   const [guideMode, setGuideMode] = useState<ProjectGuideMode>("product");
-  const [speaking, setSpeaking] = useState(false);
-  const [voiceAvailable, setVoiceAvailable] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   // Starts empty on purpose: the thread only becomes visible once the visitor
   // picks a question, and every path that shows it sets its own message.
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const nextId = useRef(1);
   const thread = useRef<HTMLDivElement>(null);
-  const speech = useRef<SpeechSynthesisUtterance | null>(null);
-  const stop = () => {
-    window.speechSynthesis?.cancel();
-    speech.current = null;
-    setSpeaking(false);
-  };
-  useEffect(() => {
-    if (!("speechSynthesis" in window)) return;
-    const refreshVoices = () => {
-      setVoices(window.speechSynthesis.getVoices());
-      setVoiceAvailable(true);
-    };
-    refreshVoices();
-    window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
-    const hidden = () => { if (document.hidden) { window.speechSynthesis?.cancel(); setSpeaking(false); } };
-    document.addEventListener("visibilitychange", hidden);
-    return () => { window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices); document.removeEventListener("visibilitychange", hidden); window.speechSynthesis.cancel(); speech.current = null; };
-  }, []);
   useEffect(() => {
     const element = thread.current;
     if (!element) return;
@@ -555,14 +533,10 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow, prev
     setGuideMode("product");
   }, [project.id]);
   useEffect(() => {
-    window.speechSynthesis?.cancel();
-    speech.current = null;
-    setSpeaking(false);
     setActiveAction(null);
     setMessages([{ id: nextId.current++, role: "guide", text: guideContextFor(project, appPath).body, animate: true }]);
   }, [appPath, project]);
   const ask = (text: string) => {
-    stop();
     if (text.toLowerCase().includes("core flow")) onCoreFlow();
     setGuideMode(guideModeForQuestion(text));
     const replyId = nextId.current++;
@@ -570,44 +544,16 @@ const GuidePanel = memo(function GuidePanel({ project, appPath, onCoreFlow, prev
     setMessages([{ id: replyId, role: "guide", text: makeGuideReply(text, project, appPath), animate: true }]);
   };
   const chooseAction = (action: LiveGuideAction) => {
-    stop();
     setGuideMode(guideModeForQuestion(action.label));
     setActiveAction(action.label);
     setMessages([{ id: nextId.current++, role: "guide", text: action.answer, animate: true }]);
   };
-  const speak = () => {
-    const latest = [...messages].reverse().find(message => message.role === "guide");
-    if (!latest || !voiceAvailable) return;
-    window.speechSynthesis?.cancel();
-    const utterance = new SpeechSynthesisUtterance(latest.text.replaceAll("**", "").replaceAll("\n- ", ". "));
-    const voice = selectBestMaleVoice(voices.length > 0 ? voices : window.speechSynthesis.getVoices());
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-    } else {
-      utterance.lang = "en-CA";
-    }
-    utterance.rate = 0.98;
-    const finish = () => {
-      // SpeechSynthesis can dispatch a late event for an utterance that was
-      // cancelled just before a new one started. Only the active utterance
-      // is allowed to stop the synchronized video.
-      if (speech.current !== utterance) return;
-      speech.current = null;
-      setSpeaking(false);
-    };
-    utterance.onend = finish;
-    utterance.onerror = finish;
-    speech.current = utterance;
-    setSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  };
   return <aside className="guide-panel" id="guide" aria-label="Andrei’s AI Guide">
-    <div className="guide-live-head"><Avatar active={speaking} /><div className="guide-live-copy"><strong>AI project guide</strong><span>Prepared, source-linked walkthroughs</span></div><button className="voice-button" disabled={!voiceAvailable} onClick={speaking ? stop : speak} aria-pressed={speaking} aria-label={speaking ? "Stop audio commentary" : "Play audio commentary"}>{speaking ? <VolumeX size={16} /> : <Play size={16} />}<span>{speaking ? "Stop audio" : "Play commentary"}</span></button></div>
+    <div className="guide-live-head"><Avatar active={false} /><div className="guide-live-copy"><strong>AI project guide</strong><span>Prepared, source-linked walkthroughs</span></div></div>
     {portfolioDemoMessageFor(project.id) && <p className={`guide-demo-state guide-demo-state-${previewState}`} role="status">
       <span className="guide-demo-dot" aria-hidden="true" />{previewStateCopy[previewState]}
     </p>}
-    <div className="guide-modes" role="tablist" aria-label="Project view"><span className="sr-only">Project view</span>{projectGuideModes.map(mode => <button key={mode.id} type="button" role="tab" aria-selected={guideMode === mode.id} onClick={() => { stop(); setGuideMode(mode.id); setActiveAction(null); }}>{mode.label}</button>)}</div>
+    <div className="guide-modes" role="tablist" aria-label="Project view"><span className="sr-only">Project view</span>{projectGuideModes.map(mode => <button key={mode.id} type="button" role="tab" aria-selected={guideMode === mode.id} onClick={() => { setGuideMode(mode.id); setActiveAction(null); }}>{mode.label}</button>)}</div>
     <div className="guide-mode-content" role="tabpanel" aria-live="polite">{guideMode === "product" ? <ScreenInsightCard insight={context.insight} /> : <EngineeringModeCard project={project} mode={guideMode} />}</div>
     {activeAction && <div className="guide-context-card guide-answer-card" aria-live="polite" aria-atomic="true"><div ref={thread} className="guide-thread" tabIndex={0}>{messages.map(message => <div key={message.id} className="message guide"><span className="message-marker"><Sparkles size={13} /></span><div><GuideReply message={message} /></div></div>)}</div></div>}
     <section className="guide-interactive" aria-labelledby="guide-interactive-title"><div className="guide-interactive-heading"><strong id="guide-interactive-title">Ask the project guide</strong><span>Interactive, prepared answers grounded in the project evidence above.</span></div><div className="guide-actions" aria-label="Suggested questions">{context.actions.map(action => <button key={action.label} className={activeAction === action.label ? "active" : ""} onClick={() => chooseAction(action)}>{action.label}</button>)}</div><form className="chat-form" onSubmit={event => { event.preventDefault(); if (input.trim()) { ask(input.trim()); setInput(""); } }}><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder="Ask about architecture, trade-offs, implementation, or testing…" aria-label="Ask Andrei’s AI Guide" /><button disabled={!input.trim()} type="submit" aria-label="Send question"><Send size={16} /></button></form></section>
@@ -1673,7 +1619,7 @@ function LinkedInReviewsCarousel() {
               </div>
             </div>
             <p className="linkedin-review-quote">{review.excerpt}</p>
-            <a className="linkedin-review-more" href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined}>Read full recommendation <ArrowUpRight size={14} /></a>
+            <a className="linkedin-review-more" href={recommendationsUrl} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined} aria-label={`Read ${review.name}'s full recommendation on my LinkedIn profile`}>Read full recommendation <ArrowUpRight size={14} /></a>
           </article>;
         })}
       </div>
@@ -1740,24 +1686,25 @@ export default function Home() {
     <main>
     <section className="intro" aria-labelledby="hero-title">
       <div className="intro-main">
-        <div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />AI-enabled product engineer</div>
-        <h1 id="hero-title">Fast with AI.<br /><em>Serious about quality.</em></h1>
-        <p className="hero-description">I build web, mobile, and AI-powered products — combining AI-assisted development with thoughtful architecture, testing, and production reliability.</p>
+        <div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />Full-Stack Software Engineer</div>
+        <h1 id="hero-title">From idea to production.<br /><em>Serious about quality.</em></h1>
+        <p className="hero-description">I design and build web, mobile, and AI-powered products. My work spans architecture, implementation, testing, and production support, with AI integrated throughout the development process.</p>
       </div>
       <div className="hero-stats">
         <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
         <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
+        <nav className="hero-app-logos" aria-label="Open a project directly">{projects.map(item => <button key={item.id} className="hero-app-logo" title={item.name} aria-label={`Open ${item.name}`} onClick={() => explore(item.id)}><ProjectLogo id={item.id} /></button>)}</nav>
         <a href="#engineering-work"><span className="stat-symbol" aria-hidden="true"><FileCheck2 size={24} /></span><span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span></a>
       </div>
     </section>
-    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2></div><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
       <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} onPreviewState={handlePreviewState} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} previewState={previewState} /></div>
     </section>
     {/* Temporarily hidden: AI with guardrails / Fun & magic sections. */}
     {/* <Architecture /> */}
     <EngineeringWorkSection />
-    <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve <em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
+    <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve<br /><em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
     <FinalCallToAction />
     </main>
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>

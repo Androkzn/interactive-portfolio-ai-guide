@@ -10,7 +10,7 @@ await Promise.all([
 ].map((asset) => access(exportUrl(`out/images/device-frames/${asset}`))));
 const html = await readFile(exportUrl("out/index.html"), "utf8");
 const requiredMarkers = [
-  "Fast with AI",
+  "From idea to production",
   "Serious about quality",
   "House of Commons Citizen Companion",
   "Symply Budget",
@@ -19,9 +19,8 @@ const requiredMarkers = [
   "Quality",
   "AI workflow",
   "AI project guide",
-  "Play commentary",
   "Ask the project guide",
-  "I build web, mobile, and AI-powered products",
+  "I design and build web, mobile, and AI-powered products",
   "Read full recommendation",
   "id=\"engineering-work\"",
   "Engineering case studies",
