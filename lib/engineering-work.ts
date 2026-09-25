@@ -1023,10 +1023,9 @@ export const caseStudies: CaseStudy[] = [
         },
         {
           kind: "source-code",
-          availability: "public",
+          availability: "private",
           label: "This portfolio's own evidence tooling",
-          note: "The same idea, at a smaller scale and in the open: this site validates its approved content and runs grounding evals in its own checks.",
-          href: "https://github.com/Androkzn/interactive-portfolio-ai-guide",
+          note: "The same idea at a smaller scale: this site validates its approved content and runs grounding evals as part of its own checks.",
         },
       ],
       claimIds: ["agent-eval-case-count", "agent-review-rule-corpus", "agent-eval-run-2026-05-28", "agent-review-roles"],

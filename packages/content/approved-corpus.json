@@ -1,5 +1,5 @@
 {
-  "corpusVersion": "0.4.0",
+  "corpusVersion": "0.4.1",
   "reviewStatus": "four-project-corpus",
   "positioning": {
     "headline": "Build systems around models, not demos around prompts.",
@@ -17,28 +17,28 @@
       "name": "House of Commons Citizen Companion",
       "challenge": "Make parliamentary data usable in plain language while preserving evidence, accessibility and cross-platform constraints.",
       "boundary": "The portfolio preview needs no account, sends no demo flag and involves no credentials anywhere in the chain — neither the portfolio nor the app bundle carries any: the embedded Web build reads public parliamentary data from its deployed public API. It does not impersonate a user or claim to run a native binary in the browser.",
-      "sources": ["hoc-v2.source-repository", "hoc-v2.platform-matrix", "hoc-v2.demo-boundary"]
+      "sources": ["hoc-v2.app-access", "hoc-v2.platform-matrix", "hoc-v2.demo-boundary"]
     },
     {
       "id": "symply-budget",
       "name": "Symply Budget",
       "challenge": "Design a trustworthy local-first budgeting system around native capabilities, sync boundaries and sensitive financial data.",
       "boundary": "The portfolio preview opens the real product; the deployed app reads a portfolioDemo flag off its own URL and pre-fills a shared demo login, which the visitor submits as a real authentication against the production API. The portfolio itself no longer carries those credentials, but the account is still a public one, because the app's own public JavaScript bundle contains them. Every figure is synthetic and editable inside a session held in that browser tab, never persisted and never synced, so no personal financial record is exposed.",
-      "sources": ["symply-budget.source-repository", "symply-budget.platform-matrix", "symply-budget.demo-boundary"]
+      "sources": ["symply-budget.app-access", "symply-budget.platform-matrix", "symply-budget.demo-boundary"]
     },
     {
       "id": "symply-health",
       "name": "Symply Health",
       "challenge": "Track personal health across iPhone, iPad, Android and Apple Watch while keeping the data read-only at the source and the safety-critical checks independent of the model.",
-      "boundary": "There is no embedded preview for this project: the app has no Web build, so nothing is framed, no demo flag is sent and no credentials exist anywhere in the chain. The portfolio describes the work rather than running it, the source repository is private, and the local-first encrypted ledger described in the teardown ships disabled — it is complete at the engine layer and awaiting cutover, not live for users.",
-      "sources": ["symply-health.source-repository", "symply-health.platform-matrix", "symply-health.demo-boundary"]
+      "boundary": "There is no embedded preview for this project: the app has no Web build, so nothing is framed, no demo flag is sent and no credentials exist anywhere in the chain. The portfolio describes the work rather than running it, and the local-first encrypted ledger described in the teardown ships disabled — it is complete at the engine layer and awaiting cutover, not live for users.",
+      "sources": ["symply-health.app-access", "symply-health.platform-matrix", "symply-health.demo-boundary"]
     },
     {
       "id": "symply-house",
       "name": "Symply House",
       "challenge": "Turn shared household context into calm, actionable routines across iPhone, iPad, Android and Web.",
       "boundary": "The portfolio preview opens the real product; the deployed app reads a portfolioDemo flag off its own URL and pre-fills a shared demo login, which the visitor submits as a real authentication against the production API. The portfolio itself no longer carries those credentials, but the account is still a public one, because the app's own public JavaScript bundle contains them. The household content is synthetic and editable inside a session held in that browser tab, never persisted and never synced, and the Web build does not claim to run a native binary.",
-      "sources": ["symply-house.source-repository", "symply-house.platform-matrix", "symply-house.demo-boundary"]
+      "sources": ["symply-house.app-access", "symply-house.platform-matrix", "symply-house.demo-boundary"]
     }
   ],
   "globalSources": ["portfolio.ai-review-chain", "portfolio.public-boundary", "portfolio.native-preview-boundary"]

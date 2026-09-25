@@ -1,4 +1,7 @@
-export const SYMPLY_HOUSE_WEB_ORIGIN = "https://symply-house-web.pages.dev";
+// The demo runs the portfolio build of the app, not the product web app: only
+// that build reads households from the API (a browser cannot open the
+// local-first ledger, which needs expo-secure-store).
+export const SYMPLY_HOUSE_WEB_ORIGIN = "https://symply-house-web-portfolio.pages.dev";
 
 export type DemoScreen = "home" | "tasks" | "spaces";
 

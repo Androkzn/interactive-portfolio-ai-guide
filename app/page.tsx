@@ -472,9 +472,9 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
   };
   if (!url) return <div className="preview-empty" role="note">
     <span className="preview-empty-icon" aria-hidden="true"><Smartphone size={22} /></span>
-    <strong>No embedded preview for this one.</strong>
-    <p>The other projects here run a real Web build of the product inside the frame. {project.name} ships to iOS and Android only — there is no Web build to embed, so this panel stays empty rather than showing a mock-up of an app you cannot actually open.</p>
-    <p className="preview-empty-note">The engineering teardown beside this panel is the same depth as the others.</p>
+    <strong>There is no web version of this app.</strong>
+    <p>The other projects here embed a real Web build running against its production API. {project.name} is built for iOS and Android only — it was never compiled to run in a browser, so there is nothing to put in this frame. Nothing is being held back; the app simply does not exist in a form a browser can open.</p>
+    <p className="preview-empty-note">The engineering teardown beside this panel goes to the same depth as the others.</p>
   </div>;
   const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
     // The load event proves the frame fetched something, nothing more. A demo
