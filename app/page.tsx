@@ -5,13 +5,11 @@ import type { CSSProperties } from "react";
 import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, VolumeX, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
+import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
+import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
 type Theme = "light" | "dark";
-const contactUrl = "https://www.linkedin.com/in/andreitekhtelev/";
-const emailUrl = "mailto:a.tekhtelev@gmail.com";
-const phoneUrl = "tel:+17788834228";
-const githubUrl = "https://github.com/Androkzn";
 const devices: DevicePreview[] = ["iphone", "ipad", "android", "desktop"];
 const deviceNames = { iphone: "iPhone", ipad: "iPad", android: "Android", desktop: "Web" };
 type LinkedInReview = {
@@ -325,14 +323,14 @@ function EngineeringModeCard({ project, mode }: { project: Project; mode: Exclud
     return <section className="guide-mode-card guide-mode-card-specific" aria-labelledby="guide-mode-ai-workflow">
       <div className="guide-mode-card-heading"><span className="screen-insight-kicker"><Bot size={13} />Project review record</span><code>sync trigger bug</code></div>
       <h3 id="guide-mode-ai-workflow">The engine worked. Nothing called it.</h3>
-      <p>A concrete failure is more useful than another generic AI process diagram. The local operation log was correct, but a task edit could sit on one phone until relaunch or manual sync.</p>
+      <p>The local operation log was correct, but a task edit could sit on one phone until relaunch or manual sync.</p>
       <ol className="ai-case-flow">
         <li><span>Agent task</span><strong>Trace the write-to-sync path and identify the missing trigger.</strong></li>
         <li><span>Failure found</span><strong>A local write appended an operation but did not schedule property-scoped sync.</strong></li>
         <li><span>Verification</span><strong>Tests assert debounce, property isolation, session-close safety, and duplicate signal collapse.</strong></li>
         <li><span>Human decision</span><strong>Keep sync automatic but bounded: one run per burst and no work after sign-out.</strong></li>
       </ol>
-      <p className="guide-source-note"><FileCheck2 size={15} />Evidence: repository test suite and implementation comments; no private prompt transcript is presented as proof.</p>
+      <p className="guide-source-note"><FileCheck2 size={15} />Source: the Symply House repository test suite and the implementation it covers.</p>
     </section>;
   }
   const content = guideModeContentFor(project, mode);
@@ -1549,65 +1547,6 @@ function Architecture() {
   </>;
 }
 
-function ProductionEngineering() {
-  const caseStudies = [
-    {
-      label: "Cloud architecture",
-      qualifier: "24-hour production snapshot",
-      metric: "~970K",
-      metricLabel: "Lambda invocations in a measured 24-hour production window",
-      title: "Operating a serverless platform at production scale",
-      body: "I helped design and operate a 160-function AWS backend across AppSync, DynamoDB Streams, SQS, EventBridge and Cognito, with 147 functions deployed in production.",
-      proof: "4 errors · 0 throttles · 2026-09-04 snapshot",
-    },
-    {
-      label: "Performance",
-      qualifier: "Measured in staging",
-      metric: "24.3s → 0.5s",
-      metricLabel: "staging-verified invite acceptance path",
-      title: "Moving fan-out away from the critical path",
-      body: "A field-scoped mutation and deferred fan-out replaced work that did not belong in the synchronous request, turning a multi-second interaction into a sub-second response.",
-      proof: "Measured on staging · production window pending",
-    },
-    {
-      label: "Production AI",
-      qualifier: "Latency removed",
-      metric: "300–500ms",
-      metricLabel: "removed from roughly 90% of chat messages",
-      title: "Retrieval only when the model actually needs it",
-      body: "I changed always-on RAG into an on-demand tool, then combined streaming, function calling and output validation so model behaviour stayed inside an explicit application contract.",
-      proof: "Gemini · Vertex AI · RAG · structured tools",
-    },
-    {
-      label: "Quality engineering",
-      qualifier: "Crash-free users · Apr–May 2026",
-      metric: "99.91%",
-      metricLabel: "crash-free users during the Apr–May 2026 measurement window",
-      title: "Release confidence backed by repeatable checks",
-      body: "Requirements, technical plans, automated tests, staged releases and production investigation form one delivery system—not separate activities at the end of a feature.",
-      proof: "3 crashes · 2 affected users · separately: 629 UI tests and 398 unit tests",
-    },
-  ];
-  return <section className="engineering-section" id="production-engineering" aria-labelledby="production-engineering-title">
-    <div className="engineering-section-heading"><div><div className="section-eyebrow"><ShieldCheck size={14} />Production engineering</div><h2 id="production-engineering-title">Systems that hold up<br /><em>after they ship.</em></h2></div><p>Selected commercial engineering work from Step.co. Each number is tied to a measured environment and window.</p></div>
-    <div className="engineering-case-grid">{caseStudies.map((card, index) => <article className="engineering-case-card" key={card.label}>
-      <div className="engineering-case-meta"><span className="engineering-case-number">0{index + 1}</span><span className="engineering-case-label">{card.label}</span></div>
-      <span className="engineering-case-qualifier">{card.qualifier}</span>
-      <div className="engineering-case-metric"><strong>{card.metric}</strong><span>{card.metricLabel}</span></div>
-      <h3>{card.title}</h3><p>{card.body}</p><code>{card.proof}</code>
-    </article>)}</div>
-  </section>;
-}
-
-function AiEngineeringWorkflow() {
-  const steps = ["Evidence + requirements", "Plan + AI-assisted build", "Automated checks", "Independent review", "Ship, observe, learn"];
-  return <section className="ai-workflow-section" id="ai-engineering" aria-labelledby="ai-engineering-title">
-    <div className="ai-workflow-heading"><div><div className="section-eyebrow"><Bot size={14} />Engineering workflow</div><h2 id="ai-engineering-title">From evidence<br /><em>to production.</em></h2></div><p>A compact delivery loop: AI helps with implementation, while requirements, tests, review and production feedback keep the result accountable.</p></div>
-    <ol className="ai-workflow-steps">{steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><strong>{step}</strong>{index < steps.length - 1 && <ArrowRight size={17} aria-hidden="true" />}</li>)}</ol>
-    <div className="ai-workflow-evidence"><p className="ai-workflow-note"><FileCheck2 size={16} aria-hidden="true" /><span><strong>Bug-fix loop</strong>Production evidence → reproduce → baseline → root cause → challenge the hypothesis → fix → verify → monitor</span></p><p><strong>11 agent eval cases</strong><span>The engineering tools are regression-tested against failures from real planning and review cycles.</span></p></div>
-  </section>;
-}
-
 function FinalCallToAction() {
   return <section className="final-cta" aria-labelledby="final-cta-title">
     <div><div className="section-eyebrow"><ArrowUpRight size={14} />Let’s talk</div><h2 id="final-cta-title">Let’s build something <em>reliable.</em></h2><p>I’m interested in full-stack, applied AI, AI-enabled development and quality-focused engineering roles.</p></div>
@@ -1753,7 +1692,7 @@ export default function Home() {
       <div className="hero-stats">
         <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
         <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
-        <a href="#production-engineering"><span className="stat-symbol" aria-hidden="true"><ShieldCheck size={24} /></span><span><strong>See production work</strong><small>Measured commercial systems, performance and reliability.</small></span></a>
+        <a href="#engineering-work"><span className="stat-symbol" aria-hidden="true"><FileCheck2 size={24} /></span><span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span></a>
       </div>
     </section>
     <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2></div><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div>
@@ -1762,8 +1701,7 @@ export default function Home() {
     </section>
     {/* Temporarily hidden: AI with guardrails / Fun & magic sections. */}
     {/* <Architecture /> */}
-    <ProductionEngineering />
-    <AiEngineeringWorkflow />
+    <EngineeringWorkSection />
     <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve <em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
     <FinalCallToAction />
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
