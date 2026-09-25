@@ -64,7 +64,7 @@ const linkedInReviews: LinkedInReview[] = [
     id: "andrei-chernykh",
     name: "Andrei Chernykh",
     role: "Senior Software Engineer",
-    relationship: "Andrei was Andrei’s mentor",
+    relationship: "Was Andrei’s mentor",
     date: "September 10, 2026",
     quote: "Andrei and I are friends, and I've mentored him occasionally during his professional journey. What I appreciate most is that he takes feedback seriously without taking it personally. He's got the range (backend, frontend web, iOS, AI) and the work ethic. Hard-working, curious, and a great person to have around. Any team would be lucky to have him.",
     excerpt: "What I appreciate most is that he takes feedback seriously without taking it personally.",
@@ -389,8 +389,8 @@ function ScreenInsightCard({ insight }: { insight: ScreenInsight }) {
     <div className="screen-insight-header"><span className="screen-insight-kicker"><Code2 size={13} />{insight.id === "budget-login" ? "Local Device-First Strategy" : insight.id === "house-login" ? "Offline-First / Privacy" : "Screen teardown"}</span><code>{insight.route}</code></div>
     <h3 id={`screen-insight-${insight.id}`}>{insight.title}</h3>
     <p className="screen-insight-summary">{insight.summary}</p>
-    <div className="screen-insight-grid">{blocks.map(block => <details key={block.label} className={`screen-insight-block ${block.className}`}><summary><span className="screen-insight-number">{block.number}</span><span><span className="screen-insight-label">{block.label}</span><strong>{block.title}</strong></span></summary><p>{block.body}</p></details>)}</div>
-    {impact && <details className="screen-insight-impact"><summary><span className="screen-insight-number">{impact.number}</span><span><span className="screen-insight-label">{impact.label}</span><strong>{impact.title}</strong></span></summary><p>{impact.body}</p></details>}
+    <div className="screen-insight-grid">{blocks.map(block => <details key={block.label} className={`screen-insight-block ${block.className}`}><summary><span className="screen-insight-number" aria-hidden="true">{block.number}</span><span><span className="screen-insight-label">{block.label}</span><strong>{block.title}</strong></span></summary><p>{block.body}</p></details>)}</div>
+    {impact && <details className="screen-insight-impact"><summary><span className="screen-insight-number" aria-hidden="true">{impact.number}</span><span><span className="screen-insight-label">{impact.label}</span><strong>{impact.title}</strong></span></summary><p>{impact.body}</p></details>}
     <div className="screen-insight-implementation"><div><span className="screen-insight-label">Implementation</span><p>{insight.implementation}</p></div><div className="screen-insight-stack" aria-label="Implementation stack">{insight.stack.map(item => <span key={item}>{item}</span>)}</div></div>
   </section>;
 }
@@ -484,10 +484,10 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
           <button disabled={!themeReady} aria-pressed={appliedTheme === "dark"} onClick={() => changeTheme("dark")}><Moon size={13} />Dark</button>
         </div>
         <div className="viewport-switcher" role="group" aria-label="Preview device">{devices.map(value => <button className={`viewport-option viewport-option-${value}`} key={value} aria-pressed={device === value} onClick={() => onDeviceChange(value)}><PreviewDeviceIcon device={value} />{deviceNames[value]}</button>)}</div>
-        <button className="preview-reload" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button>
-        <a className="preview-new-tab" href={url} target="_blank" rel="noreferrer">
-          <ArrowUpRight size={13} />Open demo in new tab
-        </a>
+        <div className="preview-bar-tools">
+          <button className="preview-reload" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={13} />Reload app</button>
+          <a className="preview-new-tab" href={url} target="_blank" rel="noreferrer"><ArrowUpRight size={13} />Open in new tab</a>
+        </div>
       </div>
     </div>
     <div className="device-stage">
@@ -499,6 +499,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
           <div className="device-live-screen">
             <DeviceStatusBar device={device} />
             <div className="device-app-viewport">{liveFrame}</div>
+            <div className={`device-home-indicator device-home-indicator-${device}`} aria-hidden="true" />
           </div>
           <img className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
           <span className="sr-only">Previewed in a {frameAsset?.model} frame.</span>
@@ -1707,10 +1708,11 @@ export default function Home() {
   }, []);
   const chooseProject = (id: string) => { setActiveId(id); setAppPath(id === "hoc-v2" ? "/" : "/login"); };
   const explore = (id = activeId) => { chooseProject(id); document.getElementById("workspace")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); };
-  return <main className="site-shell" id="top">
+  return <div className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
     <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <main>
     <section className="intro" aria-labelledby="hero-title">
       <div className="intro-main">
         <div className="section-eyebrow"><Layers3 size={14} aria-hidden="true" />AI-enabled product engineer</div>
@@ -1732,6 +1734,7 @@ export default function Home() {
     <EngineeringWorkSection />
     <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve <em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
     <FinalCallToAction />
+    </main>
     <footer className="site-footer"><span>© 2026 Andrei Tekhtelev</span><span>Real products. Visible decisions.</span></footer>
-  </main>;
+  </div>;
 }

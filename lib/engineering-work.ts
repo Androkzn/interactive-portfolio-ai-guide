@@ -10,7 +10,10 @@
 //    separate fields on purpose: reading a document is not running a test, and
 //    permission to publish is not evidence.
 //
-// lib/engineering-work.test.ts enforces both rules.
+// lib/engineering-work.test.ts enforces these rules for the registry and for
+// every claim a page references. It cannot scan prose, so a number written
+// straight into a paragraph with no registry entry is a review problem, not a
+// test failure — keep numbers out of prose unless they are registered.
 
 export type CaseStudyId = "step-social-platform" | "step-ai-coach" | "ai-assisted-plan-review";
 
@@ -76,7 +79,7 @@ export const claimRegistry: Claim[] = [
     sourceDate: "2026-09-11",
     environment: "not-applicable",
     measurementDefinition:
-      "A count of acceptance-matrix cases produced from the Circles V2 requirement documents by a generator script and imported into Xray. Scoped to Circles V2 — not the Movement Feed, and not the whole test platform. Generated and imported, not hand-authored, and separate from the app's UI and unit test suites.",
+      "A count of acceptance-matrix cases produced from the Circles V2 requirement documents by a generator script and imported into the test-management tool. Scoped to Circles V2 — not the Movement Feed, and not the whole test platform. Generated and imported, not hand-authored, and separate from the app's UI and unit test suites.",
     verificationStatus: "source-inspected",
     limitations:
       "195 imported cases is not 195 passing automated tests. No execution report for this set is presented here.",
@@ -165,7 +168,7 @@ export const claimRegistry: Claim[] = [
     sourceDate: "2026-09-11",
     environment: "production",
     measurementDefinition:
-      "The cost of the retrieval step itself on messages that no longer trigger it, with ~90% being the reported share of messages that do not need retrieval. It is not total response latency and not time-to-first-token.",
+      "The cost of the retrieval step itself on messages that no longer trigger it, with ~90% being the reported share of messages that do not need retrieval. It is not total response latency and not time-to-first-token. Environment is not applicable: this is an estimate attached to a design decision, not a measurement taken in an environment.",
     verificationStatus: "source-inspected",
     limitations:
       "This is a design estimate, not a measurement. The document's own source for it is a design-decision record rather than a benchmark or a monitoring query, unlike neighbouring figures that cite staging-verified measurements. A faster path is also not evidence that answer quality held.",
@@ -204,6 +207,24 @@ export const claimRegistry: Claim[] = [
       "The number of cases in the evaluation set. Each case holds the earliest version of a real plan, the findings a reviewer must raise with a minimum severity for each, and the properties the review output must have.",
     verificationStatus: "source-inspected",
     limitations: "The size of a set. It says nothing on its own about how many of them pass.",
+    publicArtifact: null,
+    publicationApproval: "approved",
+    publicUse: "published",
+  },
+  {
+    id: "agent-review-rule-corpus",
+    project: "engineering-tooling",
+    claim:
+      "Twelve recurring review anti-patterns are written down, and fourteen rule changes are logged as coming out of the eval cases.",
+    sourceRef: "Step Experience Master Document Appendix G4 (quality gate and logged rule additions)",
+    sourceType: "owner-document",
+    sourceDate: "2026-09-11",
+    environment: "local",
+    measurementDefinition:
+      "Two counts of my own working material: the documented anti-patterns a review is checked against, and the rule changes recorded as having come out of running the cases.",
+    verificationStatus: "source-inspected",
+    limitations:
+      "Counts of written rules and logged edits. A logged rule change is not evidence that reviews improved — the only recorded run of the cases is still the one below, and it was not green.",
     publicArtifact: null,
     publicationApproval: "approved",
     publicUse: "published",
@@ -386,7 +407,15 @@ export type RoleKind = "implemented" | "led" | "team";
 
 export type FlowStep = { id: string; title: string; detail: string };
 
-export type CheckStatus = "automated" | "documented" | "historical-run" | "not-run" | "open-question";
+export type CheckStatus =
+  | "automated"
+  | "documented"
+  /** A point-in-time audit of code or documents. Not an execution. */
+  | "static-audit"
+  /** A recorded execution, with a date. */
+  | "historical-run"
+  | "not-run"
+  | "open-question";
 
 export type VerificationCheck = {
   status: CheckStatus;
@@ -396,7 +425,7 @@ export type VerificationCheck = {
 };
 
 export type SourceItem = {
-  kind: "source-code" | "test-run" | "technical-write-up" | "owner-account";
+  kind: "source-code" | "test-run" | "audit" | "technical-write-up" | "owner-account";
   availability: "public" | "private" | "on-request";
   label: string;
   note: string;
@@ -455,7 +484,7 @@ export const engineeringWorkCards: EngineeringWorkCard[] = [
     category: "APPLIED AI · STEP",
     title: "AI coaching in production.",
     description:
-      "I built AI coaching features with contextual retrieval, streaming responses, and tool use. One key change was moving retrieval out of conversations that did not need it.",
+      "I helped build AI coaching features with contextual retrieval, streaming responses, and tool use. One key change was moving retrieval out of conversations that did not need it.",
     contribution: "AI integration, backend and client delivery, output validation, and performance investigation.",
     decision: "Use retrieval as a tool instead of an unconditional step on every message.",
     signal: {
@@ -518,25 +547,25 @@ export const caseStudies: CaseStudy[] = [
     role: {
       title: "My role",
       intro:
-        "Step's social features were built by a small team — two to three engineers plus the founder and QA — and roughly a quarter of the repository's commits are other people's. This is the part I can speak for, split by what I actually did rather than by what the feature list looks like. I am not converting a commit share into a share of the thinking.",
+        "Step's social features were built by a small team — two to three engineers plus the founder and QA — and a substantial share of the work is other people's. This is the part I can speak for, split by what I actually did rather than by what the feature list looks like. I am deliberately not quoting a commit share here: it would measure volume and read as a measure of contribution.",
       items: [
         {
           kind: "implemented",
-          text: "Implemented social product surfaces in the iOS app and the backend handlers behind them — memberships, invitations, posts, comments and reactions.",
+          text: "social product surfaces in the iOS app and the backend handlers behind them — memberships, invitations, posts, comments and reactions.",
         },
         {
           kind: "implemented",
-          text: "Implemented the change that made feed generation react to the full set of confirmation events rather than one event type, together with reconciliation for activity that had already been missed.",
+          text: "the change that made feed generation react to the full set of confirmation events rather than one event type, together with reconciliation for activity that had already been missed.",
         },
         {
           kind: "led",
-          text: "Proposed and drove the contract between client and backend: which fields the client may trust, what the backend decides on its own, and what a client is never allowed to assert.",
+          text: "the contract between client and backend: which fields the client may trust, what the backend decides on its own, and what a client is never allowed to assert.",
         },
         {
           kind: "led",
-          text: "Wrote the test scenarios for membership and visibility edge cases, and argued for keeping access decisions on the server when it would have been quicker to filter on the client.",
+          text: "the test scenarios for membership and visibility edge cases, and the case for keeping access decisions on the server when it would have been quicker to filter on the client.",
         },
-        { kind: "team", text: "Design, product scope, release approval and the wider platform were shared team work — I did not own them alone." },
+        { kind: "team", text: "design, product scope, release approval and the wider platform. I did not own those alone." },
       ],
     },
     decision: {
@@ -574,7 +603,7 @@ export const caseStudies: CaseStudy[] = [
             "The result was not an error. Nothing crashed, nothing logged a failure, and every test that created a workout the ordinary way passed. The activity was simply never considered for the feed, so for the people whose workouts came from Apple Health the feed was quietly incomplete. This is the characteristic failure of the asynchronous path above: when the work that builds the card happens outside the user's request, work that never happens looks exactly like nothing happening.",
             "The fix had three parts. First, handling was widened so that a confirmation is a confirmation regardless of which event type carries it — the rule now matches on what the event means, not on the one shape it happened to have first. Second, because activity had already been missed, a scheduled reconciliation job looks for confirmed activity with no corresponding card and produces the missing ones, so the same class of gap repairs itself rather than needing to be noticed. Third, that backfill had to be safe to run repeatedly: it can revisit the same activity without producing a second card, and it has an undo counterpart.",
             "How well it worked, stated carefully: my account is that this eliminated the class of missed cards and that the reconciliation job now finds nothing left to backfill in normal operation. That steady-state observation is the one claim in this story with no source record behind it, so read it as my report rather than as a measurement — and note that a reconciliation job reporting nothing to fix is only as good as the query it uses to look.",
-            "What this is not: it is not an exactly-once guarantee for the platform. It is one class of event handled correctly, with duplicate-safe writes and a reconciliation net on that path. Roughly a fifth of the backend's functions carry explicit idempotency machinery, not all of them, and I am not claiming the rest were audited.",
+            "What this is not: it is not an exactly-once guarantee for the platform. It is one class of event handled correctly, with duplicate-safe writes and a reconciliation net on that path. Explicit idempotency machinery exists on the paths that needed it rather than across the whole backend, and I am not claiming the rest were audited.",
           ],
         },
         {
@@ -596,11 +625,11 @@ export const caseStudies: CaseStudy[] = [
           status: "documented",
           title: "195 acceptance test cases for Circles V2, generated from the requirements",
           detail:
-            "A generator turned the Circles V2 requirement documents into 195 acceptance cases and imported them into the test-management tool. Three things that matters for: they were generated rather than hand-written, they cover Circles V2 rather than the feed, and a count of imported cases is not a count of passing tests. No execution report for this set is presented here.",
+            "A generator turned the Circles V2 requirement documents into 195 acceptance cases and imported them into the test-management tool. Three things follow from that: they were generated rather than hand-written, they cover Circles V2 rather than the feed, and a count of imported cases is not a count of passing tests. No execution report for this set is presented here.",
           claimId: "step-social-xray-cases",
         },
         {
-          status: "historical-run",
+          status: "static-audit",
           title: "A static code-vs-matrix audit: 108 of 155 checks satisfied, 47 gaps",
           detail:
             "On 2026-07-30 the acceptance matrix was compared against the code as it then stood: 108 checks satisfied, 47 not, which is about 70% implemented at that moment. The gaps became a fix backlog. This is a code audit rather than a test run, its 155 checks are a different artifact from the 195 imported cases, and nothing here claims all 47 gaps were later closed.",
@@ -625,8 +654,8 @@ export const caseStudies: CaseStudy[] = [
       title: "Outcome & limitations",
       results: [
         "Circles and the Movement Feed shipped: people can create a circle, invite members, post, comment and react, and see each other's confirmed activity.",
-        "Visibility has one implementation, on the backend. A client with stale membership data can render an out-of-date list, but it cannot grant itself access it does not have.",
-        "Activity confirmed through an event type the feed rule had not covered now reaches the feed, and the backfill that repaired the already-missed activity could be re-run without creating duplicate cards.",
+        "Visibility has one implementation, on the backend. That is what the design is for: a client holding stale membership data can render an out-of-date list, but it has no path to widen its own access. No audit or penetration test is published here to prove the property holds in every case.",
+        "Activity confirmed through an event type the feed rule had not covered now reaches the feed, and the backfill that repaired the already-missed activity was built to be safe to re-run rather than as a one-shot script.",
         "Load context, feature-scoped: the feed aggregator runs on the order of 34,000 times a day. That says how often the machinery turns over, not how many people the feature served and not whether it worked for them.",
       ],
       limitations: [
@@ -655,7 +684,7 @@ export const caseStudies: CaseStudy[] = [
           note: "A detailed internal write-up I keep, inspected while writing this page. Not published: it contains internal paths and operational detail.",
         },
         {
-          kind: "test-run",
+          kind: "audit",
           availability: "private",
           label: "The Circles V2 acceptance matrix and the 2026-07-30 code audit",
           note: "The source of the 195 imported cases and the 108 / 47 / 155 audit figures. Both are internal artifacts.",
@@ -701,18 +730,18 @@ export const caseStudies: CaseStudy[] = [
       items: [
         {
           kind: "implemented",
-          text: "Implemented the AI integration end to end for these features — the backend handler, the client surface, streaming of responses, and tool calling.",
+          text: "the AI integration end to end for these features — the backend handler, the client surface, streaming of responses, and tool calling.",
         },
         {
           kind: "implemented",
-          text: "Implemented validation of model output, so that what reaches the product is checked against an expected shape instead of being trusted because it reads well.",
+          text: "validation of model output, so that what reaches the product is checked against an expected shape instead of being trusted because it reads well.",
         },
         {
           kind: "led",
-          text: "Investigated where the time in a coach response actually went, and proposed moving retrieval from an unconditional step to a tool the model can call.",
+          text: "the investigation into where the time in a coach response actually went, and the move from unconditional retrieval to a tool the model can call.",
         },
-        { kind: "led", text: "Argued for keeping the boundary explicit: the model may request retrieval, but it does not decide what the application is allowed to do with the result." },
-        { kind: "team", text: "Product direction, the coaching content itself and the surrounding platform were team work." },
+        { kind: "led", text: "the argument for keeping the boundary explicit: the model may request retrieval, but it does not decide what the application is allowed to do with the result." },
+        { kind: "team", text: "product direction, the coaching content itself, and the surrounding platform." },
       ],
     },
     decision: {
@@ -764,10 +793,10 @@ export const caseStudies: CaseStudy[] = [
       intro: "What is checked, what is reported, and what is still open.",
       checks: [
         {
-          status: "automated",
+          status: "documented",
           title: "Schema validation on the response path",
           detail:
-            "Model output is validated against the expected shape before the product uses it, so a malformed or unexpected response fails a check instead of reaching the UI, and the failure is recorded as its own telemetry. This runs on every response, by construction — it is the one check here that does not depend on anybody remembering to run it.",
+            "Model output is validated against the expected shape before the product uses it, so a malformed or unexpected response fails a check instead of reaching the UI, and the failure is recorded as its own telemetry. By construction this runs on every response rather than when someone remembers to run it — but that is my description of the design, not an artifact you can inspect, which is why it is marked as documented rather than as a verified automated check.",
         },
         {
           status: "documented",
@@ -803,7 +832,7 @@ export const caseStudies: CaseStudy[] = [
         "The latency figure is an estimate from the design decision, not a measurement you or I can inspect. It describes the retrieval step's overhead, not end-to-end response time or time-to-first-token.",
         "Answer quality after the change is not demonstrated. The harness that would demonstrate it exists but has never produced a recorded result, which is a gap in my work rather than a detail of presentation.",
         "The internal routing is described at the boundary level only. I am not publishing the exact services or rules.",
-        "Targets that existed for this path — a p99 under 50 ms on the precomputed read, time-to-first-token under 200 ms — are targets. No measurement against them is presented, so they are not published as results.",
+        "Targets that existed for this path — a p99 under 50 ms, time-to-first-token under 200 ms — are targets. No measurement against them is presented, so they are not published as results.",
       ],
     },
     sources: {
@@ -826,13 +855,7 @@ export const caseStudies: CaseStudy[] = [
           kind: "source-code",
           availability: "private",
           label: "The retrieval-quality harness itself",
-          note: "Exists in the app repository: four scenarios, twenty queries, keyword scoring. Inspected for this page. It prints to the terminal and stores nothing, so there is no result to cite.",
-        },
-        {
-          kind: "test-run",
-          availability: "private",
-          label: "A retrieval-quality result",
-          note: "Does not exist — not in the repository, not in the build pipeline, not in my notes. This is the missing artifact behind the open question above.",
+          note: "Exists in the app repository: four scenarios, twenty queries, keyword scoring. Inspected for this page. It prints to the terminal and stores nothing, it is not wired into the build, and no run of it is recorded anywhere — so there is no result to cite, and none is being withheld either. It simply does not exist.",
         },
       ],
       claimIds: ["step-retrieval-overhead-removed", "step-retrieval-quality-harness", "step-coach-latency-targets"],
@@ -865,11 +888,11 @@ export const caseStudies: CaseStudy[] = [
       title: "My role",
       intro: "This was my own tooling for my own workflow, so the split is between building and judging.",
       items: [
-        { kind: "implemented", text: "Built the review protocol: the passes a plan goes through, and what each pass is expected to produce." },
-        { kind: "implemented", text: "Built the reusable skills that carry those passes, so a review is repeatable instead of improvised per plan." },
-        { kind: "implemented", text: "Built the evaluation cases from real review failures, each pairing a plan with the finding a reviewer is supposed to raise." },
-        { kind: "led", text: "Defined expected behaviour case by case — deciding what counts as catching the issue, which is the judgement the harness cannot make for me." },
-        { kind: "led", text: "Reviewed and accepted or rejected each change to a skill, and kept the rule that a change is not done until the case that motivated it is re-run." },
+        { kind: "implemented", text: "the review protocol: the passes a plan goes through, and what each pass has to produce." },
+        { kind: "implemented", text: "the reusable skills that carry those passes, so a review is repeatable instead of improvised per plan." },
+        { kind: "implemented", text: "the evaluation cases, built from real review failures, each pairing a plan with the finding a reviewer is supposed to raise." },
+        { kind: "led", text: "the definition of expected behaviour, case by case — what counts as catching the issue is the judgement the harness cannot make for me." },
+        { kind: "led", text: "the decision to accept or reject each change to a skill, and the rule that a change is not done until the case that motivated it is re-run." },
       ],
     },
     decision: {
@@ -884,7 +907,7 @@ export const caseStudies: CaseStudy[] = [
     howItWorks: {
       title: "How it works",
       intro:
-        "The loop below is the one that turns a failure into a case. The example in it is a real recurring failure class from my own reviews — a reviewer accepting a reference to a git object that does not exist — and it is one of twelve such anti-patterns I ended up writing down. It is not a fabricated production incident.",
+        "The loop below is the one that turns a failure into a case. The example in it is a real recurring failure class from my own reviews — a reviewer accepting a reference to a git object that does not exist. It is not a fabricated production incident.",
       flow: [
         { id: "01", title: "A plan with a known defect", detail: "A plan that references a specific commit as the basis for a change." },
         { id: "02", title: "Expected flag", detail: "The reviewer should report that the reference cannot be confirmed — the object is not there to check against." },
@@ -930,8 +953,15 @@ export const caseStudies: CaseStudy[] = [
           status: "documented",
           title: "11 regression cases, each from a plan that really did go wrong",
           detail:
-            "Every case holds the earliest version of a real plan — ones that had taken between nine and eighteen review iterations to settle — together with the findings a reviewer must raise, a minimum severity for each, and the properties the review output has to have. Fourteen rule changes are logged as coming out of them. It is the size of a set: 11 cases is not 11 passing checks.",
+            "Every case holds the earliest version of a real plan — ones that had taken between nine and eighteen review iterations to settle — together with the findings a reviewer must raise, a minimum severity for each, and the properties the review output has to have. It is the size of a set: 11 cases is not 11 passing checks.",
           claimId: "agent-eval-case-count",
+        },
+        {
+          status: "documented",
+          title: "Twelve documented anti-patterns and fourteen logged rule changes",
+          detail:
+            "The anti-patterns are the specific mistakes a review is checked against — the unconfirmable git reference above is one of them. The rule changes are the edits logged as coming out of running the cases. Both are counts of written material: a logged rule change is not evidence that reviews got better.",
+          claimId: "agent-review-rule-corpus",
         },
         {
           status: "historical-run",
@@ -958,7 +988,7 @@ export const caseStudies: CaseStudy[] = [
       title: "Outcome & limitations",
       results: [
         "Review became a defined protocol with five passes, each with its own question, instead of one general request for feedback.",
-        "Recurring failures became cases that can fail, so a change to a skill can be checked rather than believed — and twelve specific review anti-patterns got written down instead of being rediscovered.",
+        "Recurring failures became cases that can fail, so a change to a skill can be checked rather than believed, and the recurring mistakes got written down instead of being rediscovered.",
         "One concrete example is documented end to end above: a reviewer accepting an unconfirmable git reference, the missing validation step, the skill change and the re-check.",
         "The recorded run is published as it came out — 6 pass, 2 fail, 2 partial, 1 fixture defect — including the case that turned out to be wrong itself.",
       ],
@@ -999,7 +1029,7 @@ export const caseStudies: CaseStudy[] = [
           href: "https://github.com/Androkzn/interactive-portfolio-ai-guide",
         },
       ],
-      claimIds: ["agent-eval-case-count", "agent-eval-run-2026-05-28", "agent-review-roles"],
+      claimIds: ["agent-eval-case-count", "agent-review-rule-corpus", "agent-eval-run-2026-05-28", "agent-review-roles"],
     },
   },
 ];
@@ -1014,6 +1044,7 @@ export function caseStudyById(id: CaseStudyId): CaseStudy {
 export const checkStatusLabels: Record<CheckStatus, string> = {
   automated: "Automated check",
   documented: "Documented",
+  "static-audit": "Static audit",
   "historical-run": "Historical run",
   "not-run": "Not presented",
   "open-question": "Open question",
@@ -1021,13 +1052,14 @@ export const checkStatusLabels: Record<CheckStatus, string> = {
 
 export const roleKindLabels: Record<RoleKind, string> = {
   implemented: "I implemented",
-  led: "I proposed / led",
-  team: "We shipped",
+  led: "I proposed and led",
+  team: "Shared with the team",
 };
 
 export const sourceKindLabels: Record<SourceItem["kind"], string> = {
   "source-code": "Source code",
   "test-run": "Test run",
+  audit: "Audit artifact",
   "technical-write-up": "Technical write-up",
   "owner-account": "My own account",
 };
@@ -1040,7 +1072,7 @@ export const sourceAvailabilityLabels: Record<SourceItem["availability"], string
 
 export const verificationStatusLabels: Record<VerificationStatus, string> = {
   "author-reported": "Author-reported",
-  "source-inspected": "Source-inspected",
+  "source-inspected": "Source inspected, not independently verified",
   "runtime-verified": "Runtime-verified",
   "target-planned": "Target / planned",
 };

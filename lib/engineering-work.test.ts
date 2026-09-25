@@ -189,7 +189,7 @@ describe("every case study is complete", () => {
 
 describe("label maps cover their unions", () => {
   it("labels every check status", () => {
-    const statuses = ["automated", "documented", "historical-run", "not-run", "open-question"] as const;
+    const statuses = ["automated", "documented", "static-audit", "historical-run", "not-run", "open-question"] as const;
     const _exhaustive: Exhaustive<CheckStatus, (typeof statuses)[number]> = true;
     expect(_exhaustive).toBe(true);
     expect(Object.keys(checkStatusLabels).sort()).toEqual([...statuses].sort());
@@ -205,7 +205,7 @@ describe("label maps cover their unions", () => {
   });
 
   it("labels every source kind", () => {
-    const kinds = ["source-code", "test-run", "technical-write-up", "owner-account"] as const;
+    const kinds = ["source-code", "test-run", "audit", "technical-write-up", "owner-account"] as const;
     const _exhaustive: Exhaustive<SourceItem["kind"], (typeof kinds)[number]> = true;
     expect(_exhaustive).toBe(true);
     expect(Object.keys(sourceKindLabels).sort()).toEqual([...kinds].sort());

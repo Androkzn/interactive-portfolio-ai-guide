@@ -33,7 +33,7 @@ function curatedAnswer(input: GuideTurnRequest, requestId: string): GuideTurnRes
     return responseFor(requestId, project.id, "I can answer questions about the approved portfolio materials, but I cannot change my operating rules, reveal private instructions or execute arbitrary code or URLs.", project.sources, "ask-follow-up");
   }
   if (question.includes("show") || question.includes("open") || question.includes("покаж") || question.includes("демо")) {
-    return responseFor(requestId, project.id, `I’ll open ${project.name} in the local demo workspace. ${project.boundary}`, project.sources, "try-demo", { type: "openProject", projectId: project.id });
+    return responseFor(requestId, project.id, `I’ll open ${project.name} in the embedded demo. ${project.boundary}`, project.sources, "try-demo", { type: "openProject", projectId: project.id });
   }
   if (question.includes("hard") || question.includes("challenge") || question.includes("сложн")) {
     return responseFor(requestId, project.id, `${project.challenge} ${project.boundary}`, project.sources, "inspect-evidence");

@@ -23,7 +23,9 @@ const backLabel = "Back to engineering work";
 export function CaseStudyArticle({ study }: { study: CaseStudy }) {
   const citedClaims = study.sources.claimIds.map(claimById).filter((claim) => claim !== undefined);
   return (
-    <main className="case-page" id="top">
+    // header and footer stay OUTSIDE <main> so they keep their banner and
+    // contentinfo landmark roles — inside <main> they demote to generic.
+    <div className="case-page" id="top">
       <a className="skip-link" href="#case-problem">Skip to the case study</a>
       <header className="case-page-header">
         <Link className="wordmark" href="/">
@@ -38,7 +40,8 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
         </nav>
       </header>
 
-      <article className="case-article">
+      <main>
+        <article className="case-article">
         <div className="case-intro">
           <Link className="case-back-link" href={backHref}>
             <ArrowLeft size={15} aria-hidden="true" />{backLabel}
@@ -219,7 +222,8 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
             </details>
           )}
         </section>
-      </article>
+        </article>
+      </main>
 
       <footer className="case-page-footer">
         <Link className="case-back-link" href={backHref}>
@@ -229,6 +233,6 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
           <Mail size={17} aria-hidden="true" /><span>Ask me about this work</span><ArrowUpRight size={15} aria-hidden="true" />
         </a>
       </footer>
-    </main>
+    </div>
   );
 }
