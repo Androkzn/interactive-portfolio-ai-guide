@@ -502,7 +502,8 @@ export const caseStudies: CaseStudy[] = [
       { label: "Context", value: "Step · consumer fitness product, iOS app with an event-driven AWS backend" },
       {
         label: "My role",
-        value: "Product implementation across iOS and backend, shared contracts, release planning. Part of a team.",
+        value:
+          "Product implementation across iOS and backend, shared contracts, release planning — working with a small team of two to three engineers plus the founder and QA.",
       },
       sharedContextNote,
     ],
