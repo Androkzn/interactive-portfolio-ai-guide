@@ -13,7 +13,7 @@ export type RaceProfile = "mobile" | "desktop";
  * never tuned; the Next.js build is the same site rebuilt specifically to be fast.
  */
 export const RACE_PRESETS = {
-  astro: { url: "https://hrconcretepumps.pages.dev/", role: "Before", label: "Astro", stack: "Original site · not optimized" },
+  astro: { url: "https://d0d11b6f.hrconcretepumps.pages.dev/", role: "Before", label: "Astro", stack: "Original site · not optimized" },
   next: { url: "https://hr-concrete-pumps-next.pages.dev/", role: "After", label: "Next.js", stack: "Rebuilt in Next.js 16 · optimized" },
 } as const;
 export type RacePresetId = keyof typeof RACE_PRESETS;
