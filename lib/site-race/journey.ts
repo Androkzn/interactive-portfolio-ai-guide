@@ -7,7 +7,7 @@
 
 import journeyData from "./journey-data.json";
 
-export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "edge";
+export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "tuned" | "edge";
 
 export type Stage = {
   id: StageId;
@@ -136,6 +136,22 @@ export const stages: Stage[] = [
     ],
   },
   {
+    id: "tuned",
+    short: "Hero first",
+    title: "Hero first: nothing competes with the largest paint",
+    build: "next",
+    url: "https://8ba6e89f.hr-concrete-pumps-next.pages.dev",
+    commit: "decc322",
+    report: { base: "https://8ba6e89f.hr-concrete-pumps-next.pages.dev", build: "decc322" },
+    summary: "On slow 4G the home hero was sharing the link with images nobody could see yet. Now it downloads first, and the home page hydrates no scene code at all.",
+    changes: [
+      "Below-the-fold scene layers (~280 KB) requested only when the scene nears the viewport, not from the server HTML",
+      "800 px hero AVIF for 2x phones (71 KB instead of 96 KB) and measured sizes on every banner and model render",
+      "Inter preloaded only on wide layouts: the swap fallback is metric-matched, so phones lose nothing",
+      "Home scenes rendered on the server; their motion code loads per scene near the viewport (−22 KB startup JS)",
+    ],
+  },
+  {
     id: "edge",
     short: "Edge",
     title: "Next.js server on Cloudflare Workers",
@@ -157,6 +173,8 @@ export const stages: Stage[] = [
 
 export const originalStage = stages[0];
 export const latestStage = stages[stages.length - 1];
+/** The static build with every optimization: the race's default "after". */
+export const featuredStage = stages.find((stage) => stage.id === "tuned") ?? latestStage;
 
 export function stageById(id: StageId): Stage {
   return stages.find((stage) => stage.id === id) ?? latestStage;
