@@ -54,6 +54,14 @@ const LCP_PENDING = `(() => {
   const e = (window.__race || {}).lcpEntry; const size = e ? e.size : 0;
   return [...document.images].some((img) => {
     if (img.complete && img.naturalWidth > 0) return false;
+    // An image nobody can see (a hidden carousel slide, opacity 0 or visibility hidden on it or
+    // an ancestor) or one not requested yet can't become the LCP until it is shown, so it must
+    // not hold the LCP back.
+    if (!img.currentSrc) return false;
+    for (let el = img; el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if (s.visibility === "hidden" || s.display === "none" || Number(s.opacity) === 0) return false;
+    }
     const b = img.getBoundingClientRect();
     const visible = Math.max(0, Math.min(b.right, innerWidth) - Math.max(b.left, 0)) * Math.max(0, Math.min(b.bottom, innerHeight) - Math.max(b.top, 0));
     return visible > size;
