@@ -122,6 +122,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     }
     if (racing) {
       const done = LANES.filter((id) => state.lanes[id].complete);
+      if (done.length === 2) return "Both finished · scoring…";
       if (done.length === 1) {
         const other = LANES.find((id) => id !== done[0])!;
         return `${identity(done[0]).label} finished first · waiting for ${identity(other).label}…`;
