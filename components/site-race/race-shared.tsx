@@ -47,17 +47,23 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
-const FROZEN: LaneState["phase"][] = ["settling", "inspecting", "done", "failed"];
+/** The lane was stopped at the time cap — known from the settle phase's note before its metrics arrive. */
+export function isCapped(lane: LaneState): boolean {
+  return !!lane.metrics?.capped || (lane.phase !== "failed" && !!lane.phaseDetail);
+}
 
 /**
- * Where a lane crossed its finish line, ms: its LCP once that is final; the cap
- * when it was still waiting on a bigger image in the viewport; FCP as a last resort.
+ * Where a lane crossed its finish line, ms: its LCP, which the Worker sends only once
+ * it is final (after the page settles); the cap when it never painted a final LCP;
+ * first paint as a last resort. Null while the lane is still on its way — including
+ * the moment it settles, before the LCP arrives, so the clock never shows a stand-in.
  */
 export function finishTime(lane: LaneState): number | null {
-  if (!FROZEN.includes(lane.phase) && !lane.metrics) return null;
   if (lane.marks.lcp !== undefined) return Math.max(lane.marks.lcp, lane.marks.fcp ?? 0);
-  if (lane.metrics?.capped || lane.phaseDetail) return lane.metrics?.capMs ?? 30_000;
-  return Math.max(lane.marks.fcp ?? 0, lane.phase === "failed" ? lane.frames.at(-1)?.t ?? 0 : 0) || null;
+  if (isCapped(lane)) return lane.metrics?.capMs ?? 30_000;
+  if (lane.phase === "failed") return Math.max(lane.marks.fcp ?? 0, lane.frames.at(-1)?.t ?? 0) || null;
+  if (lane.phase === "inspecting" || lane.phase === "done" || lane.metrics) return lane.marks.fcp ?? null;
+  return null;
 }
 
 /** Lane clock in ms since its navigation start: live while loading, frozen at its finish line. */

@@ -11,6 +11,9 @@
     // A visitor's own site against the champion: 2 per minute per IP.
     { "name": "CHALLENGE_LIMITER", "namespace_id": "4202", "simple": { "limit": 2, "period": 60 } }
   ],
+  // One report per finished race between the project's own builds: the race's event
+  // log (thinned frames included) under race:<id>, with a summary in the key metadata.
+  "kv_namespaces": [{ "binding": "REPORTS", "id": "f6342a691884483faa132d80a0c93cb4" }],
   "vars": {
     "ALLOWED_ORIGINS": "http://localhost:3000,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev"
   },

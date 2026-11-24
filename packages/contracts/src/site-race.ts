@@ -159,4 +159,17 @@ export type RaceEvent =
   | { type: "net"; lane: LaneId; requests: number; kb: number }
   | { type: "result"; lane: LaneId; metrics: LaneMetrics }
   | { type: "error"; lane?: LaneId; message: string }
-  | { type: "done"; elapsedMs: number };
+  /** `reportId` is set when the finished race was saved and can be reopened at /reports/<id>. */
+  | { type: "done"; elapsedMs: number; reportId?: string };
+
+/** One line of a race log: a recording or a saved report, newline-delimited JSON. */
+export type RaceLogLine = { at: number; event: RaceEvent | { type: "recording"; recordedAt: string; reportId?: string } };
+
+/** What the list of saved races shows per race, kept in the KV key's metadata (≤ 1 KB). */
+export type RaceReportSummary = {
+  id: string;
+  savedAt: string;
+  page: RacePageId;
+  profile: RaceProfile;
+  lanes: Record<LaneId, { url: string; preset: RacePresetId | null; lcp: number | null; capped: boolean; kb: number }>;
+};

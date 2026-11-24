@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Crown, Flag, Gauge, Play, RotateCcw, Smartphone, Monitor, Swords, Timer } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
-import { frameAt, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
+import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
+import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { latestStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
-import { finishTime, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
+import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
 
 const LANES: LaneId[] = ["a", "b"];
@@ -24,12 +25,17 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   loading: "Loading",
   settling: "Waiting for the page to settle",
   inspecting: "Inspecting HTML, headers and SEO",
-  done: "Finished",
+  done: "Done",
   failed: "Did not finish",
+};
+const PROFILE_NOTE: Record<RaceProfile, string> = {
+  mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
+  desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
+const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
 
 export type SiteRaceProps = {
   page: RacePageId;
@@ -43,16 +49,20 @@ export type SiteRaceProps = {
 };
 
 export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, startSignal }: SiteRaceProps) {
-  const { state, runLive, runReplay, stop } = useRace();
+  const { state, runLive, runReplay, openReport, show, stop } = useRace();
   const reduced = usePrefersReducedMotion();
   const [lights, setLights] = useState(0);
   const [challenge, setChallenge] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [scrub, setScrub] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(0);
-  const autoplayed = useRef(false);
   const [replaying, setReplaying] = useState(false);
+  const [revealed, setRevealed] = useState(0);
+  /** "copied" after a copy, or the link itself when the clipboard refused. */
+  const [copied, setCopied] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const stateRef = useRef(state);
+  /** The scoreboard reveals round by round only for a race that just finished in front of the visitor. */
+  const animateReveal = useRef(false);
 
   const racing = state.status === "connecting" || state.status === "racing";
   const now = useClock(racing || replaying);
@@ -64,6 +74,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const identity = (id: LaneId) => laneIdentity(state.lanes[id], id, stage);
   const progress = useVisualProgress(state);
 
+  useEffect(() => { stateRef.current = state; }, [state]);
+
   // Start lights: five reds while Chrome boots on Cloudflare, lights out on the first frame.
   const firstFrame = state.lanes.a.frames.length > 0 || state.lanes.b.frames.length > 0;
   useEffect(() => {
@@ -74,10 +86,11 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     return () => clearInterval(timer);
   }, [state.status, state.source, firstFrame, reduced]);
 
-  // Reveal the scoreboard one round at a time.
+  // Reveal the scoreboard one round at a time after a race; a reopened race shows it whole.
   useEffect(() => {
     if (state.status !== "finished" || !verdict) { setRevealed(0); return; }
-    if (reduced) { setRevealed(verdict.rounds.length + 1); return; }
+    if (reduced || !animateReveal.current) { setRevealed(verdict.rounds.length + 1); return; }
+    animateReveal.current = false;
     setRevealed(0);
     let step = 0;
     const timer = setInterval(() => { step += 1; setRevealed(step); if (step > verdict.rounds.length) clearInterval(timer); }, 850);
@@ -89,28 +102,62 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     return Math.max(4000, ...ends);
   }, [state.lanes]);
 
-  // Photo finish: after the result, replay both filmstrips on one shared clock, once.
+  // Photo finish: both filmstrips on one shared clock, played only when asked for —
+  // a clock that restarts by itself after the race looks like the race is still on.
+  // Long races replay faster, so a 30-second loser does not hold the screen for 30 seconds.
+  const speed = Math.max(0.6, maxT / 8000);
   const replayStart = useRef(0);
   useEffect(() => {
-    if (state.status !== "finished") { setScrub(null); setReplaying(false); autoplayed.current = false; return; }
-    if (autoplayed.current || reduced) return;
-    autoplayed.current = true;
-    replayStart.current = performance.now();
-    setScrub(0);
-    setReplaying(true);
-  }, [state.status, reduced]);
+    if (state.status !== "finished") { setScrub(null); setReplaying(false); }
+  }, [state.status]);
   useEffect(() => {
     if (!replaying) return;
-    // Long races replay faster, so a 30-second loser does not hold the screen for 30 seconds.
-    const speed = Math.max(0.6, maxT / 8000);
-    const t = (now - replayStart.current) * speed;
-    if (t >= maxT) { setReplaying(false); setScrub(maxT); return; }
+    const t = Math.max(0, (now - replayStart.current) * speed);
+    if (t >= maxT) { setReplaying(false); setScrub(null); return; }
     setScrub(t);
-  }, [now, maxT, replaying]);
+  }, [now, maxT, replaying, speed]);
+  const toggleReplay = () => {
+    if (replaying) { setReplaying(false); return; }
+    const from = scrub !== null && scrub < maxT - 50 ? scrub : 0;
+    replayStart.current = performance.now() - from / speed;
+    setScrub(from);
+    setReplaying(true);
+  };
+
+  // The arena shows only the race for the selected page, stage and device. Changing any of
+  // them clears a finished race back to an empty grid; a running race is never replaced.
+  useEffect(() => {
+    const current = stateRef.current;
+    if (current.status === "idle" || current.status === "connecting" || current.status === "racing") return;
+    const shown = setupOf(current);
+    if (shown && setupKey(shown) === setupKey({ page, stage, profile })) return;
+    setScrub(null);
+    setReplaying(false);
+    setNotice(null);
+    show(idleRace(profile));
+  }, [page, stage, profile, show]);
+
+  // Every finished race is saved by the Worker; a ?report=<id> link opens that one race.
+  const openSaved = useCallback(async (id: string) => {
+    const opened = await openReport(id);
+    const setup = opened ? setupOf(opened) : null;
+    if (!setup) return;
+    onPage(setup.page);
+    onStage(setup.stage);
+    onProfile(setup.profile);
+  }, [openReport, onPage, onStage, onProfile]);
+  useEffect(() => {
+    const id = new URL(window.location.href).searchParams.get("report");
+    if (id && REPORT_ID.test(id)) void openSaved(id);
+    // Runs once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const start = async (a: string, b: string) => {
     setNotice(null);
     setScrub(null);
+    setReplaying(false);
+    animateReveal.current = true;
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
     const theirs = !b.includes(".") || stageForUrl(b) !== null;
@@ -122,6 +169,13 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     }
   };
   const startDuel = () => void start("astro", stageById(stage).url);
+  const watchRecording = () => {
+    setNotice(null);
+    setScrub(null);
+    setReplaying(false);
+    animateReveal.current = true;
+    void runReplay(recordingFor(page, profile));
+  };
 
   // The journey below can ask for a race of a particular stage.
   const lastSignal = useRef(startSignal);
@@ -139,9 +193,32 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     void start(latestStage.url, challenge.trim());
   };
 
+  const copyLink = async () => {
+    if (!state.reportId) return;
+    const link = reportLink(state.reportId, window.location.href);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied("copied");
+      setTimeout(() => setCopied(null), 1800);
+    } catch {
+      // No clipboard (permissions, insecure origin): show the link to copy by hand.
+      setCopied(link);
+    }
+  };
+
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
   const selectedStage = stageById(stage);
+  const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
+  const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
+  const lightsLabel = {
+    replay: "Replay",
+    go: "GO",
+    scoring: "Scoring",
+    armed: "Starting Chrome…",
+    over: state.source === "report" ? "Saved race" : "Race over",
+    idle: state.status === "failed" ? "Stopped" : "Ready",
+  }[lightsState];
 
   return (
     <section ref={sectionRef} className={styles.race} aria-labelledby="site-race-title" id="race">
@@ -165,7 +242,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
               <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Start the race" : "Race again"}
             </button>
           )}
-          <button type="button" className={styles.ghostButton} onClick={() => { setNotice(null); void runReplay(recordingFor(page, profile)); }} disabled={racing}>
+          <button type="button" className={styles.ghostButton} onClick={watchRecording} disabled={racing}>
             <RotateCcw size={15} aria-hidden="true" /> Watch a recorded race
           </button>
         </div>
@@ -203,17 +280,26 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       </div>
       {selectedStage.showsIn && <p className={styles.stageNote}>{selectedStage.short} pays off on {selectedStage.showsIn}. The race still includes every earlier optimization.</p>}
 
-      <div className={styles.lights} aria-hidden="true" data-state={lights === 6 ? "go" : racing ? "armed" : "idle"}>
-        {[1, 2, 3, 4, 5].map((n) => <span key={n} className={lights >= n && lights < 6 ? styles.lightOn : ""} />)}
-        <strong>{lights === 6 && racing ? "GO" : racing ? "Starting Chrome…" : state.status === "finished" ? "Finish" : "Ready"}</strong>
+      <div className={styles.lights} aria-hidden="true" data-state={lightsState}>
+        {[1, 2, 3, 4, 5].map((n) => <span key={n} className={lights >= n && lights < 6 && racing ? styles.lightOn : ""} />)}
+        <strong key={lightsState}>{lightsLabel}</strong>
       </div>
 
       <p className={styles.status} role="status" aria-live="polite">
         {notice ?? (state.status === "failed" ? state.error
-          : state.source === "replay" && state.recordedAt ? `Recorded race from ${new Date(state.recordedAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
+          : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
+          : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : "Mobile profile matches the projects' own performance reports: 390 px, slow 4G, 4× CPU slowdown. A lane that is still downloading after 30 s is stopped there.")}
+          : `${PROFILE_NOTE[profile]} A lane still downloading after 30 s is stopped there.`)}
       </p>
+      {state.status === "finished" && state.reportId && state.source === "live" && (
+        <p className={styles.savedNote}>
+          <Check size={14} aria-hidden="true" /> Report saved
+          {copied && copied !== "copied"
+            ? <a href={copied}>{copied}</a>
+            : <button type="button" onClick={() => void copyLink()}><Link2 size={14} aria-hidden="true" /> {copied ? "Link copied" : "Copy link"}</button>}
+        </p>
+      )}
 
       <div className={styles.arena}>
         {LANES.map((id) => (
@@ -227,10 +313,12 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       {state.status === "finished" && verdict && (
         <>
           <div className={styles.scrubber}>
-            <label htmlFor="photo-finish"><Timer size={15} aria-hidden="true" /> Photo finish {tLabel && <b>{tLabel}</b>}</label>
-            <input id="photo-finish" type="range" min={0} max={Math.round(maxT)} step={10} value={Math.round(scrub ?? maxT)}
-              onChange={(event) => { setReplaying(false); setScrub(Number(event.target.value)); }} />
-            <span>Drag to compare both screens at the same moment</span>
+            <button type="button" className={styles.replayButton} onClick={toggleReplay} aria-pressed={replaying}>
+              {replaying ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />} {replaying ? "Pause" : "Replay side by side"}
+            </button>
+            <input type="range" min={0} max={Math.round(maxT)} step={10} value={Math.round(scrub ?? maxT)} aria-label="Photo finish: moment to show on both screens"
+              onChange={(event) => { setReplaying(false); const value = Number(event.target.value); setScrub(value >= maxT ? null : value); }} />
+            <span>{tLabel ? <><Timer size={14} aria-hidden="true" /> Both screens at <b>{tLabel}</b></> : "Drag to compare both screens at the same moment"}</span>
           </div>
           <RaceScorecard state={state} progress={progress} identity={identity} />
           <Scoreboard verdict={verdict} identity={identity} revealed={revealed} reduced={reduced} />
@@ -259,38 +347,51 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   const { role, label, stack } = identity;
   const mine = finishTime(lane);
   const theirs = finishTime(rival);
-  // During the photo finish both lanes share one clock; each stopwatch stops at its own finish line.
+  const failed = lane.phase === "failed";
+  // In the photo finish both lanes share one clock and each stopwatch stops at its own finish line.
   const t = scrub ?? clock;
   const shownT = scrub !== null && mine !== null ? Math.min(scrub, mine) : t;
   const finishedNow = mine !== null && (scrub === null || scrub >= mine);
-  const capped = !!lane.metrics?.capped || !!lane.phaseDetail;
+  const capped = isCapped(lane);
   const capS = ((lane.metrics?.capMs ?? 30_000) / 1000).toFixed(0);
-  // While one lane waits at the finish, the other shows how far behind it is.
-  const behind = !finishedNow && theirs !== null && t !== null && t > theirs && (scrub === null || scrub >= theirs) ? t - theirs : null;
+  const hasLcp = lane.marks.lcp !== undefined;
+  const seconds = (value: number) => `${(value / 1000).toFixed(2)} s`;
+  // Once the rival has crossed the line, count how long this lane has been going since.
+  // Live, a lane learns its own LCP only when it settles, so it reads "still loading";
+  // in the photo finish both finish lines are known, so the gap is a real "behind".
+  const trailing = !finishedNow && !failed && theirs !== null && t !== null && t > theirs && (scrub === null || scrub >= theirs) ? t - theirs : null;
+  const clockNote = shownT === null ? null : finishedNow ? (hasLcp ? "to LCP" : capped ? "at the cap" : "to first paint") : "elapsed";
   return (
     <article className={`${styles.lane} ${toneClass(identity.kind)} ${winner ? styles.laneWinner : ""}`} aria-label={`${label} lane`}>
       <header className={styles.laneHead}>
         <div>
           <span className={styles.role}>{role}</span>
-          <h3>{winner && <Crown size={18} aria-label="Winner" />} {label}</h3>
-          <span>{stack}</span>
+          <h3>{label}</h3>
+          <span className={styles.stack}>{stack}</span>
         </div>
-        <output className={styles.stopwatch} aria-label={`${label} time`}>{shownT === null ? "0.00" : (shownT / 1000).toFixed(2)}<small>s</small></output>
+        <div className={styles.clock}>
+          <output className={styles.stopwatch} aria-label={`${label} time`}>{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
+          {clockNote && <span className={styles.clockNote}>{clockNote}</span>}
+        </div>
       </header>
       <div className={`${styles.device} ${profile === "desktop" ? styles.deviceDesktop : ""}`}>
         {frame ? <img src={frame.src} alt={`${label} as the test browser saw it`} /> : <div className={styles.blank}>{lane.phase === "queued" ? "Waiting for the start" : "No pixels yet"}</div>}
-        {finishedNow && !capped && lane.phase !== "failed" && <span className={styles.finishBadge}>Finished · {(mine / 1000).toFixed(2)} s</span>}
+        {finishedNow && !capped && !failed && <span className={styles.finishBadge}>Finished · {hasLcp ? "LCP " : ""}{seconds(mine)}</span>}
         {finishedNow && capped && (
-          <span className={`${styles.finishBadge} ${styles.finishCapped}`}>{lane.marks.lcp !== undefined ? `LCP ${(lane.marks.lcp / 1000).toFixed(2)} s · ` : ""}still loading at {capS} s</span>
+          <span className={`${styles.finishBadge} ${styles.finishCapped}`}>{hasLcp ? `LCP ${seconds(lane.marks.lcp!)} · ` : ""}still loading at {capS} s</span>
         )}
-        {behind !== null && <span className={styles.behindBadge}>+{(behind / 1000).toFixed(1)} s behind</span>}
-        <span className={styles.phase} data-phase={lane.phase}>{lane.phaseDetail ?? PHASE_LABEL[lane.phase]}</span>
+        {trailing !== null && (
+          <span className={styles.behindBadge}>{scrub !== null ? `+${(trailing / 1000).toFixed(1)} s behind` : `Still loading · +${(trailing / 1000).toFixed(1)} s`}</span>
+        )}
+        {scrub !== null
+          ? <span className={styles.phase} data-phase="replay">Replay</span>
+          : lane.phase !== "done" && <span className={styles.phase} data-phase={lane.phase}>{lane.phaseDetail ?? PHASE_LABEL[lane.phase]}</span>}
       </div>
       <ul className={styles.marks}>
         {MARKS.map(({ name, label: markLabel }) => {
-          const t = lane.marks[name];
-          const passed = t !== undefined && (scrub === null || scrub >= t);
-          const text = t !== undefined ? ms(t) : name === "lcp" && capped ? `> ${capS} s` : "—";
+          const at = lane.marks[name];
+          const passed = at !== undefined && (scrub === null || scrub >= at);
+          const text = at !== undefined ? ms(at) : name === "lcp" && capped ? `> ${capS} s` : "—";
           return <li key={name} className={passed ? styles.markOn : ""}><span>{markLabel}</span><b>{text}</b></li>;
         })}
       </ul>
@@ -330,6 +431,9 @@ function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict
   const name = (id: LaneId) => { const d = identity(id); return d.kind === "challenger" ? d.label : `${d.label} (${d.role.toLowerCase()})`; };
   const tone = (id: LaneId) => toneClass(identity(id).kind);
   const done = revealed > verdict.rounds.length;
+  const winner = verdict.winner === "tie" ? null : verdict.winner;
+  const loser: LaneId | null = winner === "a" ? "b" : winner === "b" ? "a" : null;
+  const byRounds = verdict.roundsWon.a !== verdict.roundsWon.b;
   return (
     <div className={styles.scoreboard}>
       <div className={styles.tally} aria-live="polite">
@@ -348,13 +452,20 @@ function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict
       </ol>
       {done && (
         <div className={styles.verdict} role="status">
-          {!reduced && verdict.winner !== "tie" && <Confetti tone={tone(verdict.winner)} />}
-          {verdict.winner === "tie" ? (
-            <h3>Dead heat.</h3>
+          {!reduced && winner && <Confetti tone={tone(winner)} />}
+          {winner && loser ? (
+            <h3>
+              <span className={tone(winner)}>{name(winner)}</span> wins {byRounds
+                ? `${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]}`
+                : `${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
+            </h3>
           ) : (
-            <h3><Crown size={28} aria-hidden="true" /> <span className={tone(verdict.winner)}>{name(verdict.winner)}</span> wins {verdict.roundsWon[verdict.winner]}–{verdict.roundsWon[verdict.winner === "a" ? "b" : "a"]}</h3>
+            <h3>Dead heat.</h3>
           )}
-          <p>{verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}. Gaps within single-run noise count as a draw.</p>
+          <p>
+            {!byRounds && winner ? `Rounds split ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
+            {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}. Gaps within single-run noise count as a draw.
+          </p>
         </div>
       )}
     </div>

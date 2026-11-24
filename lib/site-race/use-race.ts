@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import type { LaneId, LaneMetrics, LanePhase, MarkName, RaceEvent, RaceLaneInfo, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
+import type { LaneId, LaneMetrics, LanePhase, MarkName, RaceEvent, RaceLaneInfo, RaceLogLine, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
+import { fetchReportLog, parseRaceLog, SITE_RACE_API } from "./reports";
 
-export const SITE_RACE_API = process.env.NEXT_PUBLIC_SITE_RACE_API ?? "https://site-race-api.a-tekhtelev.workers.dev";
+export { SITE_RACE_API };
 
 export type Frame = { t: number; src: string };
 
@@ -21,7 +22,8 @@ export type LaneState = {
   error: string | null;
 };
 
-export type RaceSource = "live" | "replay";
+/** live: streamed from the Worker now; replay: a bundled recording; report: a saved race reopened. */
+export type RaceSource = "live" | "replay" | "report";
 
 export type RaceState = {
   status: "idle" | "connecting" | "racing" | "finished" | "failed";
@@ -30,6 +32,8 @@ export type RaceState = {
   profileLabel: string;
   page: RacePageId | null;
   recordedAt: string | null;
+  /** Set once the Worker saved this race; it reopens at ?report=<id>. */
+  reportId: string | null;
   lanes: Record<LaneId, LaneState>;
   error: string | null;
   elapsedMs: number | null;
@@ -37,14 +41,15 @@ export type RaceState = {
 
 const emptyLane = (): LaneState => ({ info: null, phase: "queued", phaseDetail: null, frames: [], marks: {}, net: { requests: 0, kb: 0 }, startedAt: null, metrics: null, error: null });
 
-const initial = (profile: RaceProfile = "mobile"): RaceState => ({
-  status: "idle", source: null, profile, profileLabel: "", page: null, recordedAt: null, lanes: { a: emptyLane(), b: emptyLane() }, error: null, elapsedMs: null,
+export const idleRace = (profile: RaceProfile = "mobile"): RaceState => ({
+  status: "idle", source: null, profile, profileLabel: "", page: null, recordedAt: null, reportId: null, lanes: { a: emptyLane(), b: emptyLane() }, error: null, elapsedMs: null,
 });
 
 type Action =
   | { type: "begin"; source: RaceSource; profile: RaceProfile }
   | { type: "event"; event: RaceEvent; now: number }
-  | { type: "recording"; recordedAt: string }
+  | { type: "recording"; recordedAt: string; reportId?: string }
+  | { type: "load"; state: RaceState }
   | { type: "fail"; message: string };
 
 function updateLane(state: RaceState, lane: LaneId, patch: (current: LaneState) => Partial<LaneState>): RaceState {
@@ -54,9 +59,11 @@ function updateLane(state: RaceState, lane: LaneId, patch: (current: LaneState) 
 function reducer(state: RaceState, action: Action): RaceState {
   switch (action.type) {
     case "begin":
-      return { ...initial(action.profile), status: "connecting", source: action.source };
+      return { ...idleRace(action.profile), status: "connecting", source: action.source };
     case "recording":
-      return { ...state, recordedAt: action.recordedAt };
+      return { ...state, recordedAt: action.recordedAt, reportId: action.reportId ?? state.reportId };
+    case "load":
+      return action.state;
     case "fail":
       return { ...state, status: "failed", error: action.message };
     case "event": {
@@ -91,12 +98,24 @@ function reducer(state: RaceState, action: Action): RaceState {
           return event.lane ? updateLane(state, event.lane, () => ({ error: event.message })) : { ...state, status: "failed", error: event.message };
         case "done": {
           const ok = state.lanes.a.metrics && state.lanes.b.metrics;
-          return { ...state, status: ok ? "finished" : "failed", elapsedMs: event.elapsedMs, error: ok ? null : state.error ?? "One of the sites did not finish, so there is no verdict." };
+          return {
+            ...state, status: ok ? "finished" : "failed", elapsedMs: event.elapsedMs, reportId: event.reportId ?? state.reportId,
+            error: ok ? null : state.error ?? "One of the sites did not finish, so there is no verdict.",
+          };
         }
       }
     }
   }
   return state;
+}
+
+const toAction = (line: RaceLogLine, now: number): Action => line.event.type === "recording"
+  ? { type: "recording", recordedAt: line.event.recordedAt, reportId: line.event.reportId }
+  : { type: "event", event: line.event, now };
+
+/** A whole race log folded into its final state at once — how a saved report opens. */
+export function foldRaceLog(lines: RaceLogLine[], source: RaceSource, now = 0): RaceState {
+  return lines.reduce((state, line) => reducer(state, toAction(line, now)), reducer(idleRace(), { type: "begin", source, profile: "mobile" }));
 }
 
 /** Parses an SSE body into events. EventSource is not used: it reconnects on close, which would start a second race. */
@@ -121,17 +140,22 @@ async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<RaceEv
 export type RaceRequest = { a: string; b: string; profile: RaceProfile; page: RacePageId };
 
 export function useRace() {
-  const [state, dispatch] = useReducer(reducer, undefined, () => initial());
+  const [state, dispatch] = useReducer(reducer, undefined, () => idleRace());
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
-  const runLive = useCallback(async ({ a, b, profile, page }: RaceRequest) => {
+  const fresh = () => {
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
+    return abort;
+  };
+
+  const runLive = useCallback(async ({ a, b, profile, page }: RaceRequest) => {
+    const abort = fresh();
     dispatch({ type: "begin", source: "live", profile });
     try {
       const query = new URLSearchParams({ a, b, profile, page });
@@ -148,37 +172,54 @@ export function useRace() {
       }
       if (!finished) dispatch({ type: "fail", message: "The connection to the race closed early." });
       return { ok: finished, status: 200 };
-    } catch (error) {
+    } catch {
       if (abort.signal.aborted) return { ok: false as const, status: 0 };
       dispatch({ type: "fail", message: "Could not reach the race service." });
       return { ok: false as const, status: 0 };
     }
   }, []);
 
+  /** Plays a bundled recording at its real pace. */
   const runReplay = useCallback(async (file: string, speed = 1) => {
-    abortRef.current?.abort();
-    const abort = new AbortController();
-    abortRef.current = abort;
+    const abort = fresh();
     dispatch({ type: "begin", source: "replay", profile: "mobile" });
     try {
       const res = await fetch(file, { signal: abort.signal });
       if (!res.ok) throw new Error(`recording ${res.status}`);
-      const text = await res.text();
-      const lines = text.split("\n").filter(Boolean).map((line) => JSON.parse(line) as { at: number; event: RaceEvent | { type: "recording"; recordedAt: string } });
+      const lines = parseRaceLog(await res.text());
       const started = performance.now();
-      for (const { at, event } of lines) {
-        const wait = at / speed - (performance.now() - started);
+      for (const line of lines) {
+        const wait = line.at / speed - (performance.now() - started);
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
         if (abort.signal.aborted) return;
-        if (event.type === "recording") dispatch({ type: "recording", recordedAt: event.recordedAt });
-        else dispatch({ type: "event", event, now: performance.now() });
+        dispatch(toAction(line, performance.now()));
       }
     } catch {
       if (!abort.signal.aborted) dispatch({ type: "fail", message: "Could not load the recorded race." });
     }
   }, []);
 
-  return { state, runLive, runReplay, stop };
+  /** Opens a saved race straight at its result. Resolves to the opened state, or null. */
+  const openReport = useCallback(async (id: string): Promise<RaceState | null> => {
+    const abort = fresh();
+    try {
+      const opened = foldRaceLog(await fetchReportLog(id, abort.signal), "report", performance.now());
+      if (abort.signal.aborted) return null;
+      dispatch({ type: "load", state: opened });
+      return opened;
+    } catch {
+      if (!abort.signal.aborted) dispatch({ type: "fail", message: "Could not open that saved race. It may have been removed." });
+      return null;
+    }
+  }, []);
+
+  /** Shows a race this page already holds (one run earlier in the visit). */
+  const show = useCallback((saved: RaceState) => {
+    abortRef.current?.abort();
+    dispatch({ type: "load", state: saved });
+  }, []);
+
+  return { state, runLive, runReplay, openReport, show, stop };
 }
 
 /** The frame on screen at time t (ms since that lane's navigation start). */
