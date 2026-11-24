@@ -1,6 +1,10 @@
+import { LEGACY_CAPS } from "../../packages/contracts/src/site-race";
 import type { LaneId, LaneMetrics } from "@/packages/contracts/src/site-race";
 
 export type Better = "lower" | "higher";
+
+/** Lanes whose visit is still running (a live race): their journey rounds wait instead of scoring a gap. */
+export type Pending = Partial<Record<LaneId, boolean>>;
 
 export type MetricRow = {
   id: string;
@@ -12,26 +16,35 @@ export type MetricRow = {
   format: (value: number) => string;
   better: Better;
   winner: LaneId | "tie" | null;
-  /** The lane hit the time cap first: its value is a lower bound ("> 30 s"). */
+  /** The lane hit the time cap first: its value is a lower bound ("> cap"). */
   censored?: Partial<Record<LaneId, boolean>>;
+  /** The lane has not got to this step yet: no value and no winner yet. */
+  pending?: Pending;
   /** A per-lane footnote under the value, e.g. the compressed size of a raw number. */
   note?: Partial<Record<LaneId, string>>;
 };
 
 export type Round = {
   id: "speed" | "smoothness" | "weight" | "edge" | "seo" | "navigation" | "repeat";
+  /** The first page's rounds are known as soon as both first pages are in; the visit's come after. */
+  part: "first-page" | "visit";
   title: string;
   subtitle: string;
   rows: MetricRow[];
   points: Record<LaneId, number>;
   winner: LaneId | "tie";
+  /** Still waiting for a lane's visit: not counted in the tally yet. */
+  pending?: boolean;
 };
 
 export type Verdict = {
   rounds: Round[];
+  /** Decided rounds only: a round still waiting for a lane counts for no one. */
   roundsWon: Record<LaneId, number>;
   metricWins: Record<LaneId, number>;
   winner: LaneId | "tie";
+  /** Rounds still waiting for a lane's visit; 0 once the verdict is final. */
+  pending: number;
 };
 
 export const ms = (v: number) => (v >= 10_000 ? `${(v / 1000).toFixed(1)} s` : v >= 1000 ? `${(v / 1000).toFixed(2)} s` : `${Math.round(v)} ms`);
@@ -98,23 +111,32 @@ export function compare(a: number | null, b: number | null, better: Better, floo
   return winner;
 }
 
-function row(id: string, label: string, hint: string, a: number | null, b: number | null, format: MetricRow["format"], better: Better, noise = NOISE[id], censored: Partial<Record<LaneId, boolean>> = {}): MetricRow {
-  return { id, label, hint, a, b, format, better, winner: compare(a, b, better, noise?.abs ?? 0, noise?.rel ?? 0.05, censored), ...(censored.a || censored.b ? { censored } : {}) };
+function row(id: string, label: string, hint: string, a: number | null, b: number | null, format: MetricRow["format"], better: Better, noise = NOISE[id], censored: Partial<Record<LaneId, boolean>> = {}, pending: Pending = {}): MetricRow {
+  const waiting = !!(pending.a || pending.b);
+  return {
+    id, label, hint, a: pending.a ? null : a, b: pending.b ? null : b, format, better,
+    winner: waiting ? null : compare(a, b, better, noise?.abs ?? 0, noise?.rel ?? 0.05, censored),
+    ...(censored.a || censored.b ? { censored } : {}),
+    ...(waiting ? { pending } : {}),
+  };
 }
 
 const share = (part: number, whole: number) => (whole > 0 ? part / whole : null);
 
+/** The first page's cap a lane ran under; the oldest races do not record it. */
+export const capOf = (m: LaneMetrics) => m.capMs ?? LEGACY_CAPS.firstPageMs;
+
 /** A capped lane never painted its final LCP: score it at the cap, shown as "> cap". */
 export function lcpOrCap(m: LaneMetrics): { value: number | null; censored: boolean } {
   if (m.timing.lcp !== null) return { value: m.timing.lcp, censored: false };
-  if (m.capped) return { value: m.capMs ?? 30_000, censored: true };
+  if (m.capped) return { value: capOf(m), censored: true };
   return { value: null, censored: false };
 }
 
 /** The load event, or the cap as a lower bound when the lane was stopped before it fired. */
 export function loadOrCap(m: LaneMetrics): { value: number | null; censored: boolean } {
   if (m.timing.load !== null) return { value: m.timing.load, censored: false };
-  if (m.capped) return { value: m.capMs ?? 30_000, censored: true };
+  if (m.capped) return { value: capOf(m), censored: true };
   // Journey: the visitor tapped before the load event, so it is "later than the tap".
   if (m.tappedAt !== undefined) return { value: m.tappedAt, censored: true };
   return { value: null, censored: false };
@@ -126,22 +148,28 @@ export const tbtCensored = (m: LaneMetrics) => (m.capped || m.tappedAt !== undef
 export const weightCensored = (m: LaneMetrics) => (m.capped || m.tappedAt !== undefined) && m.timing.load === null;
 
 export function formatValue(row: MetricRow, lane: LaneId): string {
+  if (row.pending?.[lane]) return "…";
   const value = row[lane];
   if (value === null) return "n/a";
   return row.censored?.[lane] ? `> ${row.format(value)}` : row.format(value);
 }
 const passed = (m: LaneMetrics) => m.seo.filter((check) => check.pass).length;
 
-function round(id: Round["id"], title: string, subtitle: string, rows: MetricRow[]): Round {
+function round(id: Round["id"], title: string, subtitle: string, rows: MetricRow[], part: Round["part"] = "first-page", pending = false): Round {
   const points = { a: 0, b: 0 };
   for (const r of rows) if (r.winner === "a" || r.winner === "b") points[r.winner] += 1;
   const winner = points.a === points.b ? "tie" : points.a > points.b ? "a" : "b";
-  return { id, title, subtitle, rows, points, winner };
+  return { id, part, title, subtitle, rows, points, winner, ...(pending ? { pending } : {}) };
 }
 
 const both = (a: boolean, b: boolean) => ({ a, b });
 
-export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
+/**
+ * The race's rounds and verdict. `pending` names lanes still on their visit (a live race): the
+ * first page's rounds score at once, the visit's rounds wait for them, and the tally and winner
+ * count decided rounds only, so the verdict is provisional until `pending` comes back 0.
+ */
+export function scoreRace(a: LaneMetrics, b: LaneMetrics, pending: Pending = {}): Verdict {
   const lcpA = lcpOrCap(a);
   const lcpB = lcpOrCap(b);
   const loadA = loadOrCap(a);
@@ -176,17 +204,18 @@ export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
       row("words", "Content in the HTML", "Words readable before any JavaScript runs (SSG signal)", a.document.wordsWithoutJs, b.document.wordsWithoutJs, count, "higher"),
     ]),
   ];
-  rounds.push(...journeyRounds(a, b));
+  rounds.push(...journeyRounds(a, b, pending));
   const roundsWon = { a: 0, b: 0 };
   const metricWins = { a: 0, b: 0 };
   for (const r of rounds) {
+    if (r.pending) continue;
     if (r.winner !== "tie") roundsWon[r.winner] += 1;
     metricWins.a += r.points.a;
     metricWins.b += r.points.b;
   }
   let winner: LaneId | "tie" = roundsWon.a === roundsWon.b ? "tie" : roundsWon.a > roundsWon.b ? "a" : "b";
   if (winner === "tie" && metricWins.a !== metricWins.b) winner = metricWins.a > metricWins.b ? "a" : "b";
-  return { rounds, roundsWon, metricWins, winner };
+  return { rounds, roundsWon, metricWins, winner, pending: rounds.filter((r) => r.pending).length };
 }
 
 /** A second-page or repeat-visit timing: the value, or the cap as a lower bound when it was never reached. */
@@ -196,32 +225,38 @@ export function stepOrCap(value: number | null, step: { skipped: string | null; 
   return { value: step.capMs, censored: true };
 }
 
-/** Rounds for what the visitor does after the first page; only races that measured it have them. */
-export function journeyRounds(a: LaneMetrics, b: LaneMetrics): Round[] {
+/**
+ * Rounds for what the visitor does after the first page, in the order the visit runs them;
+ * only races that measured it have them. A lane in `pending` that has not reached a step yet
+ * leaves that round waiting (shown, not scored) instead of scoring as missing.
+ */
+export function journeyRounds(a: LaneMetrics, b: LaneMetrics, pending: Pending = {}): Round[] {
   const out: Round[] = [];
-  if (a.navigation !== undefined || b.navigation !== undefined) {
+  // Scored only when both lanes ran it: a lane skipped for time must not hand the other a free round.
+  const ran = (m: LaneMetrics) => !!m.repeat && !m.repeat.skipped;
+  const repeatWait = both(!!pending.a && !a.repeat, !!pending.b && !b.repeat);
+  if ((ran(a) || repeatWait.a) && (ran(b) || repeatWait.b)) {
+    // The cap only when the reload never finished; a finished reload without an LCP entry is unmeasured (no points).
+    const repeatLcp = (r: LaneMetrics["repeat"]) => (!r ? { value: null, censored: false } : r.capped && r.load === null ? { value: r.capMs, censored: true } : { value: r.lcp, censored: false });
+    const la = repeatLcp(a.repeat), lb = repeatLcp(b.repeat);
+    out.push(round("repeat", "Repeat visit", "What a returning visitor pays: the first page again, HTTP cache on", [
+      row("repeat-lcp", "Repeat LCP", "The main content on screen again, from the cache where the site allows it", la.value, lb.value, ms, "lower", NOISE["repeat-lcp"], both(la.censored, lb.censored), repeatWait),
+      row("repeat-kb", "Re-downloaded", "Bytes that still crossed the network (revalidations and anything not cacheable)", a.repeat?.net.kb ?? null, b.repeat?.net.kb ?? null, kb, "lower", NOISE["repeat-kb"], {}, repeatWait),
+      row("repeat-requests", "Network requests", "Requests that left the browser, 304 revalidations included (the rest came from cache)", a.repeat?.net.network ?? null, b.repeat?.net.network ?? null, count, "lower", NOISE["repeat-requests"], {}, repeatWait),
+    ], "visit", repeatWait.a || repeatWait.b));
+  }
+  // A partial result sets `navigation` only once all its taps are in (see LaneMetrics.navigationSteps).
+  const tapWait = both(!!pending.a && a.navigation === undefined, !!pending.b && b.navigation === undefined);
+  if (a.navigation !== undefined || b.navigation !== undefined || tapWait.a || tapWait.b) {
     const na = a.navigation, nb = b.navigation;
     const ca = stepOrCap(na?.content ?? null, na), cb = stepOrCap(nb?.content ?? null, nb);
     const ia = stepOrCap(na?.image ?? null, na), ib = stepOrCap(nb?.image ?? null, nb);
     const bytes = (n: typeof na) => (n && !n.skipped ? n.net.kb : null);
     out.push(round("navigation", "Next page", "The page the visitor tapped through to: tap a link, wait for the new page", [
-      row("nav-content", "Tap → content", "From the tap to the new page's heading on screen", ca.value, cb.value, ms, "lower", NOISE["nav-content"], both(ca.censored, cb.censored)),
-      row("nav-image", "Tap → main image", "From the tap to the new page's largest visible image loaded, decoded and painted", ia.value, ib.value, ms, "lower", NOISE["nav-image"], both(ia.censored, ib.censored)),
-      row("nav-kb", "Downloaded for it", "Bytes over the wire from scrolling to this link until the new page showed: what came into view, prefetches and the page itself", bytes(na), bytes(nb), kb, "lower", NOISE["nav-kb"], both(!!na?.capped, !!nb?.capped)),
-    ]));
-  }
-  // Scored only when both lanes ran it: a lane skipped for time must not hand the other a free round.
-  if (a.repeat && b.repeat && !a.repeat.skipped && !b.repeat.skipped) {
-    const ra = a.repeat, rb = b.repeat;
-    // The cap only when the reload never finished; a finished reload without an LCP entry is unmeasured (no points).
-    const repeatLcp = (r: typeof ra) => (r.capped && r.load === null ? { value: r.capMs, censored: true } : { value: r.lcp, censored: false });
-    const la = repeatLcp(ra), lb = repeatLcp(rb);
-    const done = (r: typeof ra) => (r && !r.skipped ? r : null);
-    out.push(round("repeat", "Repeat visit", "What a returning visitor pays: the first page again, HTTP cache on", [
-      row("repeat-lcp", "Repeat LCP", "The main content on screen again, from the cache where the site allows it", la.value, lb.value, ms, "lower", NOISE["repeat-lcp"], both(la.censored, lb.censored)),
-      row("repeat-kb", "Re-downloaded", "Bytes that still crossed the network (revalidations and anything not cacheable)", done(ra)?.net.kb ?? null, done(rb)?.net.kb ?? null, kb, "lower", NOISE["repeat-kb"]),
-      row("repeat-requests", "Network requests", "Requests that left the browser, 304 revalidations included (the rest came from cache)", done(ra)?.net.network ?? null, done(rb)?.net.network ?? null, count, "lower", NOISE["repeat-requests"]),
-    ]));
+      row("nav-content", "Tap → content", "From the tap to the new page's heading on screen", ca.value, cb.value, ms, "lower", NOISE["nav-content"], both(ca.censored, cb.censored), tapWait),
+      row("nav-image", "Tap → main image", "From the tap to the new page's largest visible image loaded, decoded and painted", ia.value, ib.value, ms, "lower", NOISE["nav-image"], both(ia.censored, ib.censored), tapWait),
+      row("nav-kb", "Downloaded for it", "Bytes over the wire from scrolling to this link until the new page showed: what came into view, prefetches and the page itself", bytes(na), bytes(nb), kb, "lower", NOISE["nav-kb"], both(!!na?.capped, !!nb?.capped), tapWait),
+    ], "visit", tapWait.a || tapWait.b));
   }
   return out;
 }

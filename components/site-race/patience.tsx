@@ -40,7 +40,7 @@ export function PatienceWhy({ capMs }: { capMs: number }) {
 export function PatienceMethod({ capMs }: { capMs: number }) {
   return (
     <>
-      Each step stops at {capSeconds(capMs)}, a visitor&apos;s patience: 10 seconds is about the limit for keeping a user&apos;s attention
+      No step waits longer than {capSeconds(capMs)}, a visitor&apos;s patience: 10 seconds is about the limit for keeping a user&apos;s attention
       (<Source source={PATIENCE_SOURCES.limits} />), and a 10-second delay will often make users leave a site (<Source source={PATIENCE_SOURCES.website} />).
       {" "}On phones, 53% of visits are likely to be abandoned if pages take longer than 3 seconds to load (<Source source={PATIENCE_SOURCES.mobile} />);
       a page still loading then scores &ldquo;&gt; {capSeconds(capMs)}&rdquo;, and its lane shows the full weight it still had to download.
