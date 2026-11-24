@@ -256,7 +256,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       </div>
 
       <details className={styles.settings}>
-        <summary>How the race stays fair <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label}</span></summary>
+        <summary>How the race stays fair</summary>
         <p className={styles.fairNote}>{FAIRNESS_NOTE}</p>
       </details>
 
