@@ -44,10 +44,10 @@ const story: { tone: "before" | "after" | "proof"; icon: LucideIcon; label: stri
 
 // The order the Worker runs it (apps/site-race-api/src/navigation.ts): cold load, repeat view, then the taps.
 const visit: { icon: LucideIcon; title: string; who: string; scored: string[] | null; limit: string }[] = [
-  { icon: House, title: "Home page, cold", who: "A first visit: empty cache, no open connections.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: "Until loaded and quiet · 30 s max" },
-  { icon: RotateCcw, title: "Home page again", who: "A returning visitor, with the cache on.", scored: ["Repeat visit"], limit: "10 s max" },
-  { icon: Hand, title: "Tap → pump catalogue", who: "Scroll to the link, tap it, wait for the page.", scored: null, limit: "20 s max" },
-  { icon: Hand, title: "Tap → HR40-5RZ page", who: "Scroll to the model card, tap it.", scored: ["Next page"], limit: "20 s max" },
+  { icon: House, title: "Home page, cold", who: "First visit, nothing cached.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: "30 s max" },
+  { icon: RotateCcw, title: "Home page again", who: "Returning visitor, cache on.", scored: ["Repeat visit"], limit: "10 s max" },
+  { icon: Hand, title: "Tap to a list page", who: "A tap on a link.", scored: null, limit: "20 s max" },
+  { icon: Hand, title: "Tap to a product page", who: "A tap on a link.", scored: ["Next page"], limit: "20 s max" },
 ];
 
 const changes: { icon: LucideIcon; title: string; body: string; how: string; shows: Shows[] }[] = [
@@ -125,14 +125,14 @@ const fullMethod: ReactNode[] = [
   <><b>Between steps</b> the throttle is lifted while the previous page finishes downloading; each step then runs under the full profile.</>,
   <><b>A tap</b> is touchstart, 100 ms on the glass, then touchend (desktop: 300 ms of hover, then a click). Bytes count from the scroll to the link, times from the tap.</>,
   <><b>“Main image”</b> means the new page&apos;s largest visible image is loaded, decoded and painted.</>,
-  <><b>The catalogue tap</b> is shown under each lane; the Next page round scores the tap to HR40-5RZ.</>,
+  <><b>The first tap</b> is shown under each lane; the Next page round scores the second one.</>,
   <><b>Speed Index</b> comes from the screencast frames, computed the way speedline does it.</>,
   <><b>Requests still downloading</b> when a lane stops are drawn hatched on the waterfall.</>,
 ];
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: the home page cold, a return visit, then taps to the catalogue and a model page, in one race.";
+  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: the home page cold, a return visit, then two taps through the site, in one race.";
 
 export const metadata: Metadata = {
   title,
@@ -193,7 +193,7 @@ export default function Page() {
                         <ul className={styles.chips}>{scored.map((round) => <li key={round}><b>{round}</b></li>)}</ul>
                       </div>
                     ) : (
-                      <p className={styles.unscored}>Shown under each lane, not scored</p>
+                      <p className={styles.unscored}>Shown, not scored</p>
                     )}
                     <p className={styles.stepLimit}><Timer size={13} aria-hidden="true" /> {limit}</p>
                   </div>

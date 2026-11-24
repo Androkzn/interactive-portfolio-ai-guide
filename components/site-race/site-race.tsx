@@ -28,7 +28,7 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
   revisiting: "Repeat visit · home again, cache on",
-  navigating: "Tapping through · catalogue → HR40-5RZ",
+  navigating: "Tapping through the site",
   done: "Done",
   failed: "Did not finish",
 };
@@ -36,7 +36,7 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
   mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
   desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
-const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (home, catalogue, model page), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, a tap to the catalogue, a tap to a model page. Before each step the previous page may finish downloading, so every step measures itself.";
+const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (every page of the visit), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, then two taps through the site. Before each step the previous page may finish downloading, so every step measures itself.";
 /**
  * The race's plan as the visitor sees it: one step per stage of the visit. A step is done when
  * both lanes have moved past it, so the bar always shows the slower lane's progress.
@@ -558,7 +558,7 @@ function Confetti({ tone }: { tone: string }) {
   );
 }
 
-const STEP_NAME: Record<string, string> = { "/pumps/": "Catalogue", "/boom-pumps/hr40-5rz/": "HR40-5RZ page", "/boom-pumps/hr21-4zr/": "HR21-4ZR page" };
+const STEP_NAME: Record<string, string> = { "/pumps/": "List page", "/boom-pumps/hr40-5rz/": "Product page", "/boom-pumps/hr21-4zr/": "Product page" };
 export const stepName = (to: string) => STEP_NAME[to] ?? to;
 
 /** The journey race at a glance, in the order it runs: the home load, the return visit, then each tap. */
