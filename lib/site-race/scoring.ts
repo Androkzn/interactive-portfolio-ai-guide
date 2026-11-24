@@ -46,22 +46,27 @@ const cls = (v: number) => v.toFixed(3);
  * within either is a draw. Calibrated from live races (see NOISE_SOURCE).
  */
 export const NOISE: Record<string, { abs: number; rel: number }> = {
-  ttfb: { abs: 150, rel: 0.1 },
-  fcp: { abs: 300, rel: 0.1 },
-  lcp: { abs: 400, rel: 0.1 },
-  load: { abs: 400, rel: 0.1 },
-  tbt: { abs: 200, rel: 0.2 },
+  // Timings: |a − b| between two lanes/runs of the same build, v2 Worker, 2026-11-24.
+  // 15 A/A races (same build on two hosts) + 5 A/B races, 110 same-site pairs (66 mobile, 44 desktop).
+  // Mobile p80/p90: TTFB 14/35 ms · FCP 592/924 ms · LCP 172/252 ms (7%/11%) · load 247/297 ms (7%/9%) · TBT 292/801 ms.
+  // Desktop p80/p90: TTFB 18/28 · FCP 188/256 · LCP 188/348 · load 133/297 · TBT 40/40 ms.
+  ttfb: { abs: 35, rel: 0.1 },
+  fcp: { abs: 600, rel: 0.2 },
+  lcp: { abs: 250, rel: 0.1 },
+  load: { abs: 300, rel: 0.1 },
+  tbt: { abs: 300, rel: 0.4 },
   cls: { abs: 0.02, rel: 0.1 },
-  total: { abs: 50, rel: 0.05 },
-  images: { abs: 50, rel: 0.05 },
-  js: { abs: 10, rel: 0.05 },
-  requests: { abs: 2, rel: 0.05 },
+  // Bytes are deterministic now (p90 of same-site gaps < 1 KB, 0.3%); small floors only.
+  total: { abs: 10, rel: 0.02 },
+  images: { abs: 10, rel: 0.02 },
+  js: { abs: 5, rel: 0.02 },
+  requests: { abs: 1, rel: 0 },
   share: { abs: 0.02, rel: 0 },
   "edge-html": { abs: 15, rel: 0.1 },
-  html: { abs: 5, rel: 0.05 },
+  html: { abs: 5, rel: 0.02 },
   words: { abs: 10, rel: 0.05 },
 };
-export const NOISE_SOURCE = "Same-site spread across live races on 2026-11-24 (11 races with the v1 Worker, A/A and A/B races with the v2 Worker).";
+export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
 
 /**
  * Who wins one metric, or a draw when the gap is within single-run noise (`floor` absolute,
