@@ -3,7 +3,7 @@ import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
 import { MEASURE_VERSION, RACE_CAPS } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes as bytesOf, type Wire } from "./bytes";
 import { afterFirstPage, journeyFor, navTargetFor, NetWindow, visitSnapshot, type VisitSoFar } from "./navigation";
-import { computeTti, totalBlockingTime, type Req, type Task } from "./tti";
+import { computeTti, QUIET_WINDOW_MS, totalBlockingTime, type Req, type Task } from "./tti";
 import type { FullPageWeight, HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceLink, RaceProfile, ResourceBucket, ResourceType, ResultStage, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
 type Emit = (event: RaceEvent) => Promise<void>;
@@ -368,9 +368,15 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
           if (tti !== null) break;
         }
       }
-      if (Date.now() - startedAt > LANE_CAP_MS) { capped = true; break; }
+      // The patience cap bounds when the page becomes usable, not Lighthouse's confirmation of it:
+      // TTI is only known after a 5 s quiet window, so a page that loaded within the cap is watched
+      // for one more window past it. Any TTI found that way began before the cap.
+      const loadedInTime = last?.load != null && last.load <= LANE_CAP_MS;
+      if (Date.now() - startedAt > LANE_CAP_MS + (loadedInTime ? QUIET_WINDOW_MS : 0)) { capped = true; break; }
     }
     if (signal.aborted) return null;
+    // Interactive only after the visitor's patience ran out: that is the cap too.
+    if (tti !== null && tti > LANE_CAP_MS) { tti = null; capped = true; }
     const stoppedAt = Date.now() - navWall;
 
     if (capped) {
