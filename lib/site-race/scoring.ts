@@ -19,7 +19,7 @@ export type MetricRow = {
 };
 
 export type Round = {
-  id: "speed" | "smoothness" | "weight" | "edge" | "seo";
+  id: "speed" | "smoothness" | "weight" | "edge" | "seo" | "navigation" | "repeat";
   title: string;
   subtitle: string;
   rows: MetricRow[];
@@ -65,6 +65,14 @@ export const NOISE: Record<string, { abs: number; rel: number }> = {
   "edge-html": { abs: 15, rel: 0.1 },
   html: { abs: 5, rel: 0.02 },
   words: { abs: 10, rel: 0.05 },
+  // Second page and repeat visit: not calibrated by A/A runs yet; set like LCP (paint-bound timings)
+  // and like Weight (bytes), so a gap must clear the same noise as the first-load rows.
+  "nav-content": { abs: 250, rel: 0.1 },
+  "nav-image": { abs: 250, rel: 0.1 },
+  "nav-kb": { abs: 10, rel: 0.02 },
+  "repeat-lcp": { abs: 250, rel: 0.1 },
+  "repeat-kb": { abs: 10, rel: 0.02 },
+  "repeat-requests": { abs: 1, rel: 0 },
 };
 export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
 
@@ -104,13 +112,15 @@ export function lcpOrCap(m: LaneMetrics): { value: number | null; censored: bool
 export function loadOrCap(m: LaneMetrics): { value: number | null; censored: boolean } {
   if (m.timing.load !== null) return { value: m.timing.load, censored: false };
   if (m.capped) return { value: m.capMs ?? 30_000, censored: true };
+  // Journey: the visitor tapped before the load event, so it is "later than the tap".
+  if (m.tappedAt !== undefined) return { value: m.tappedAt, censored: true };
   return { value: null, censored: false };
 }
 
 /** v2 lanes report TTI; one stopped at the cap without it has TBT counted only up to the cap. */
-export const tbtCensored = (m: LaneMetrics) => m.capped && m.timing.tti === null;
+export const tbtCensored = (m: LaneMetrics) => (m.capped || m.tappedAt !== undefined) && m.timing.tti === null;
 /** Still downloading when stopped: byte and request counts are lower bounds. */
-export const weightCensored = (m: LaneMetrics) => m.capped && m.timing.load === null;
+export const weightCensored = (m: LaneMetrics) => (m.capped || m.tappedAt !== undefined) && m.timing.load === null;
 
 export function formatValue(row: MetricRow, lane: LaneId): string {
   const value = row[lane];
@@ -163,6 +173,7 @@ export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
       row("words", "Content in the HTML", "Words readable before any JavaScript runs (SSG signal)", a.document.wordsWithoutJs, b.document.wordsWithoutJs, count, "higher"),
     ]),
   ];
+  rounds.push(...journeyRounds(a, b));
   const roundsWon = { a: 0, b: 0 };
   const metricWins = { a: 0, b: 0 };
   for (const r of rounds) {
@@ -173,4 +184,38 @@ export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
   let winner: LaneId | "tie" = roundsWon.a === roundsWon.b ? "tie" : roundsWon.a > roundsWon.b ? "a" : "b";
   if (winner === "tie" && metricWins.a !== metricWins.b) winner = metricWins.a > metricWins.b ? "a" : "b";
   return { rounds, roundsWon, metricWins, winner };
+}
+
+/** A second-page or repeat-visit timing: the value, or the cap as a lower bound when it was never reached. */
+export function stepOrCap(value: number | null, step: { skipped: string | null; capped: boolean; capMs: number } | null | undefined): { value: number | null; censored: boolean } {
+  if (!step) return { value: null, censored: false };
+  if (value !== null && !step.skipped) return { value, censored: false };
+  return { value: step.capMs, censored: true };
+}
+
+/** Rounds for what the visitor does after the first page; only races that measured it have them. */
+export function journeyRounds(a: LaneMetrics, b: LaneMetrics): Round[] {
+  const out: Round[] = [];
+  if (a.navigation !== undefined || b.navigation !== undefined) {
+    const na = a.navigation, nb = b.navigation;
+    const ca = stepOrCap(na?.content ?? null, na), cb = stepOrCap(nb?.content ?? null, nb);
+    const ia = stepOrCap(na?.image ?? null, na), ib = stepOrCap(nb?.image ?? null, nb);
+    const bytes = (n: typeof na) => (n && !n.skipped ? n.net.kb : null);
+    out.push(round("navigation", "Next page", "Opening a second page: tap a link, wait for the new page", [
+      row("nav-content", "Tap → content", "From the tap to the new page's heading on screen", ca.value, cb.value, ms, "lower", NOISE["nav-content"], both(ca.censored, cb.censored)),
+      row("nav-image", "Tap → main image", "From the tap to the new page's largest visible image loaded, decoded and painted", ia.value, ib.value, ms, "lower", NOISE["nav-image"], both(ia.censored, ib.censored)),
+      row("nav-kb", "Downloaded for it", "Bytes over the wire from the touch (or hover) on, prefetches included", bytes(na), bytes(nb), kb, "lower", NOISE["nav-kb"], both(!!na?.capped, !!nb?.capped)),
+    ]));
+  }
+  if (a.repeat !== undefined || b.repeat !== undefined) {
+    const ra = a.repeat, rb = b.repeat;
+    const la = stepOrCap(ra?.lcp ?? null, ra), lb = stepOrCap(rb?.lcp ?? null, rb);
+    const done = (r: typeof ra) => (r && !r.skipped ? r : null);
+    out.push(round("repeat", "Repeat visit", "What a returning visitor pays: the first page again, HTTP cache on", [
+      row("repeat-lcp", "Repeat LCP", "The main content on screen again, from the cache where the site allows it", la.value, lb.value, ms, "lower", NOISE["repeat-lcp"], both(la.censored, lb.censored)),
+      row("repeat-kb", "Re-downloaded", "Bytes that still crossed the network (revalidations and anything not cacheable)", done(ra)?.net.kb ?? null, done(rb)?.net.kb ?? null, kb, "lower", NOISE["repeat-kb"]),
+      row("repeat-requests", "Network requests", "Requests that left the browser, 304 revalidations included (the rest came from cache)", done(ra)?.net.network ?? null, done(rb)?.net.network ?? null, count, "lower", NOISE["repeat-requests"]),
+    ]));
+  }
+  return out;
 }

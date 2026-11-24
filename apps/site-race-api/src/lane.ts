@@ -2,6 +2,7 @@ import puppeteer from "@cloudflare/puppeteer";
 import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
 import { MEASURE_VERSION } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes as bytesOf, type Wire } from "./bytes";
+import { afterFirstPage, navTargetFor, readyToTap } from "./navigation";
 import { computeTti, totalBlockingTime, type Req, type Task } from "./tti";
 import type { HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceProfile, ResourceBucket, ResourceType, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
@@ -27,6 +28,8 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
 const NAV_TIMEOUT_MS = 30_000;
 const SETTLE_MS = 1_200;
 export const LANE_CAP_MS = 30_000;
+/** The repeat visit runs only for a lane that reached the tap within this long, to keep the race short. */
+const REPEAT_BUDGET_MS = 22_000;
 /** Unthrottled warm-up load per lane, in a discarded browser context, before the timed load. */
 const WARM_TIMEOUT_MS = 10_000;
 const FRAME_INTERVAL_MS = 200;
@@ -289,6 +292,9 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     // that is a result too.
     let tti: number | null = null;
     let settlingShown = false;
+    // The journey: on a page with a shared link, the visitor taps it once the LCP has painted.
+    const journey = navTargetFor(url) !== null;
+    let tapped = false;
     let last: Snapshot | null = null;
     while (!signal.aborted) {
       await Promise.race([navigation, new Promise((resolve) => setTimeout(resolve, 250))]);
@@ -301,6 +307,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
         await emitMark("fcp", snap.fcp);
         await emitMark("dcl", snap.dcl);
         await emitMark("load", snap.load);
+        if (journey && committed && snap.lcp !== null && await readyToTap(page, url, LCP_PENDING)) { tapped = true; break; }
         if (committed && snap.load !== null) {
           // After load every image in the DOM has loaded: the LCP is final unless a bigger one
           // is still coming into the viewport. Show it now rather than when the lane stops.
@@ -339,6 +346,10 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     const inspect = (await page.evaluate(INSPECT)) as Inspect;
     const finalUrl = page.url();
     for (const [id, r] of responses) r.bytes = bytesNow(id, r);
+    // The first page's own requests, frozen at the tap: what the second page fetches is counted apart.
+    const firstPage = [...responses.values()].map((r) => ({ ...r }));
+    const firstRequests = requestCount();
+    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { tapped, repeat: Date.now() - startedAt < REPEAT_BUDGET_MS }, signal) : null;
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
@@ -349,7 +360,8 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
       // …and requested but still waiting for a response (queued behind the bandwidth).
       ...[...requested.entries()].filter(([id]) => !responses.has(id) && !failed.has(id)).map(([id, q]) => ({ url: q.url, type: q.type, start: startOf(id), bytes: 0 })),
     ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
-    const metrics = await assemble(url, finalUrl, snap, inspect, [...responses.values()], capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: requestCount() });
+    const metrics = await assemble(url, finalUrl, snap, inspect, firstPage, capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: firstRequests });
+    if (looks) Object.assign(metrics, { ...looks, ...(tapped ? { tappedAt: observedMs } : {}) });
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
   } catch (error) {

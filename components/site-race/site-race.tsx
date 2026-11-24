@@ -28,6 +28,8 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   loading: "Loading",
   settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
+  revisiting: "Repeat visit · same page again, cache on",
+  navigating: "Opening a second page",
   done: "Done",
   failed: "Did not finish",
 };

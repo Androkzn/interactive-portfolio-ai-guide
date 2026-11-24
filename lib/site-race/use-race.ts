@@ -77,7 +77,7 @@ function reducer(state: RaceState, action: Action): RaceState {
         case "phase":
           return updateLane(state, event.lane, (lane) => ({
             phase: event.phase,
-            phaseDetail: event.detail ?? (event.phase === "inspecting" || event.phase === "done" ? lane.phaseDetail : null),
+            phaseDetail: event.detail ?? (event.phase === "inspecting" || event.phase === "revisiting" || event.phase === "navigating" || event.phase === "done" ? lane.phaseDetail : null),
             ...(event.phase === "failed" ? { error: event.detail ?? "Failed" } : {}),
           }));
         case "origin":
