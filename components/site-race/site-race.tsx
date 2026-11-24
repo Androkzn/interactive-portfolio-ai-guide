@@ -36,6 +36,13 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
+/** Once the arena moves on from a race opened by link, a reload should not bring that race back. */
+function dropReportParam() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("report")) return;
+  url.searchParams.delete("report");
+  window.history.replaceState(null, "", url);
+}
 
 export type SiteRaceProps = {
   page: RacePageId;
@@ -134,6 +141,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setScrub(null);
     setReplaying(false);
     setNotice(null);
+    dropReportParam();
     show(idleRace(profile));
   }, [page, stage, profile, show]);
 
@@ -157,6 +165,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setNotice(null);
     setScrub(null);
     setReplaying(false);
+    dropReportParam();
     animateReveal.current = true;
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
@@ -173,6 +182,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setNotice(null);
     setScrub(null);
     setReplaying(false);
+    dropReportParam();
     animateReveal.current = true;
     void runReplay(recordingFor(page, profile));
   };
@@ -401,6 +411,29 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   );
 }
 
+/** Minimum gap, % of the track, between two labels in the same row before the later one is dropped. */
+const FLAG_GAP = 9;
+
+/**
+ * Milestone flags for one lane. A fast lane's milestones bunch up within a second on a
+ * 30-second track, so labels alternate above and below the bar, the finish line (LCP)
+ * always keeps its label, and any other label too close to one already placed is
+ * dropped — its line stays, and the value is in the milestone tiles above.
+ */
+function trackFlags(lane: LaneState, maxT: number) {
+  const flags = MARKS.flatMap(({ name, label }, index) => {
+    const t = lane.marks[name];
+    return t === undefined ? [] : [{ name, label, low: index % 2 === 1, x: Math.min(100, (t / maxT) * 100) }];
+  });
+  const placed: Record<"top" | "low", number[]> = { top: [], low: [] };
+  const labelled = new Set<MarkName>();
+  for (const flag of [...flags].sort((p, q) => Number(q.name === "lcp") - Number(p.name === "lcp"))) {
+    const row = placed[flag.low ? "low" : "top"];
+    if (row.every((x) => Math.abs(x - flag.x) >= FLAG_GAP)) { row.push(flag.x); labelled.add(flag.name); }
+  }
+  return flags.map((flag) => ({ ...flag, labelled: labelled.has(flag.name) }));
+}
+
 function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: number; maxT: number; scrub: number | null; identity: (id: LaneId) => LaneIdentity }) {
   return (
     <div className={styles.track} aria-hidden="true">
@@ -413,11 +446,9 @@ function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: n
             <span className={styles.trackName}>{who.role}</span>
             <div className={styles.trackBar}>
               <div className={styles.trackFill} style={{ width: `${Math.min(100, (clock / maxT) * 100)}%` }} />
-              {MARKS.map(({ name, label }, index) => {
-                const t = lane.marks[name];
-                if (t === undefined) return null;
-                return <span key={name} className={`${styles.flag} ${index % 2 ? styles.flagLow : ""}`} style={{ left: `${Math.min(100, (t / maxT) * 100)}%` }}><i />{label}</span>;
-              })}
+              {trackFlags(lane, maxT).map((flag) => (
+                <span key={flag.name} className={`${styles.flag} ${flag.low ? styles.flagLow : ""}`} style={{ left: `${flag.x}%` }}><i />{flag.labelled ? flag.label : null}</span>
+              ))}
             </div>
           </div>
         );
