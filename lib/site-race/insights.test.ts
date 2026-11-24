@@ -1,8 +1,8 @@
-import { OWN_HOST_PATTERN } from "../../packages/contracts/src/site-race";
+import { OWN_HOST_PATTERN, RACE_PRESETS } from "../../packages/contracts/src/site-race";
 import { describe, expect, it } from "vitest";
 import { band, CURVES, logNormalScore, performanceScore } from "./lighthouse-score";
 import { emptyHistogram, frameProgress, histogram, speedIndex, visuallyComplete } from "./visual-progress";
-import { latestStage, median, runFor, stageById, stageForUrl, stageMetrics, stages } from "./journey";
+import { featuredStage, latestStage, median, raceUrl, runFor, stageById, stageForUrl, stageMetrics, stages, type StageId } from "./journey";
 
 describe("logNormalScore", () => {
   const lcp = CURVES.mobile.lcp;
@@ -76,6 +76,31 @@ describe("journey", () => {
     expect(stageForUrl(`${latestStage.url}/boom-pumps/hr40-5rz/`)?.id).toBe(latestStage.id);
     expect(stageForUrl("https://example.com/")).toBeNull();
     expect(stageById("original").short).toBe("Original");
+    for (const stage of stages) expect(stageForUrl(`${stage.url}/pumps/`)?.id, stage.url).toBe(stage.id);
+  });
+  it("labels each deployment the race loads with the build it serves", () => {
+    const deployments: [string, StageId][] = [
+      ["https://hrconcretepumps.pages.dev/", "original"],
+      ["https://8a5d5231.hr-concrete-pumps-next.pages.dev/boom-pumps/hr40-5rz/", "prefetch"],
+      ["https://92ecff30.hr-concrete-pumps-next.pages.dev/", "tuned"],
+      ["https://eeb1e9f7.hr-concrete-pumps-next.pages.dev/", "deferred"],
+      ["https://124fd5ad.hr-concrete-pumps-next.pages.dev/", "compile"],
+      // The production alias (the "next" preset) moves with every deploy: it is the newest Pages build.
+      [RACE_PRESETS.next.url, "compile"],
+      ["https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev/", "edge"],
+    ];
+    for (const [url, id] of deployments) expect(stageForUrl(url)?.id, url).toBe(id);
+  });
+  it("races the newest Pages build on the live alias and every other stage on its own deployment", () => {
+    const alias = new URL(RACE_PRESETS.next.url);
+    expect(featuredStage.id).toBe("compile");
+    expect(latestStage.id).toBe("edge");
+    expect(raceUrl(featuredStage.id)).toBe(alias.origin);
+    for (const stage of stages) {
+      // No stage claims the moving alias as its own URL.
+      expect(new URL(stage.url).host).not.toBe(alias.host);
+      if (stage.id !== featuredStage.id) expect(raceUrl(stage.id)).toBe(stage.url);
+    }
   });
   it("matches report runs to stages", () => {
     expect(runFor("original")?.base).toBe("https://hrconcretepumps.pages.dev");

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { newReportId } from "../../apps/site-race-api/src/report";
+import { featuredStage } from "./journey";
 import { parseRaceLog, REPORT_ID, reportLink, setupOf } from "./reports";
 import { foldRaceLog } from "./use-race";
 
@@ -14,6 +15,12 @@ describe("saved reports", () => {
     expect(state.lanes.a.metrics && state.lanes.b.metrics).toBeTruthy();
     expect(state.lanes.a.frames.length).toBeGreaterThan(5);
     expect(setupOf(state)).toEqual({ page: "model", stage: "prefetch", profile: "mobile" });
+  });
+
+  it("give a race against the production alias to the stage the race runs by default", () => {
+    const state = foldRaceLog(log("recorded-mobile-home"), "report");
+    expect(state.lanes.b.info?.preset).toBe("next");
+    expect(setupOf(state)).toEqual({ page: "home", stage: featuredStage.id, profile: "mobile" });
   });
 
   it("carry the report id the Worker saved them under", () => {
