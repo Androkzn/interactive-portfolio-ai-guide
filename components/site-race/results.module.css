@@ -111,24 +111,33 @@
 .facts li { position: relative; padding-left: 16px; }
 .facts li::before { content: ""; position: absolute; top: .62em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: #5d6058; }
 .facts b { color: #f5f4ee; }
-.ctaWrap { display: grid; justify-items: end; gap: 8px; margin: 0; color: #a9aca2; font-size: var(--text-caption); }
+.ctaWrap { display: grid; justify-items: end; gap: 12px; margin: 0; color: #f5f4ee; font-size: clamp(18px, 1.8vw, 22px); font-weight: 800; letter-spacing: -.01em; }
 .cta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  color: #141316;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 16px 30px;
+  color: #111;
+  font-size: 18px;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
-  border-radius: 99px;
-  background: linear-gradient(135deg, #b9aeff, #9085e9);
-  box-shadow: 0 8px 24px #9085e940;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #d4ff76, #a8f07a);
+  box-shadow: 0 0 0 6px #d4ff761f, 0 12px 32px #d4ff7640;
   transition: transform .2s ease, box-shadow .2s ease;
+  animation: cta-glow 2.4s ease-in-out infinite;
 }
-.cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px #9085e966; }
-.cta:focus-visible { outline: 2px solid #d9d7ff; outline-offset: 3px; }
-.cta svg { animation: nudge 1.6s ease-in-out 3 2.4s; }
+.cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 8px #d4ff762e, 0 16px 38px #d4ff7660; }
+.cta:focus-visible { outline: 2px solid #f5ffd9; outline-offset: 3px; }
+@keyframes cta-glow { 50% { box-shadow: 0 0 0 10px #d4ff760f, 0 12px 32px #d4ff7655; } }
+.cta svg { animation: cta-arrow 1.1s ease-in-out infinite; }
+@keyframes cta-arrow { 50% { transform: translateY(5px); } }
+/* Header row: the story on the left, the call to action in the top right corner. */
+.top { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(18px, 3vw, 40px); align-items: start; }
+.top .ctaWrap { padding-top: 4px; }
 
 /* ── Motion: paused until the block scrolls into view (data-play, set by results.tsx). ── */
 .bar i { animation: fill calc(var(--race) * var(--w)) linear both; animation-delay: var(--start); }
@@ -142,7 +151,7 @@
 @keyframes pulse { 50% { box-shadow: 0 0 0 8px #5fd35f00; } }
 @keyframes nudge { 50% { transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) {
-  .kicker i, .bar i, .value, .gain, .cta svg { animation: none; }
+  .kicker i, .bar i, .value, .gain, .cta, .cta svg { animation: none; }
 }
 
 /* Phone: the gain moves up next to the label, the bars take the full width under them. */
@@ -154,5 +163,7 @@
   .row + .row::before { right: 12px; left: 12px; }
   .gain strong, .rowHero .gain strong { font-size: 1.85rem; }
   .foot { padding-inline: 0; }
-  .ctaWrap { justify-items: start; }
+  .top { grid-template-columns: 1fr; }
+  .ctaWrap { justify-items: stretch; }
+  .cta { width: 100%; }
 }

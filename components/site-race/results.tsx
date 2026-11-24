@@ -89,14 +89,23 @@ export function RaceResults() {
   return (
     <section className={styles.results} aria-labelledby="race-results-title">
       <div className={styles.glow} aria-hidden="true" />
-      <p className={styles.kicker}><i aria-hidden="true" />The result · phone on slow 4G</p>
-      <h2 id="race-results-title" className={styles.title}>
-        Same site, same content.<br /><span>The product page: from {productBeforeText} to {Number(((model.after.lcp ?? 0) / 1000).toFixed(1))} s.</span>
-      </h2>
-      <p className={styles.lede}>
-        Before: the original site, never tuned. After: rebuilt in Next.js, with images sized for the screen, the main photo loaded
-        first, less work at start, and the next page fetched while the visitor&apos;s finger is still on the link.
-      </p>
+      <div className={styles.top}>
+        <div>
+        <p className={styles.kicker}><i aria-hidden="true" />The result · phone on slow 4G</p>
+        <h2 id="race-results-title" className={styles.title}>
+          Same site, same content.<br /><span>The product page: from {productBeforeText} to {Number(((model.after.lcp ?? 0) / 1000).toFixed(1))}&nbsp;s.</span>
+        </h2>
+        <p className={styles.lede}>
+          Before: the original site, never tuned. After: rebuilt in Next.js, with images sized for the screen, the main photo loaded
+          first, less work at start, and the next page fetched while the visitor&apos;s finger is still on the link.
+        </p>
+        </div>
+        {/* The one action on this block, up where the eye lands first. */}
+        <p className={styles.ctaWrap}>
+          <span>Don&apos;t take our word for it.</span>
+          <a className={styles.cta} href="#race">Race it yourself <ArrowDown size={18} aria-hidden="true" /></a>
+        </p>
+      </div>
 
       <div className={styles.board}>
         <div className={styles.head}>
@@ -117,10 +126,6 @@ export function RaceResults() {
           <li>On a desktop, the product page downloads <b>{mb(desktopModel.before.totalKb)}&nbsp;MB</b> on the original and <b>{mb(desktopModel.after.totalKb)}&nbsp;MB</b> here.</li>
           <li>Where the original stays close: it runs a little less JavaScript, so on pages without heavy images its blocking time can be lower. That is React&apos;s start-up cost, and the race shows it.</li>
         </ul>
-        <p className={styles.ctaWrap}>
-          <span>Don&apos;t take our word for it.</span>
-          <a className={styles.cta} href="#race">Race it yourself <ArrowDown size={16} aria-hidden="true" /></a>
-        </p>
       </footer>
     </section>
   );
