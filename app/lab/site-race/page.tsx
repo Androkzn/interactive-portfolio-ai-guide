@@ -1,23 +1,138 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, FlaskConical } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Archive, ArrowLeft, ArrowUp, ArrowUpRight, Braces, ChevronDown, Cpu, Dices, Equal, EyeOff,
+  FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Monitor, Rocket,
+  RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Users, Wifi, Zap,
+} from "lucide-react";
 import { LabExperience } from "@/components/site-race/lab-experience";
-import { skillMap } from "@/lib/site-race/playbook";
+import resultsData from "@/lib/site-race/results-data.json";
 import { contactUrl, emailUrl } from "@/lib/site-links";
 import styles from "@/components/site-race/lab-page.module.css";
 
-const changes: { what: string; how: string; shows: string }[] = [
-  { what: "Images sized for the screen", how: "Every photo and product render re-encoded as AVIF and WebP in several widths, so a phone gets a phone-sized file. A 1.2 MB render becomes about 40 KB.", shows: "data downloaded, main content on screen, page fully loaded." },
-  { what: "Main photo first", how: "The hero is preloaded at high priority; scenes and images below the fold wait until the visitor scrolls near them, so nothing competes with it on a slow link.", shows: "main content on screen (LCP)." },
-  { what: "Less work at start", how: "The home page's sections render on the server, their animation code loads only near the viewport, and the slider spreads its work out.", shows: "blocking time and the scorecard." },
-  { what: "The next page before the tap lands", how: "When a finger touches a link, the model page's data and its photo start loading, so the tap opens a page that is mostly there.", shows: "the model page after the tap." },
-  { what: "Files cached for a year", how: "Scripts, styles, fonts and images carry a hash of their content in the name, so the CDN and the browser keep them without asking again.", shows: "the edge cache round." },
-  { what: "Pages built ahead of time", how: "Every page is pre-rendered HTML on Cloudflare's edge, readable without JavaScript.", shows: "time to first byte and the search round." },
+// Medians of repeated races (scripts/site-race/build-results.mjs): the same numbers as the result block at the top.
+// A rebuild of that file may drop a page, so every read tolerates a missing cell.
+type Side = Record<string, number | null>;
+const cells = resultsData.cells as unknown as Record<string, { races: number; before: Side; after: Side } | undefined>;
+const home = cells["home/mobile"];
+const races = Math.min(...["home/mobile", "model/mobile"].map((key) => cells[key]?.races ?? Infinity));
+const mb = (kb: number | null | undefined) => (kb == null ? null : `${(kb / 1024).toFixed(1)} MB`);
+const stat = (value: string | null, note: string) => (value ? { value, note } : undefined);
+
+/** Where a change shows up: a round of the race's scoreboard and, optionally, the row inside it. */
+type Shows = { round: string; row?: string };
+
+const story: { tone: "before" | "after" | "proof"; icon: LucideIcon; label: string; title: string; body: string; stat?: { value: string; note: string }; cta?: boolean }[] = [
+  {
+    tone: "before", icon: Snail, label: "Before", title: "The original site",
+    body: "Live and never tuned for speed: full-size images everywhere and no loading priorities, so the main photo queues behind everything else.",
+    stat: stat(mb(home?.before.totalKb), "for the home page on a phone"),
+  },
+  {
+    tone: "after", icon: Rocket, label: "After", title: "The same site in Next.js 16",
+    body: "The same pages and content in both languages, rebuilt and optimized. Nothing was removed to make it fast.",
+    stat: stat(mb(home?.after.totalKb), "for the same page"),
+  },
+  {
+    tone: "proof", icon: Flag, label: "The proof", title: "One live race",
+    body: "Two real Chrome browsers on Cloudflare make the same visit with the same phone and connection. You watch both screens.",
+    cta: true,
+  },
+];
+
+// The order the Worker runs it (apps/site-race-api/src/navigation.ts): cold load, repeat view, then the taps.
+const visit: { icon: LucideIcon; title: string; who: string; scored: string[] | null; limit: string }[] = [
+  { icon: House, title: "Home page, cold", who: "A first visit: empty cache, no open connections.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: "Until loaded and quiet · 30 s max" },
+  { icon: RotateCcw, title: "Home page again", who: "A returning visitor, with the cache on.", scored: ["Repeat visit"], limit: "10 s max" },
+  { icon: Hand, title: "Tap → pump catalogue", who: "Scroll to the link, tap it, wait for the page.", scored: null, limit: "20 s max" },
+  { icon: Hand, title: "Tap → HR40-5RZ page", who: "Scroll to the model card, tap it.", scored: ["Next page"], limit: "20 s max" },
+];
+
+const changes: { icon: LucideIcon; title: string; body: string; how: string; shows: Shows[] }[] = [
+  {
+    icon: ImageDown, title: "Images sized for the screen",
+    body: "Renders and photos re-encoded as AVIF and WebP in several widths, so a phone gets a phone-sized file. One 1.2 MB product render is now 39 KB.",
+    how: "<picture> · srcset + sizes · AVIF / WebP",
+    shows: [{ round: "Weight", row: "Images" }, { round: "Speed", row: "LCP" }, { round: "Speed", row: "Fully loaded" }],
+  },
+  {
+    icon: Zap, title: "Main photo first",
+    body: "The hero is preloaded at high priority. Images below the fold wait for the scroll, and Next.js's own scripts wait until the hero has loaded.",
+    how: "preload · fetchpriority=high · deferred scripts",
+    shows: [{ round: "Speed", row: "LCP" }],
+  },
+  {
+    icon: Cpu, title: "Less work at start-up",
+    body: "No animation library: the browser's Web Animations API does the motion. Each page loads only its own scripts, and home sections render on the server.",
+    how: "Web Animations API · per-page scripts · server rendering",
+    shows: [{ round: "Smoothness", row: "Total blocking time" }],
+  },
+  {
+    icon: FileCode2, title: "HTML without decoration",
+    body: "A 349 KB decorative drawing left the HTML. Code the page already has draws it when its section scrolls near.",
+    how: "client-drawn SVG · near the viewport",
+    shows: [{ round: "Edge cache", row: "HTML document" }],
+  },
+  {
+    icon: Hand, title: "The next page starts on touch",
+    body: "When a finger lands on a link, about 100 ms before the tap completes, the next page's data starts loading, and for a model page its photo too.",
+    how: "router.prefetch() on touchstart · 65 ms hover · Save-Data respected",
+    shows: [{ round: "Next page", row: "Tap → content" }, { round: "Next page", row: "Tap → main image" }],
+  },
+  {
+    icon: Archive, title: "Images cached for a year",
+    body: "Images are now named by a hash of their bytes, as scripts and fonts already were, so browsers and Cloudflare keep them for a year. The original re-checks its images after a day.",
+    how: "Cache-Control: immutable · hashed file names",
+    shows: [{ round: "Edge cache", row: "Immutable assets" }],
+  },
+];
+
+const conditions: { icon: LucideIcon; label: string; value: string }[] = [
+  { icon: Smartphone, label: "Phone", value: "390 px wide, 2× screen" },
+  { icon: Wifi, label: "Network", value: "Slow 4G: 1.6 Mbps down, 150 ms latency" },
+  { icon: Cpu, label: "Processor", value: "4× CPU slowdown" },
+  { icon: Monitor, label: "Desktop option", value: "1440 px wide, no throttling" },
+];
+
+const fairness: { icon: LucideIcon; text: string }[] = [
+  { icon: Flame, text: "Both sites' CDNs are warmed the same way first: every page of the visit, in a throwaway session." },
+  { icon: Snowflake, text: "Then each timed browser starts cold, with an empty cache and no open connections. Both launch together." },
+  { icon: ListChecks, text: "Same steps, same taps, same order. Neither browser knows which site it is driving." },
+];
+
+const verdict: { icon: LucideIcon; text: string }[] = [
+  { icon: Scale, text: "A gap smaller than two runs of the same site differ by is a draw. The thresholds come from racing each site against itself." },
+  { icon: Timer, text: "A side cut off at a step's limit shows “> limit”: a lower bound, so it can lose but never win." },
+  { icon: Trophy, text: "A round goes to whoever wins more of its metrics; the race goes to whoever wins more rounds." },
+  { icon: Gauge, text: "The 0–100 scorecard applies Lighthouse 10's weights to the home page: an estimate, not a Lighthouse report." },
+];
+
+const caveats: { icon: LucideIcon; text: ReactNode }[] = [
+  { icon: Dices, text: <><b>One race is one sample.</b> Close calls can flip between runs; the numbers at the top are medians of {Number.isFinite(races) ? `${races} races` : "repeated races"}.</> },
+  { icon: Users, text: <><b>Lab, not field.</b> One controlled phone profile, no real-user (CrUX) data.</> },
+  { icon: Braces, text: <><b>The original ships less JavaScript</b> on most pages. React has a start-up cost, so where images do not dominate, the original&apos;s main thread can be the freer one.</> },
+  { icon: EyeOff, text: <><b>Preview hosts.</b> Both sites are marked noindex on purpose, so the Indexable check fails for both.</> },
+  { icon: Globe, text: <><b>Live sites.</b> Both lanes load the sites as they are now: redeploy either one and the next race shows it.</> },
+  { icon: Swords, text: <><b>Your site.</b> In the challenger round it races the Next.js site on the first page only. Public http(s) domains, two races a minute.</> },
+];
+
+const fullMethod: ReactNode[] = [
+  <><b>Timings</b> come from the page&apos;s own PerformanceObserver (paint, largest-contentful-paint, layout-shift and longtask entries) and Navigation Timing.</>,
+  <><b>The home page is done</b> at its load event once it is interactive: the first 5 s with no long task and at most two requests in flight (Lighthouse&apos;s TTI rule). Blocking time counts from first contentful paint to that point.</>,
+  <><b>Bytes</b> are what crossed the wire: compressed, headers included, per request from Chrome&apos;s network events.</>,
+  <><b>Between steps</b> the throttle is lifted while the previous page finishes downloading; each step then runs under the full profile.</>,
+  <><b>A tap</b> is touchstart, 100 ms on the glass, then touchend (desktop: 300 ms of hover, then a click). Bytes count from the scroll to the link, times from the tap.</>,
+  <><b>“Main image”</b> means the new page&apos;s largest visible image is loaded, decoded and painted.</>,
+  <><b>The catalogue tap</b> is shown under each lane; the Next page round scores the tap to HR40-5RZ.</>,
+  <><b>Speed Index</b> comes from the screencast frames, computed the way speedline does it.</>,
+  <><b>Requests still downloading</b> when a lane stops are drawn hatched on the waterfall.</>,
 ];
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: home page, catalogue, model page and a return visit, in one race.";
+  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: the home page cold, a return visit, then taps to the catalogue and a model page, in one race.";
 
 export const metadata: Metadata = {
   title,
@@ -50,58 +165,118 @@ export default function Page() {
         <section className={styles.section} aria-labelledby="lab-why">
           <p className={styles.eyebrow}><FlaskConical size={14} aria-hidden="true" /> Why this exists</p>
           <h2 id="lab-why">Take a slow website. Make it fast. Prove it in one race.</h2>
-          <div className={styles.columns}>
-            <p>
-              The <b>before</b> is the original site as it was first shipped: never tuned, multi-megabyte images and all. The <b>after</b> is
-              the same site, with the same content and routes, rebuilt in Next.js 16 and optimized. Nothing was removed to make it fast.
-            </p>
-            <p>
-              One press of the button races both sites through the same visit: open the home page cold, tap through to the pump catalogue and on to a model, then come back as a returning visitor.
-              Two real Chrome sessions on Cloudflare do it at the same moment and stream what they see, their paint milestones and every
-              request straight to your screen. The numbers at the top are medians of repeated races; the live race lets you check them.
+          <ul className={styles.story}>
+            {story.map(({ tone, icon: Icon, label, title: name, body, stat: figure, cta }) => (
+              <li key={tone} className={`${styles.storyCard} ${styles[tone]}`}>
+                <span className={styles.iconBox}><Icon size={20} aria-hidden="true" /></span>
+                <p className={styles.storyLabel}>{label}</p>
+                <h3>{name}</h3>
+                <p className={styles.storyText}>{body}</p>
+                {figure && <p className={styles.storyFoot}><b>{figure.value}</b> {figure.note}</p>}
+                {cta && <p className={styles.storyFoot}><a className={styles.storyLink} href="#race"><ArrowUp size={15} aria-hidden="true" /> Start the race</a></p>}
+              </li>
+            ))}
+          </ul>
+
+          <div className={styles.visit}>
+            <h3 className={styles.subhead}>One press, one visit: the same four steps for both sites</h3>
+            <ol className={styles.steps}>
+              {visit.map(({ icon: Icon, title: name, who, scored, limit }, index) => (
+                <li key={name} className={styles.step}>
+                  <span className={styles.stepNo} aria-hidden="true">{index + 1}</span>
+                  <div className={styles.stepBody}>
+                    <p className={styles.stepTitle}><Icon size={16} aria-hidden="true" /> {name}</p>
+                    <p className={styles.stepWho}>{who}</p>
+                    {scored ? (
+                      <div className={styles.stepScored}>
+                        <span className={styles.label}>Scored in</span>
+                        <ul className={styles.chips}>{scored.map((round) => <li key={round}><b>{round}</b></li>)}</ul>
+                      </div>
+                    ) : (
+                      <p className={styles.unscored}>Shown under each lane, not scored</p>
+                    )}
+                    <p className={styles.stepLimit}><Timer size={13} aria-hidden="true" /> {limit}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className={styles.stepNote}>
+              <Info size={15} aria-hidden="true" />
+              <span>The cache stays on after the first page, as in a real browser. Before each step the previous page may finish downloading, so every step measures only itself.</span>
             </p>
           </div>
         </section>
 
         <section className={styles.section} aria-labelledby="lab-changes">
           <h2 id="lab-changes">What was optimized, and where you see it in the race.</h2>
-          <ul className={styles.skillMap}>
-            {changes.map((item) => (
-              <li key={item.what}><b>{item.what}</b><span>{item.how} <i>Shows in: {item.shows}</i></span></li>
+          <p className={styles.lede}>Six changes. Each card names the scoreboard round and row where it shows.</p>
+          <ul className={styles.changes}>
+            {changes.map(({ icon: Icon, title: name, body, how, shows }) => (
+              <li key={name} className={styles.change}>
+                <span className={styles.iconBox}><Icon size={20} aria-hidden="true" /></span>
+                <h3>{name}</h3>
+                <p className={styles.changeText}>{body}</p>
+                <p className={styles.how}>{how}</p>
+                <div className={styles.shows}>
+                  <span className={styles.label}>Shows in the race</span>
+                  <ul className={styles.chips}>
+                    {shows.map(({ round, row }) => <li key={`${round}-${row}`}><b>{round}</b>{row ? ` · ${row}` : ""}</li>)}
+                  </ul>
+                </div>
+              </li>
             ))}
           </ul>
-        </section>
-
-        <section className={styles.section} aria-labelledby="lab-skills">
-          <h2 id="lab-skills">What the rebuild demonstrates.</h2>
-          <ul className={styles.skillMap}>
-            {skillMap.map((item) => (
-              <li key={item.ask}><b>{item.ask}</b><span>{item.where}</span></li>
-            ))}
-          </ul>
+          <p className={styles.parity}>
+            <Equal size={18} aria-hidden="true" />
+            <span><b>Kept, not gained.</b> Like the original, every page is pre-rendered HTML on Cloudflare Pages that reads without JavaScript, so time to first byte and the Search round start level.</span>
+          </p>
         </section>
 
         <section className={styles.section} aria-labelledby="lab-method">
-          <h2 id="lab-method">How the race is measured — and what it does not prove.</h2>
-          <div className={styles.columns}>
-            <ul className={styles.list}>
-              <li><b>The visit.</b> Each lane opens the home page cold and is measured until it is fully loaded and interactive (or 30 s). Then, in the same order for both: the home page again with the browser cache on (what a returning visitor pays), a tap to the pump catalogue, a tap to the HR40-5RZ page. Before each step the previous page may finish downloading, so a step measures itself, not the leftovers of the page before; the step itself runs under the full slow-4G profile. For each tap the race measures how long the new page takes to show its heading and its main image (capped at 20 s), and what it downloaded. The HTTP cache is on after the first load, as in a real browser. Challenger races (your site) are first-page only.</li>
-              <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel; the first page loads with the cache bypassed and no open connections.</li>
-              <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown. Desktop is 1440 px, unthrottled.</li>
-              <li><b>Timings.</b> Read from the page&apos;s own PerformanceObserver: paint, largest-contentful-paint, layout-shift and longtask entries.</li>
-              <li><b>Finish line.</b> The home page is done at its load event once it is interactive (Lighthouse&apos;s TTI rule). Both sites&apos; CDN caches are warmed identically before the start, for every page of the visit. A lane still downloading at the cap stops there and is reported as “&gt; cap”; requests still in flight are drawn hatched on the waterfall.</li>
-              <li><b>Scoring.</b> A gap within the run-to-run noise measured for that metric is a draw. A round goes to whoever wins more of its metrics.</li>
-              <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the home page&apos;s numbers. Speed Index comes from the screencast the way speedline computes it, so it is an estimate, not a Lighthouse report.</li>
-            </ul>
-            <ul className={styles.list}>
-              <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip. The numbers at the top are medians of several races.</li>
-              <li><b>Lab, not field.</b> No real-user (CrUX) data: this is one controlled profile, not every visitor.</li>
-              <li><b>Where the original is strong.</b> It runs less JavaScript, so its blocking time can be lower: React has a start-up cost. The race shows that too.</li>
-              <li><b>Live sites.</b> Both sides are the live sites, loaded fresh on every race: redeploy either one and the next race shows it.</li>
-              <li><b>Review hosts.</b> Both builds run on preview hosts (pages.dev) marked noindex on purpose, so the Indexable check fails for both of them.</li>
-              <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>
+          <h2 id="lab-method">How the race is measured, and what it does not prove.</h2>
+          <div className={styles.method}>
+            <div className={styles.panel}>
+              <h3>Same conditions</h3>
+              <dl className={styles.specs}>
+                {conditions.map(({ icon: Icon, label, value }) => (
+                  <div key={label}>
+                    <dt><Icon size={15} aria-hidden="true" /> {label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div className={styles.panel}>
+              <h3>A fair start</h3>
+              <ul className={styles.points}>
+                {fairness.map(({ icon: Icon, text }) => <li key={text}><Icon size={17} aria-hidden="true" /><span>{text}</span></li>)}
+              </ul>
+            </div>
+            <div className={styles.panel}>
+              <h3>Who wins</h3>
+              <ul className={styles.points}>
+                {verdict.map(({ icon: Icon, text }) => <li key={text}><Icon size={17} aria-hidden="true" /><span>{text}</span></li>)}
+              </ul>
+            </div>
+          </div>
+
+          <div className={styles.caveats}>
+            <h3><Info size={18} aria-hidden="true" /> What one race does not prove</h3>
+            <ul>
+              {caveats.map(({ icon: Icon, text }, index) => <li key={index}><Icon size={17} aria-hidden="true" /><span>{text}</span></li>)}
             </ul>
           </div>
+
+          <details className={styles.fullMethod}>
+            <summary>
+              <span>The full method</span>
+              <small>Timings, finish lines, bytes and taps</small>
+              <ChevronDown size={18} aria-hidden="true" />
+            </summary>
+            <ul className={styles.list}>
+              {fullMethod.map((item, index) => <li key={index}>{item}</li>)}
+            </ul>
+          </details>
         </section>
       </main>
     </div>

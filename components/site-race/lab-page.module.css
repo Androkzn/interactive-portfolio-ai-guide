@@ -1,39 +1,115 @@
+/* The lab page under the race: why it exists, what changed, how it is measured.
+   Built for scanning: one idea per card or row, an icon as the anchor of each, the scoreboard's own
+   round names as chips, and the full method behind a disclosure. Before = orange, after = violet,
+   the same marks as the race above. */
 .main { max-width: 1480px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 4vw, 56px) clamp(60px, 8vw, 110px); }
 .back { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin-bottom: 14px; color: #5142b7; font-size: var(--text-caption); font-weight: 700; }
 .back:hover { color: #32249d; }
 
 .section { max-width: 1180px; margin: clamp(56px, 7vw, 96px) auto 0; }
-.section h2 { max-width: 26ch; margin: 0 0 22px; font-size: var(--text-title); line-height: 1.04; letter-spacing: -.04em; }
+.section h2 { max-width: 26ch; margin: 0 0 22px; font-size: var(--text-title); line-height: 1.04; letter-spacing: -.04em; text-wrap: balance; }
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--muted); font: 700 var(--text-meta)/1.4 var(--font-code); letter-spacing: .07em; text-transform: uppercase; }
-.columns { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 4vw, 56px); }
-.columns p { margin: 0; color: #3e403b; }
-.intro { max-width: 80ch; margin: -6px 0 22px; color: var(--muted); }
+.lede { max-width: 70ch; margin: -8px 0 22px; color: var(--muted); }
 
-.skillMap { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
-.skillMap li { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.skillMap b { font-size: var(--text-body); }
-.skillMap span { color: #4a4c47; }
+/* ── Shared pieces ── */
+.iconBox { display: inline-grid; flex: none; place-items: center; width: 40px; height: 40px; color: #4a3fb0; border-radius: 12px; background: #ece9ff; }
+.label { color: var(--muted); font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .08em; text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.chips li { padding: 4px 10px; color: #3d33a0; border-radius: 999px; background: #ece9ff; font-size: var(--text-meta); line-height: 1.35; }
+.chips b { font-weight: 800; }
 
-.plays { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
-.plays li { display: flex; flex-direction: column; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fbfaf6; }
-.plays .playNext { border-style: dashed; background: transparent; }
-.plays h3 { margin: 14px 0 8px; font-size: 1.2rem; line-height: 1.2; letter-spacing: -.02em; }
-.plays p { margin: 0; color: #43453f; font-size: var(--text-small); }
-.plays .moves { margin-top: auto; padding-top: 14px; color: var(--muted); font-size: var(--text-meta); }
-.plays .moves b { color: var(--ink); }
-.plays .moves a { color: #5142b7; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.playMeta { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.skill { padding: 4px 9px; color: #3d33a0; border-radius: 999px; background: #ece9ff; font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .06em; text-transform: uppercase; }
-.inPlace, .partial, .nextUp { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-meta); font-weight: 700; white-space: nowrap; }
-.inPlace { color: #2f7a35; }
-.partial { color: #6a5aa8; }
-.nextUp { color: #8a6a1f; }
+/* ── Why: before, after, the proof ── */
+.story { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.storyCard { --accent: #5142b7; --tint: #ece9ff; display: flex; flex-direction: column; gap: 8px; padding: 22px; border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 18px; background: #fbfaf6; }
+.before { --accent: #b9481b; --tint: #fde8dc; }
+.after { --accent: #5142b7; --tint: #ece9ff; }
+.proof { --accent: var(--ink); --tint: #e8e7e0; }
+.storyCard .iconBox { color: var(--accent); background: var(--tint); }
+.storyLabel { margin: 6px 0 0; color: var(--accent); font: 700 var(--text-meta)/1.3 var(--font-code); letter-spacing: .08em; text-transform: uppercase; }
+.storyCard h3 { margin: 0; font-size: 1.25rem; line-height: 1.2; letter-spacing: -.02em; }
+.storyText { margin: 0; color: #43453f; font-size: var(--text-small); }
+.storyFoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: auto 0 0; padding-top: 14px; color: var(--muted); border-top: 1px dashed var(--line); font-size: var(--text-caption); }
+.storyFoot b { color: var(--accent); font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.03em; }
+.storyLink { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -12px 0 -12px; color: #5142b7; font-size: var(--text-small); font-weight: 800; }
+.storyLink:hover { color: #32249d; }
 
-.list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.list li { padding-left: 16px; border-left: 2px solid var(--line); color: #43453f; font-size: var(--text-small); }
+/* The visit: four numbered steps on one rail. */
+.visit { margin-top: 14px; padding: clamp(18px, 2.4vw, 28px); border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.subhead { margin: 0 0 20px; font-size: var(--text-lead); line-height: 1.3; letter-spacing: -.01em; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 0; padding: 0; list-style: none; }
+.step { position: relative; display: grid; align-content: start; gap: 12px; }
+.step:not(:last-child)::after { content: ""; position: absolute; top: 17px; right: -10px; left: 46px; height: 2px; border-radius: 2px; background: var(--line); }
+.stepNo { display: grid; place-items: center; width: 36px; height: 36px; color: #fff; border-radius: 50%; background: var(--ink); font: 800 var(--text-caption)/1 var(--font-code); }
+.stepBody { display: grid; align-content: start; gap: 8px; }
+.stepTitle { display: flex; align-items: center; gap: 7px; margin: 0; font-weight: 800; }
+.stepTitle svg { flex: none; color: #5142b7; }
+.stepWho { margin: 0; color: #4a4c47; font-size: var(--text-small); }
+.stepScored { display: grid; gap: 6px; }
+.unscored { margin: 0; color: var(--muted); font-size: var(--text-meta); font-style: italic; }
+.stepLimit { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font: 600 var(--text-meta)/1.3 var(--font-code); }
+.stepNote { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0 0; padding-top: 16px; color: var(--muted); border-top: 1px solid var(--line); font-size: var(--text-caption); }
+.stepNote svg { flex: none; margin-top: 2px; }
+
+/* ── What was optimized: one card per change ── */
+.changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.change { display: flex; flex-direction: column; gap: 10px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fbfaf6; transition: border-color .2s ease; }
+.change:hover { border-color: #b9b0ee; }
+.change h3 { margin: 4px 0 0; font-size: 1.15rem; line-height: 1.2; letter-spacing: -.02em; }
+.changeText { margin: 0; color: #43453f; font-size: var(--text-small); }
+.how { margin: 0; color: #5b5d57; font: 500 var(--text-meta)/1.5 var(--font-code); }
+.shows { display: grid; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--line); }
+.parity { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 0; padding: 16px 20px; color: #43453f; border: 1px dashed #c9cabf; border-radius: 16px; font-size: var(--text-small); }
+.parity svg { flex: none; margin-top: 1px; color: var(--muted); }
+.parity b { color: var(--ink); }
+
+/* ── How it is measured: three panels, the caveats, then the full method on demand ── */
+.method { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.panel { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fbfaf6; }
+.panel h3 { margin: 0 0 16px; font-size: 1.05rem; letter-spacing: -.01em; }
+.specs { display: grid; gap: 14px; margin: 0; }
+.specs div { display: grid; gap: 3px; }
+.specs dt { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .08em; text-transform: uppercase; }
+.specs dt svg { color: #5142b7; }
+.specs dd { margin: 0 0 0 23px; color: var(--ink); font-size: var(--text-small); font-weight: 600; }
+.points { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.points li { display: grid; grid-template-columns: 17px minmax(0, 1fr); gap: 11px; color: #43453f; font-size: var(--text-small); }
+.points svg { margin-top: 2px; color: #5142b7; }
+
+.caveats { margin-top: 14px; padding: 22px; border: 1px solid #ead7a4; border-radius: 18px; background: #fcf7e8; }
+.caveats h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 16px; font-size: 1.05rem; letter-spacing: -.01em; }
+.caveats h3 svg { color: #8a6a1f; }
+.caveats ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 32px; margin: 0; padding: 0; list-style: none; }
+.caveats li { display: grid; grid-template-columns: 17px minmax(0, 1fr); gap: 11px; color: #4b4738; font-size: var(--text-small); }
+.caveats li svg { margin-top: 2px; color: #8a6a1f; }
+.caveats b { color: var(--ink); }
+
+.fullMethod { margin-top: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.fullMethod summary { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; min-height: 56px; padding: 10px 22px; border-radius: 18px; cursor: pointer; font-weight: 800; list-style: none; }
+.fullMethod summary::-webkit-details-marker { display: none; }
+.fullMethod summary small { color: var(--muted); font-size: var(--text-caption); font-weight: 500; }
+.fullMethod summary svg { margin-left: auto; color: var(--muted); transition: transform .2s ease; }
+.fullMethod[open] summary svg { transform: rotate(180deg); }
+.fullMethod summary:hover svg { color: var(--ink); }
+.fullMethod summary:focus-visible { outline: 2px solid #5142b7; outline-offset: 2px; }
+.list { display: grid; gap: 10px; max-width: calc(92ch + 44px); margin: 0; padding: 4px 22px 22px; list-style: none; }
+.list li { padding-left: 14px; color: #43453f; border-left: 2px solid var(--line); font-size: var(--text-small); }
 .list b { color: var(--ink); }
 
-@media (max-width: 800px) {
-  .columns, .skillMap li { grid-template-columns: 1fr; }
-  .skillMap li { gap: 4px; }
+/* Tablet: the story stacks, the visit becomes a vertical timeline. */
+@media (max-width: 900px) {
+  .story { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; gap: 0; }
+  .step { grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 22px; }
+  .step:last-child { padding-bottom: 0; }
+  .step:not(:last-child)::after { top: 44px; right: auto; bottom: 8px; left: 17px; width: 2px; height: auto; }
+  .stepBody { padding-top: 7px; }
+}
+
+/* Phone: the caveats go to one column. */
+@media (max-width: 720px) {
+  .caveats ul { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .change, .fullMethod summary svg { transition: none; }
 }

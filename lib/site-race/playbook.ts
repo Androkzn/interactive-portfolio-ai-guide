@@ -9,8 +9,8 @@ export type PlayStatus = "in-place" | "partial" | "next";
 
 export type Play = {
   id: string;
-  /** The job requirement this play demonstrates. */
-  skill: "Rebuild" | "Rendering" | "Page load" | "Cloudflare" | "Edge cache" | "SSG";
+  /** The area of work this play belongs to. */
+  area: "Rebuild" | "Rendering" | "Page load" | "Cloudflare" | "Edge cache" | "SSG";
   title: string;
   body: string;
   /** Which race metric moves when this lands. */
@@ -23,16 +23,16 @@ export type Play = {
 export const playbook: Play[] = [
   {
     id: "rebuild",
-    skill: "Rebuild",
+    area: "Rebuild",
     title: "Rebuild the whole site, page for page",
-    body: "Same content, routes, three languages and images, on Next.js 16 — so every gap in the race comes from engineering decisions, not from a different website.",
+    body: "Same content, routes, both languages (English and Spanish) and images, on Next.js 16 — so every gap in the race comes from engineering decisions, not from a different website.",
     moves: "Makes before and after comparable",
     status: "in-place",
     stage: "port",
   },
   {
     id: "ssg",
-    skill: "SSG",
+    area: "SSG",
     title: "Every route pre-rendered at build time",
     body: "output: \"export\" with trailing-slash directories: Cloudflare Pages serves finished HTML with no server on the request path. The race checks it by counting words in the HTML before any JavaScript runs.",
     moves: "Content in the HTML · TTFB",
@@ -41,7 +41,7 @@ export const playbook: Play[] = [
   },
   {
     id: "images",
-    skill: "Page load",
+    area: "Page load",
     title: "AVIF/WebP in six widths, through <picture>",
     body: "Product renders went from 1.2–1.9 MB PNG to tens of KB of AVIF, with per-context sizes so an 84-px thumbnail no longer downloads a 1774-px file.",
     moves: "Image bytes · LCP",
@@ -50,7 +50,7 @@ export const playbook: Play[] = [
   },
   {
     id: "lcp-priority",
-    skill: "Page load",
+    area: "Page load",
     title: "The LCP image goes first",
     body: "The hero is preloaded from <head> with imageSrcSet and fetchpriority=high; everything below the fold waits until it is within one viewport.",
     moves: "Largest contentful paint",
@@ -59,7 +59,7 @@ export const playbook: Play[] = [
   },
   {
     id: "html-diet",
-    skill: "Rendering",
+    area: "Rendering",
     title: "HTML carries content, not decoration",
     body: "A 349 KB inline SVG drawing left the server output; client code the bundle already had draws it near the viewport. Home HTML: 73 KB → 26 KB Brotli.",
     moves: "HTML document · FCP",
@@ -68,7 +68,7 @@ export const playbook: Play[] = [
   },
   {
     id: "immutable",
-    skill: "Edge cache",
+    area: "Edge cache",
     title: "Content-hashed files cached for a year",
     body: "/_next/static, fonts and /images/optimized carry a hash of their bytes in the name, so the browser and every Cloudflare location keep them as immutable — a changed file is a new URL, not an invalidation.",
     moves: "Immutable assets",
@@ -77,7 +77,7 @@ export const playbook: Play[] = [
   },
   {
     id: "prefetch",
-    skill: "Page load",
+    area: "Page load",
     title: "Prefetch the next page on intent",
     body: "router.prefetch() after a 65 ms hover, on touchstart or focus — once per URL, never by viewport on a metered connection.",
     moves: "Second-page navigation (not visible in a cold race)",
@@ -86,7 +86,7 @@ export const playbook: Play[] = [
   },
   {
     id: "js",
-    skill: "Rendering",
+    area: "Rendering",
     title: "JavaScript: still heavier than the original",
     body: "Removing framer-motion and per-page component scripts cut what each page loads, but the React runtime remains: about 160 KB against the original site's 12 KB on the model page. Next: more Server Components, fewer client boundaries.",
     moves: "JavaScript · Total blocking time",
@@ -95,7 +95,7 @@ export const playbook: Play[] = [
   },
   {
     id: "cache-tags",
-    skill: "Edge cache",
+    area: "Edge cache",
     title: "Cache HTML at the edge, purge by tag on deploy",
     body: "HTML is still served with max-age=0, so the edge revalidates every page. Tag each page by section and language (Cache-Tag: page:/pumps, lang:es, models), cache it at the edge, and have the deploy purge only the tags whose content changed.",
     moves: "Warm HTML fetch · TTFB",
@@ -103,18 +103,10 @@ export const playbook: Play[] = [
   },
   {
     id: "speculation",
-    skill: "Cloudflare",
+    area: "Cloudflare",
     title: "Prerender the likely next page",
     body: "Speculation Rules for the top navigation targets, so the second page can be fully rendered before the click — on top of the RSC prefetch already in place.",
     moves: "Second-page navigation",
     status: "next",
   },
-];
-
-export const skillMap: { ask: string; where: string }[] = [
-  { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized original site rebuilt end to end in Next.js 16, then optimized and measured against the original." },
-  { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, loading priority, main-thread work and prefetching the next page: each change measured in real Chrome, and visible in one live race." },
-  { ask: "Production Next.js deploys on Cloudflare", where: "The optimized build is a Cloudflare Pages deployment; the race itself runs on Workers and Browser Run." },
-  { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed files cached for a year at the edge and in the browser. HTML edge caching with cache-tag purges is the next step, not done yet." },
-  { ask: "Static Site Generation", where: "Round 5 of the race checks that a crawler gets the content without running JavaScript." },
 ];
