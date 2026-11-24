@@ -15,7 +15,7 @@ async function saveReport(env: Env, log: RaceLog, start: Extract<RaceEvent, { ty
   const id = newReportId();
   const savedAt = new Date().toISOString();
   const body = log.toNdjson(savedAt, id, [{ type: "done", elapsedMs, reportId: id }]);
-  const put = env.REPORTS.put(REPORT_PREFIX + id, body, { metadata: summarize(id, savedAt, start, metrics) });
+  const put = env.REPORTS.put(REPORT_PREFIX + id, body, { metadata: summarize(id, savedAt, start, metrics, env.CF_VERSION_METADATA?.id) });
   const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("save timed out")), SAVE_TIMEOUT_MS));
   try {
     await Promise.race([put, timeout]);
@@ -116,7 +116,7 @@ export default {
     const encoder = new TextEncoder();
     const abort = new AbortController();
     const started = Date.now();
-    const log = new RaceLog(started);
+    const log = new RaceLog(started, env.CF_VERSION_METADATA?.id);
     let closed = false;
     let queue = Promise.resolve();
     const emit = (event: RaceEvent) => {

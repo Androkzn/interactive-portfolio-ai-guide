@@ -4,6 +4,15 @@
 
 export const SITE_RACE_PROTOCOL = "site-race/1" as const;
 
+/**
+ * Measurement method. Bump when what a number means changes, so saved reports stay
+ * comparable only with their own kind. Reports without a tag are v1.
+ *  v1: bytes double-counted (decoded + encoded), TBT until each lane stopped, no warm-up.
+ *  v2: bytes = encoded transfer size; TBT from FCP to TTI (Lighthouse); lanes observed until
+ *      load + a 5 s quiet window; both CDNs warmed identically before the timed load.
+ */
+export const MEASURE_VERSION = "v2" as const;
+
 export type LaneId = "a" | "b";
 export type RaceProfile = "mobile" | "desktop";
 
@@ -13,7 +22,7 @@ export type RaceProfile = "mobile" | "desktop";
  * the same site rebuilt in Next.js specifically to be fast.
  */
 export const RACE_PRESETS = {
-  astro: { url: "https://hrconcretepumps.pages.dev/", role: "Before", label: "Original site", stack: "Original site · not optimized" },
+  astro: { url: "https://d0d11b6f.hrconcretepumps.pages.dev/", role: "Before", label: "Original site", stack: "Original site · not optimized" },
   next: { url: "https://hr-concrete-pumps-next.pages.dev/", role: "After", label: "Next.js optimized site", stack: "Rebuilt in Next.js 16 · optimized" },
 } as const;
 export type RacePresetId = keyof typeof RACE_PRESETS;
@@ -38,9 +47,19 @@ export type TimingMetrics = {
   ttfb: number | null;
   fcp: number | null;
   lcp: number | null;
+  /** DOMContentLoaded end. Not comparable across builds: async scripts do not delay it, module scripts do. */
   domContentLoaded: number | null;
+  /** Load event end ("fully loaded"); null if it had not fired when the lane stopped. */
   load: number | null;
-  /** Sum of (long task − 50 ms) after FCP, the lab proxy for INP. */
+  /**
+   * Time to Interactive (Lighthouse): start of the first 5 s with no long task and ≤ 2 requests
+   * in flight after FCP. Null when the lane hit the cap first. Absent in v1 reports.
+   */
+  tti?: number | null;
+  /**
+   * Lighthouse TBT: long tasks clipped to [FCP, TTI], minus 50 ms each. If TTI was not reached
+   * the window ends at the cap and this is a lower bound. (v1: tasks after FCP until the lane stopped.)
+   */
   tbt: number | null;
   cls: number | null;
 };
@@ -80,7 +99,10 @@ export type EdgeMetrics = {
 export type SeoCheck = { id: string; label: string; pass: boolean; detail: string };
 
 export type DocumentMetrics = {
+  /** Uncompressed HTML as parsed by the browser (fetched text length). */
   htmlKb: number;
+  /** The HTML document's transfer size on the wire (compressed, with headers). Absent in v1. */
+  transferKb?: number;
   domNodes: number;
   /** Words of visible text in the HTML as served, before any JavaScript runs. */
   wordsWithoutJs: number;
@@ -126,10 +148,14 @@ export type WaterfallEntry = {
 };
 
 export type LaneMetrics = {
+  /** Measurement method (see MEASURE_VERSION); absent means v1. */
+  measure?: string;
+  /** How long the lane was observed, ms of page time. */
+  observedMs?: number;
   url: string;
   finalUrl: string;
   status: number | null;
-  /** True when the lane hit the time cap before the load event or a quiet network. */
+  /** True when the lane hit the time cap before its stop condition (v2: load event + TTI quiet window). */
   capped: boolean;
   /** The cap this lane ran under, ms. */
   capMs?: number;
@@ -163,11 +189,15 @@ export type RaceEvent =
   | { type: "done"; elapsedMs: number; reportId?: string };
 
 /** One line of a race log: a recording or a saved report, newline-delimited JSON. */
-export type RaceLogLine = { at: number; event: RaceEvent | { type: "recording"; recordedAt: string; reportId?: string } };
+export type RaceLogLine = { at: number; event: RaceEvent | { type: "recording"; recordedAt: string; reportId?: string; measure?: string; version?: string } };
 
 /** What the list of saved races shows per race, kept in the KV key's metadata (≤ 1 KB). */
 export type RaceReportSummary = {
   id: string;
+  /** Measurement method of this report; absent = v1 (double-counted bytes). */
+  measure?: string;
+  /** Worker version id that ran the race, when known. */
+  version?: string;
   savedAt: string;
   page: RacePageId;
   profile: RaceProfile;

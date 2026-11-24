@@ -14,6 +14,8 @@
   // One report per finished race between the project's own builds: the race's event
   // log (thinned frames included) under race:<id>, with a summary in the key metadata.
   "kv_namespaces": [{ "binding": "REPORTS", "id": "f6342a691884483faa132d80a0c93cb4" }],
+  // Version id of the running Worker, stamped on saved reports (preview uploads included).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "vars": {
     "ALLOWED_ORIGINS": "http://localhost:3000,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev"
   },

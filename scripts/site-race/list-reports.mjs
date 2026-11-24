@@ -3,6 +3,10 @@
 // opens its full report in the lab. The lab page itself never lists earlier races.
 //
 //   node scripts/site-race/list-reports.mjs [--limit 20] [--site http://localhost:3000]
+//
+// The "method" column is the measurement tag: reports without one are v1, made before
+// bytes stopped being double-counted (decoded + encoded) and before the TBT/TTI window fix.
+// Compare races only within one method. The version is the Worker version that ran it.
 
 const arg = (name, fallback) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : fallback; };
 const api = arg("api", "https://site-race-api.a-tekhtelev.workers.dev");
@@ -20,6 +24,7 @@ for (const row of reports) {
   const saved = new Date(row.savedAt).toLocaleString("en-CA", { dateStyle: "short", timeStyle: "short" });
   console.log([
     saved.padEnd(22),
+    `${row.measure ?? "v1"}${row.version ? `@${row.version.slice(0, 8)}` : ""}`.padEnd(12),
     row.page.padEnd(10),
     row.profile.padEnd(8),
     `vs ${build(row.lanes.b.url)}`.padEnd(22),

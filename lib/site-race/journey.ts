@@ -32,7 +32,7 @@ export const stages: Stage[] = [
     short: "Original",
     title: "The original site",
     build: "astro",
-    url: "https://hrconcretepumps.pages.dev",
+    url: "https://d0d11b6f.hrconcretepumps.pages.dev",
     commit: "7f66469",
     report: { base: "https://hrconcretepumps.pages.dev" },
     summary: "The site as it was first shipped, never tuned. Light on JavaScript, heavy on everything else.",
