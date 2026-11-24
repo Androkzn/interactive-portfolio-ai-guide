@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
+import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { featuredStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
-import resultsData from "@/lib/site-race/results-data.json";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
 import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
@@ -39,7 +38,6 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
 };
 const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (home, catalogue, model page), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, a tap to the catalogue, a tap to a model page. Before each step the previous page may finish downloading, so every step measures itself.";
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
-type Metrics = { lcp: number | null; load: number | null; tbt: number | null; totalKb: number; imageKb: number };
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
@@ -225,18 +223,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
-  // Medians of repeated races for this page and device (scripts/site-race/build-results.mjs),
-  // the same numbers as the result block above the race: not a single sample, not a stage report.
-  const measured = (resultsData.cells as Record<string, { before: Metrics; after: Metrics } | undefined>)[`${page}/${profile}`];
-  const baselineBefore = measured?.before;
-  const baselineAfter = measured?.after;
-  const improvement = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.round((1 - after / before) * 100) : null;
-  const lcpImprovement = improvement(baselineBefore?.lcp, baselineAfter?.lcp);
-  const weightImprovement = improvement(baselineBefore?.totalKb, baselineAfter?.totalKb);
-  // Say what actually improved: a gap under 15% in LCP is within run-to-run noise, so it is not a claim.
-  const headline = lcpImprovement != null && lcpImprovement >= 15 ? `${lcpImprovement}% lower LCP`
-    : weightImprovement != null && weightImprovement >= 15 ? `${weightImprovement}% less data downloaded`
-      : "Measured improvement";
   const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
   const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
   const lightsLabel = {
@@ -250,33 +236,16 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   return (
     <section ref={sectionRef} className={styles.race} aria-labelledby="site-race-title" id="race">
+      {/* The measured numbers live in the result block above (results.tsx); this head only says what the race does. */}
       <div className={styles.head}>
-        <div>
-          <p className={styles.kicker}><Gauge size={14} aria-hidden="true" /> Live performance lab · real Chrome on Cloudflare&apos;s edge</p>
-          <p className={styles.nextBrand}><span>N</span> Built and optimized with <b>Next.js 16</b></p>
-          <h2 id="site-race-title" className={styles.title}>
-            The result,<br /><span className={styles.toneNext}>before the race.</span>
-          </h2>
-          <p className={styles.lede}>
-            Same page and content. The original is the baseline; the Next.js rebuild is the measured result. Run the live race to watch
-            two identical Chrome sessions prove the difference under the same conditions.
-          </p>
-        </div>
-        <div className={styles.heroResult}>
-          <p>Measured · {RACE_PAGES[page].label} · {profile === "mobile" ? "mobile slow 4G" : "desktop"}</p>
-          <div className={styles.heroLcp}>
-            <span><small>Original site</small><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b></span>
-            <ArrowUpRight size={24} aria-hidden="true" />
-            <span><small>Next.js optimized</small><b>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</b></span>
-          </div>
-          <strong>{headline}</strong>
-        </div>
-      </div>
-
-      <div className={styles.resultMetrics} aria-label="Measured performance result">
-        <article><span>LCP</span><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b><i>→</i><strong>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</strong><small>Main content visible</small></article>
-        <article><span>Page weight</span><b>{baselineBefore ? `${(baselineBefore.totalKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.totalKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Total cold-load transfer</small></article>
-        <article><span>Image bytes</span><b>{baselineBefore ? `${(baselineBefore.imageKb / 1024).toFixed(2)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.imageKb / 1024).toFixed(2)}MB` : "—"}</strong><small>Responsive AVIF/WebP</small></article>
+        <p className={styles.kicker}><Gauge size={14} aria-hidden="true" /> Live race · real Chrome on Cloudflare&apos;s edge</p>
+        <h2 id="site-race-title" className={styles.title}>
+          Race it <span className={styles.toneNext}>yourself.</span>
+        </h2>
+        <p className={styles.lede}>
+          Two identical Chrome sessions open the original and the Next.js site at the same moment, on the same connection,
+          and you watch both screens live.
+        </p>
       </div>
 
       <div className={styles.controls}>
@@ -303,6 +272,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           </div>
         </fieldset>
         </div>
+        <p className={styles.stageNote}><b>How it stays fair.</b> {FAIRNESS_NOTE}</p>
       </details>
 
       <div className={styles.lights} aria-hidden="true" data-state={lightsState}>
@@ -315,7 +285,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : `${PROFILE_NOTE[profile]} ${FAIRNESS_NOTE}`)}
+          : PROFILE_NOTE[profile])}
       </p>
       {state.status === "finished" && state.reportId && state.source === "live" && (
         <p className={styles.savedNote}>
