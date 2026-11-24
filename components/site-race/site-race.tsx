@@ -297,7 +297,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Page</legend>
           <div className={styles.segmented} role="radiogroup" aria-label="Page to race">
-            {(Object.keys(RACE_PAGES) as RacePageId[]).map((id) => (
+            {(Object.keys(RACE_PAGES) as RacePageId[]).filter((id) => id !== "catalogue" || page === "catalogue").map((id) => (
               <button key={id} type="button" role="radio" aria-checked={page === id} className={page === id ? styles.segOn : ""} onClick={() => onPage(id)} title={RACE_PAGES[id].detail}>
                 {RACE_PAGES[id].label}{id === "model" && <i className={styles.hot}>biggest change</i>}
               </button>
