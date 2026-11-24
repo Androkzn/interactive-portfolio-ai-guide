@@ -1704,7 +1704,7 @@ export default function Home() {
       </div>
       <div className="hero-stats">
         <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
-        <a href="#performance-lab"><span className="stat-symbol" aria-hidden="true"><Gauge size={24} /></span><span><strong>Make slow sites fast</strong><small>I rebuild and optimize slow websites. Watch one race its original, live.</small></span></a>
+        <a href="#performance-lab"><span className="stat-symbol" aria-hidden="true"><Gauge size={24} /></span><span><strong>Watch a slow site get fast</strong><small>A real business site vs. my rebuild, racing side by side, live in your browser.</small></span></a>
         <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
         <nav className="hero-app-logos" aria-label="Open a project directly">{projects.map(item => <button key={item.id} className="hero-app-logo" title={item.name} aria-label={`Open ${item.name}`} onClick={() => explore(item.id)}><ProjectLogo id={item.id} /></button>)}</nav>
         <a href="#engineering-work"><span className="stat-symbol" aria-hidden="true"><FileCheck2 size={24} /></span><span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span></a>
