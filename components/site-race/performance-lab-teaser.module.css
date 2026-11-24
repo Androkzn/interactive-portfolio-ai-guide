@@ -42,3 +42,44 @@
 @media (max-width: 620px) { .section { padding: 48px 16px; }.card { padding: 22px 16px; border-radius: 22px; }.copy h2 { font-size: clamp(39px, 12vw, 56px); }.chartGrid { grid-template-columns: 1fr; }.scoreboard { grid-template-columns: 1fr; }.racePulse { position: absolute; z-index: 2; left: calc(50% - 15px); top: calc(50% - 15px); width: 30px; height: 30px; border-radius: 50%; background: #111; transform: rotate(90deg); }.timeline span { font-size: 0; } }
 @media (prefers-reduced-motion: reduce) { .visualHead > span:first-child i, .racePulse svg, .originalLine, .optimizedLine, .chartDot, .weightRow i, .timeline i { animation: none; }.originalLine, .optimizedLine { stroke-dashoffset: 0; opacity: 1; }.chartDot { opacity: 1; }.weightBefore { width: 100% !important; }.weightAfter { width: 32% !important; }.timeline i { border-color: #d4ff76; background: #d4ff76; } }
 .sectionHeading { max-width: 1540px; margin: 0 auto 24px; }
+
+/* Race lanes. Same 4.8s cycle and .3s offset as .optimizedLine/.chartDot: the race car reaches the
+   flag at 58% of the cycle, the moment the lime dot lands on the purple line. Transform/opacity only. */
+.race { --car-next: clamp(110px, 27%, 168px); --car-orig: clamp(60px, 14%, 84px); position: relative; display: grid; gap: 4px; height: 128px; padding: 8px 0; border: 1px solid #34372f; border-radius: 15px; background: repeating-linear-gradient(90deg, #ffffff07 0 2px, transparent 2px 46px), linear-gradient(#1b1d1a, #141613); overflow: hidden; contain: layout paint; }
+.lane { position: relative; padding: 0 calc(10% + 4px) 0 10px; }
+.lane + .lane::before { content: ""; position: absolute; left: 10px; right: 10px; top: -3px; border-top: 1px dashed #3a3d37; }
+.runner { position: relative; height: 100%; display: flex; align-items: flex-end; will-change: transform; }
+.runnerNext { width: calc(100% - var(--car-next)); animation: raceNext 4.8s .3s infinite; }
+.runnerOriginal { width: calc(100% - var(--car-orig)); animation: raceOriginal 4.8s .3s infinite linear; }
+.carNext { width: var(--car-next); flex: none; }
+.carOriginal { width: var(--car-orig); flex: none; }
+.carSvg { display: block; width: 100%; height: auto; overflow: visible; }
+.carBody { animation: bob .22s ease-in-out infinite alternate; }
+.carOriginal .carBody { animation: putter .5s steps(2) infinite; }
+.wheelFast, .wheelSlow { transform-box: fill-box; transform-origin: center; animation: spin .18s linear infinite; }
+.wheelSlow { animation-duration: .9s; }
+.speedLines { position: absolute; left: -46px; bottom: 6px; width: 50px; height: 24px; display: grid; align-content: space-between; animation: speed 4.8s .3s infinite; }
+.speedLines i { height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, #b9aeff); }.speedLines i:nth-child(2) { margin-left: 14px; }.speedLines i:nth-child(3) { margin-left: 6px; }
+.finishLine { position: absolute; right: 10%; top: 0; bottom: 0; width: 8px; background: repeating-conic-gradient(#f5f4ee 0 25%, #111 0 50%) 0 0 / 8px 8px; opacity: .85; }
+.finishGlow { position: absolute; right: calc(10% - 70px); top: -30px; width: 148px; height: 160px; border-radius: 50%; background: radial-gradient(closest-side, #d4ff7666, transparent); opacity: 0; animation: glow 4.8s .3s infinite; }
+.flag { position: absolute; right: calc(10% - 26px); top: 6px; width: 24px; transform-origin: 2px 100%; animation: flagRaise 4.8s .3s infinite; }
+.flagSvg { display: block; width: 100%; overflow: visible; }
+.flagCloth { transform-box: fill-box; transform-origin: left center; animation: wave .5s ease-in-out infinite alternate; }
+.finishChip { position: absolute; right: calc(10% + 14px); top: 6px; padding: 4px 8px; color: #111; border-radius: 999px; background: #d4ff76; font: 800 10px/1 var(--font-code); letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 0 16px #d4ff7688; opacity: 0; animation: chip 4.8s .3s infinite; z-index: 2; }
+@keyframes raceNext { 0%, 12% { transform: translateX(0); opacity: 1; animation-timing-function: cubic-bezier(.5, 0, .35, 1); } 58% { transform: translateX(100%); } 94% { transform: translateX(100%); opacity: 1; } 99%, 100% { transform: translateX(100%); opacity: 0; } }
+@keyframes raceOriginal { 0%, 12% { transform: translateX(0); opacity: 1; } 94% { transform: translateX(22%); opacity: 1; } 99%, 100% { transform: translateX(22%); opacity: 0; } }
+@keyframes speed { 0%, 14% { opacity: 0; transform: scaleX(.4); } 22%, 50% { opacity: 1; transform: scaleX(1); } 58%, 100% { opacity: 0; transform: scaleX(.3); } }
+@keyframes glow { 0%, 54% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.1); } 88% { opacity: .7; transform: scale(1); } 97%, 100% { opacity: 0; } }
+@keyframes chip { 0%, 56% { opacity: 0; transform: translateY(6px) scale(.85); } 62%, 90% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; } }
+@keyframes flagRaise { 0%, 52% { transform: rotate(0); } 58% { transform: rotate(-16deg); } 64% { transform: rotate(10deg); } 70% { transform: rotate(-12deg); } 76% { transform: rotate(8deg); } 84%, 100% { transform: rotate(0); } }
+@keyframes wave { from { transform: skewY(-5deg) scaleX(.94); } to { transform: skewY(5deg) scaleX(1); } }
+@keyframes bob { to { transform: translateY(-1px); } }
+@keyframes putter { 50% { transform: translateY(-1.5px) rotate(-.6deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 620px) { .race { height: 104px; --car-next: 104px; --car-orig: 56px; } }
+@media (prefers-reduced-motion: reduce) {
+  .runner, .speedLines, .finishGlow, .finishChip, .flag, .flagCloth, .carBody, .wheelFast, .wheelSlow { animation: none; }
+  .runnerNext { transform: translateX(100%); } .runnerOriginal { transform: translateX(22%); }
+  .speedLines { opacity: 0; } .finishGlow { opacity: .7; } .finishChip { opacity: 1; }
+}
+.carNext, .carOriginal { position: relative; z-index: 1; }
