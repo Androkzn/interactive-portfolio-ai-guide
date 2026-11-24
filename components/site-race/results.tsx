@@ -3,46 +3,61 @@ import { Gauge, ImageDown, PackageOpen, TimerReset, Zap } from "lucide-react";
 import resultsData from "@/lib/site-race/results-data.json";
 import styles from "./results.module.css";
 
-// Before → after across the site, mobile profile (390 px, slow 4G, 4× CPU): medians of
-// the races in lib/site-race/results-data.json (scripts/site-race/build-results.mjs).
-// Ordered by what a visitor feels first; where the original stays close is said in words.
-type Cell = { races: number; beforeCapped: boolean; before: Record<string, number | null>; after: Record<string, number | null> };
-const cells = resultsData.cells as Record<string, Cell>;
+// Before → after across the site, mobile profile (390 px, slow 4G, 4× CPU): medians of the races
+// in lib/site-race/results-data.json (scripts/site-race/build-results.mjs). A median that hit its
+// cap is shown as "> cap"; a gap within single-run noise (the race's own draw rule) is shown as
+// "≈ same", never as a win. Where the original stays close is said in words below the tiles.
+type Side = Record<string, number | null>;
+type Cell = { races: number; beforeCapped: boolean; before: Side; after: Side; censored?: { before?: Record<string, boolean>; after?: Record<string, boolean> } };
+const cells = resultsData.cells as unknown as Record<string, Cell>;
 const home = cells["home/mobile"];
 const model = cells["model/mobile"];
 const desktopModel = cells["model/desktop"];
 
 const sec = (ms: number | null) => Number(((ms ?? 0) / 1000).toFixed(2));
 const mb = (kb: number | null) => Number(((kb ?? 0) / 1024).toFixed(2));
-const times = (before: number, after: number, capped?: boolean) => {
-  const r = before / Math.max(after, 1e-9);
-  return `${capped ? "> " : ""}${r >= 9.5 ? Math.round(r) : r.toFixed(1)}×`;
-};
 
-type Tile = { icon: typeof Zap; label: string; sub: string; before: number; after: number; unit: string; capped?: boolean; gain: string; gainWord: string; hero?: boolean };
+type Unit = "s" | "ms" | "MB";
+type Tile = { icon: typeof Zap; label: string; sub: string; before: number; after: number; unit: Unit; capped?: boolean; afterCapped?: boolean; gain: string; gainWord: string; hero?: boolean; same?: boolean };
+type Spec = { key: string; icon: typeof Zap; label: string; sub: string; unit: Unit; word: string; hero?: boolean; pct?: boolean };
 
-function tiles(cell: Cell, product: boolean): Tile[] {
-  const lcp = { before: sec(cell.before.lcp), after: sec(cell.after.lcp) };
-  const load = { before: sec(cell.before.load), after: sec(cell.after.load) };
-  const weight = { before: mb(cell.before.totalKb), after: mb(cell.after.totalKb) };
-  const capped = cell.beforeCapped;
-  const lcpCapped = product && capped;
-  const list: Tile[] = [
-    { icon: Zap, label: product ? "Product photo on screen" : "Main content on screen", sub: "Largest contentful paint", ...lcp, unit: "s", capped: lcpCapped, gain: times(lcp.before, lcp.after, lcpCapped), gainWord: "faster", hero: true },
-    { icon: TimerReset, label: "Page fully loaded", sub: "Load event", ...load, unit: "s", capped, gain: times(load.before, load.after, capped), gainWord: "faster" },
-    { icon: ImageDown, label: "Data downloaded", sub: "Page weight", ...weight, unit: "MB", gain: times(weight.before, weight.after), gainWord: "lighter" },
-  ];
-  if (!product) {
-    const tbt = { before: Math.round(cell.before.tbt ?? 0), after: Math.round(cell.after.tbt ?? 0) };
-    list.push({ icon: Gauge, label: "Page frozen while loading", sub: "Total blocking time", ...tbt, unit: "ms", gain: `−${Math.round((1 - tbt.after / Math.max(tbt.before, 1)) * 100)}%`, gainWord: "blocking" });
-  }
-  return list;
+/** The race's draw thresholds (lib/site-race/scoring.ts NOISE): timings, blocking time, bytes. */
+const noiseFor = (key: string) => (key === "tbt" ? { abs: 300, rel: 0.4 } : /kb|Kb/.test(key) ? { abs: 10, rel: 0.02 } : { abs: 250, rel: 0.1 });
+
+function tile(cell: Cell | undefined, spec: Spec): Tile | null {
+  const b = cell?.before[spec.key], a = cell?.after[spec.key];
+  if (b == null || a == null || !cell) return null;
+  const bc = !!cell.censored?.before?.[spec.key], ac = !!cell.censored?.after?.[spec.key];
+  const value = (v: number) => (spec.unit === "s" ? sec(v) : spec.unit === "MB" ? mb(v) : Math.round(v));
+  const noise = noiseFor(spec.key);
+  const within = Math.abs(b - a) <= Math.max(noise.abs, Math.max(b, a) * noise.rel);
+  // A lower bound on the original's side that is already worse is a real win; anything else within noise is a draw.
+  const same = ac || (within && !(bc && b > a));
+  const r = b / Math.max(a, 1e-9);
+  const gain = same ? "≈" : spec.pct ? `−${Math.round((1 - a / Math.max(b, 1)) * 100)}%` : `${bc ? "> " : ""}${r >= 9.5 ? Math.round(r) : r.toFixed(1)}×`;
+  return { icon: spec.icon, label: spec.label, sub: spec.sub, before: value(b), after: value(a), unit: spec.unit, capped: bc, afterCapped: ac, gain, gainWord: same ? "about the same" : spec.word, hero: spec.hero, same };
 }
 
+const firstLoad = (cell: Cell | undefined, product: boolean): Spec[] => ([
+  { key: "lcp", icon: Zap, label: product ? "Product photo on screen" : "Main content on screen", sub: "Largest contentful paint", unit: "s", word: "faster", hero: true },
+  { key: "load", icon: TimerReset, label: "Page fully loaded", sub: "Load event", unit: "s", word: "faster" },
+  { key: "totalKb", icon: ImageDown, label: "Data downloaded", sub: "Page weight", unit: "MB", word: "lighter" },
+  ...(product ? [] : [{ key: "tbt", icon: Gauge, label: "Page frozen while loading", sub: "Total blocking time", unit: "ms", word: "blocking", pct: true }]),
+] as Spec[]).filter(() => !!cell);
+
 const GROUPS = [
-  { id: "product", title: "Product page", note: "A pump model's page: its large product render is the main content.", items: tiles(model, true) },
-  { id: "home", title: "Home page", note: "The first page a visitor opens.", items: tiles(home, false) },
-];
+  { id: "product", title: "Product page", note: "A pump model's page, opened cold: its large product render is the main content.", items: firstLoad(model, true).map((s) => tile(model, s)) },
+  { id: "home", title: "Home page", note: "The first page a visitor opens, cold.", items: firstLoad(home, false).map((s) => tile(home, s)) },
+  { id: "journey", title: "Then the visitor taps on", note: "From the catalogue, a tap on the HR40-5RZ card: scroll to it, tap, wait for the page.", items: [
+    tile(home, { key: "tap:hr40-5rz:content", icon: Zap, label: "Tap → product page", sub: "Its heading on screen", unit: "s", word: "faster", hero: true }),
+    tile(home, { key: "tap:hr40-5rz:image", icon: ImageDown, label: "Tap → product photo", sub: "Loaded, decoded, painted", unit: "s", word: "faster" }),
+    tile(home, { key: "tap:hr40-5rz:kb", icon: PackageOpen, label: "Downloaded for it", sub: "From scrolling to the card on", unit: "MB", word: "less" }),
+  ] },
+  { id: "return", title: "And comes back", note: "The home page again in the same browser, cache on.", items: [
+    tile(home, { key: "repeatLcp", icon: TimerReset, label: "Main content again", sub: "Largest contentful paint", unit: "s", word: "faster" }),
+    tile(home, { key: "repeatKb", icon: ImageDown, label: "Downloaded again", sub: "What the cache did not cover", unit: "MB", word: "less" }),
+  ] },
+].map((group) => ({ ...group, items: group.items.filter((item): item is Tile => item !== null) })).filter((group) => group.items.length > 0);
 
 const show = (v: number, unit: string) => `${v} ${unit}`;
 
@@ -66,7 +81,7 @@ export function RaceResults() {
               const Icon = r.icon;
               const ratio = Math.max(0.03, r.after / r.before);
               return (
-                <article key={r.label} className={`${styles.tile} ${r.hero ? styles.tileHero : ""}`} style={{ "--delay": `${index * 110}ms`, "--after": ratio } as CSSProperties}>
+                <article key={r.label} className={`${styles.tile} ${r.hero ? styles.tileHero : ""} ${r.same ? styles.tileSame : ""}`} style={{ "--delay": `${index * 110}ms`, "--after": ratio } as CSSProperties}>
                   <header className={styles.tileHead}>
                     <span className={styles.icon}><Icon size={18} aria-hidden="true" /></span>
                     <span><b>{r.label}</b><small>{r.sub}</small></span>
@@ -81,7 +96,7 @@ export function RaceResults() {
                     <div className={styles.barRow}>
                       <span className={styles.barLabel}>After</span>
                       <div className={styles.track}><i className={styles.barAfter} /></div>
-                      <span className={styles.valueAfter}>{show(r.after, r.unit)}</span>
+                      <span className={styles.valueAfter}>{r.afterCapped ? `> ${show(r.after, r.unit)}` : show(r.after, r.unit)}</span>
                     </div>
                   </div>
                 </article>

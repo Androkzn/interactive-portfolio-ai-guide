@@ -204,7 +204,7 @@ export function journeyRounds(a: LaneMetrics, b: LaneMetrics): Round[] {
     out.push(round("navigation", "Next page", "The page the visitor tapped through to: tap a link, wait for the new page", [
       row("nav-content", "Tap → content", "From the tap to the new page's heading on screen", ca.value, cb.value, ms, "lower", NOISE["nav-content"], both(ca.censored, cb.censored)),
       row("nav-image", "Tap → main image", "From the tap to the new page's largest visible image loaded, decoded and painted", ia.value, ib.value, ms, "lower", NOISE["nav-image"], both(ia.censored, ib.censored)),
-      row("nav-kb", "Downloaded for it", "Bytes over the wire from the touch (or hover) on this link, prefetches included", bytes(na), bytes(nb), kb, "lower", NOISE["nav-kb"], both(!!na?.capped, !!nb?.capped)),
+      row("nav-kb", "Downloaded for it", "Bytes over the wire from scrolling to this link until the new page showed: what came into view, prefetches and the page itself", bytes(na), bytes(nb), kb, "lower", NOISE["nav-kb"], both(!!na?.capped, !!nb?.capped)),
     ]));
   }
   // Scored only when both lanes ran it: a lane skipped for time must not hand the other a free round.

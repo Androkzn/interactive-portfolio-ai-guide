@@ -223,9 +223,12 @@ export function skippedNavigation(from: string, target: NavTarget | null, profil
 }
 
 /** Clicks the page's target link like a visitor would and times what follows. */
-export async function openSecondPage(page: Page, cdp: CDPSession, from: string, target: NavTarget, profile: RaceProfile, net: NetWindow): Promise<NavigationMetrics> {
-  // Counted from before the link comes into view, so anything the page fetches because the link
-  // became visible is part of this step's bytes (timings still start at the click).
+export async function openSecondPage(page: Page, cdp: CDPSession, from: string, target: NavTarget, profile: RaceProfile, net: NetWindow, throttle: Throttle): Promise<NavigationMetrics> {
+  // The step starts when the visitor scrolls to the link: what scrolling sets off (lazy images that
+  // come into view, on the original catalogue its full-size PNG thumbnails) is part of the step, in
+  // bytes and in time, under the full profile; that is what a visitor who scrolls and taps pays.
+  // (Settling those first and not counting them would hide megabytes.) Timings start at the click.
+  void throttle;
   net.start();
   const found = (await page.evaluate(`${FIND_LINK}(${JSON.stringify(target.selectors)})`).catch(() => null)) as { selector: string; text: string } | null;
   if (!found) return skippedNavigation(from, target, profile, "The link was not on the page.");
@@ -300,7 +303,7 @@ export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, p
       const prev = steps[i - 1];
       if (prev && (prev.skipped || prev.content === null)) return finish(skipAll("The previous page never showed up inside the cap.", steps), repeat);
       await settle(page, cdp, opts.network);
-      steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
+      steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net, opts.network).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
     }
     return finish(steps, repeat);
   } finally {

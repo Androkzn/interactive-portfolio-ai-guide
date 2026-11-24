@@ -92,3 +92,4 @@
 .facts li { display: flex; gap: 10px; align-items: flex-start; color: #c9cbc3; font-size: var(--text-caption); }
 .facts svg { flex: none; margin-top: 3px; color: #cfc8ff; }
 .facts b { color: #f5f4ee; }
+.tileSame .gain strong { background: none; color: #c9cbc3; -webkit-text-fill-color: #c9cbc3; }

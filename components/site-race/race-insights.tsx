@@ -506,7 +506,7 @@ function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: L
                       <li><span>URL changed</span><b>{t(step.commit, step.capMs)}</b></li>
                       <li><span>Heading on screen</span><b>{t(step.content, step.capMs)}</b></li>
                       <li><span>Main image painted{step.imagePath ? <> · <code>{step.imagePath}</code></> : ""}</span><b>{t(step.image, step.capMs)}</b></li>
-                      <li><span>Downloaded from the first touch on</span><b>{kb(step.net.kb)} · {step.net.network} requests</b></li>
+                      <li><span>Downloaded from scrolling to the link on</span><b>{kb(step.net.kb)} · {step.net.network} requests</b></li>
                     </ul>
                   )}
                 </div>

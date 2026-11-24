@@ -1,7 +1,9 @@
-// Folds saved race runs (scripts/site-race run-races style JSON: one file per race with
-// lanes {a,b}, results {a,b}) into lib/site-race/results-data.json: the medians the
-// result block shows. Usage:
-//   node scripts/site-race/build-results.mjs <dir-of-race-jsons> [before-preset=astro] [after-preset=next] [after-label]
+// Folds saved race runs (scripts/site-race/run-races.mjs: one JSON per race with lanes {a,b} and
+// results {a,b}) into lib/site-race/results-data.json, the medians the result blocks show.
+//   node scripts/site-race/build-results.mjs <dir-of-race-jsons> [before=astro] [after=next] [afterLabel]
+// Per page and device: the first page (cold load), and for journey races the repeat visit and each
+// tap of the visit. A value that hit its cap counts as the cap, and the cell is flagged censored when
+// most races hit it, so the page can say "> cap" instead of pretending it is a measurement.
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,39 +17,65 @@ const median = (xs) => {
   const m = Math.floor(v.length / 2);
   return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
 };
-const get = {
-  lcp: (m) => m.timing.lcp ?? (m.capped ? m.capMs ?? 30000 : null),
-  load: (m) => m.timing.load ?? (m.capped ? m.capMs ?? 30000 : null),
-  tbt: (m) => m.timing.tbt,
-  totalKb: (m) => m.network.totalKb,
-  imageKb: (m) => m.network.byType.image.kb,
+/** [value, censored] pairs → { value: median, censored: majority } */
+const fold = (pairs) => {
+  const ok = pairs.filter((p) => p && typeof p[0] === "number");
+  if (!ok.length) return null;
+  return { value: median(ok.map((p) => p[0])), censored: ok.filter((p) => p[1]).length > ok.length / 2 };
 };
+const first = {
+  lcp: (m) => [m.timing.lcp ?? (m.capped ? m.capMs ?? 30000 : null), m.timing.lcp === null && m.capped],
+  load: (m) => [m.timing.load ?? (m.capped ? m.capMs ?? 30000 : null), m.timing.load === null && m.capped],
+  tbt: (m) => [m.timing.tbt, m.capped && m.timing.tti === null],
+  totalKb: (m) => [m.network.totalKb, m.capped && m.timing.load === null],
+  imageKb: (m) => [m.network.byType.image.kb, m.capped && m.timing.load === null],
+  jsKb: (m) => [m.network.byType.script.kb, m.capped && m.timing.load === null],
+};
+const step = (s, key) => (!s ? null : s.skipped || s[key] === null ? [s.capMs, true] : [s[key], false]);
 
 const cells = {};
 let races = 0;
 for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort()) {
   const run = JSON.parse(await readFile(path.join(dir, file), "utf8"));
   if (run.error || !run.results) continue;
-  const lane = (id) => Object.entries(run.lanes).find(([, v]) => v === id)?.[0];
-  const [a, b] = [lane(beforeId), lane(afterId)];
-  if (!a || !b || !run.results[a] || !run.results[b]) continue;
-  const cell = (cells[`${run.page}/${run.profile}`] ??= { before: {}, after: {}, beforeCapped: [], n: 0 });
-  cell.n += 1; races += 1;
-  for (const [name, fn] of Object.entries(get)) {
-    (cell.before[name] ??= []).push(fn(run.results[a]));
-    (cell.after[name] ??= []).push(fn(run.results[b]));
+  const laneOf = (id) => Object.entries(run.lanes).find(([, v]) => v === id)?.[0];
+  const sides = { before: run.results[laneOf(beforeId)], after: run.results[laneOf(afterId)] };
+  if (!sides.before || !sides.after) continue;
+  races += 1;
+  const cell = (cells[`${run.page}/${run.profile}`] ??= { n: 0, before: {}, after: {} });
+  cell.n += 1;
+  for (const [side, m] of Object.entries(sides)) {
+    const acc = cell[side];
+    for (const [name, fn] of Object.entries(first)) (acc[name] ??= []).push(fn(m));
+    if (m.repeat && !m.repeat.skipped) {
+      (acc.repeatLcp ??= []).push([m.repeat.lcp ?? m.repeat.capMs, m.repeat.lcp === null]);
+      (acc.repeatKb ??= []).push([m.repeat.net.kb, false]);
+      (acc.repeatRequests ??= []).push([m.repeat.net.network, false]);
+    }
+    for (const s of m.navigationSteps ?? []) {
+      const key = s.to.replace(/^\/|\/$/g, "").split("/").pop() || "home";
+      (acc[`tap:${key}:content`] ??= []).push(step(s, "content"));
+      (acc[`tap:${key}:image`] ??= []).push(step(s, "image"));
+      (acc[`tap:${key}:kb`] ??= []).push(s.skipped ? null : [s.net.kb, !!s.capped]);
+    }
   }
-  cell.beforeCapped.push(!!run.results[a].capped);
 }
 
 const out = { measuredOn: new Date().toISOString().slice(0, 10), after: afterLabel, cells: {} };
 for (const [key, c] of Object.entries(cells)) {
+  const side = (acc) => Object.fromEntries(Object.entries(acc).map(([k, v]) => [k, fold(v)]));
+  const before = side(c.before), after = side(c.after);
   out.cells[key] = {
     races: c.n,
-    // A lane that was still loading at the cap in most races is reported as "> cap".
-    beforeCapped: c.beforeCapped.filter(Boolean).length > c.n / 2,
-    before: Object.fromEntries(Object.entries(c.before).map(([k, v]) => [k, median(v)])),
-    after: Object.fromEntries(Object.entries(c.after).map(([k, v]) => [k, median(v)])),
+    beforeCapped: !!before.load?.censored,
+    // Plain medians for the existing readers (lcp, load, tbt, totalKb, imageKb)…
+    before: Object.fromEntries(Object.entries(before).map(([k, v]) => [k, v?.value ?? null])),
+    after: Object.fromEntries(Object.entries(after).map(([k, v]) => [k, v?.value ?? null])),
+    // …and which of them are lower bounds ("> cap").
+    censored: {
+      before: Object.fromEntries(Object.entries(before).filter(([, v]) => v?.censored).map(([k]) => [k, true])),
+      after: Object.fromEntries(Object.entries(after).filter(([, v]) => v?.censored).map(([k]) => [k, true])),
+    },
   };
 }
 const target = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../lib/site-race/results-data.json");

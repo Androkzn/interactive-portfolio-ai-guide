@@ -584,13 +584,14 @@ function Confetti({ tone }: { tone: string }) {
 const STEP_NAME: Record<string, string> = { "/pumps/": "Catalogue", "/boom-pumps/hr40-5rz/": "HR40-5RZ page", "/boom-pumps/hr21-4zr/": "HR21-4ZR page" };
 export const stepName = (to: string) => STEP_NAME[to] ?? to;
 
-/** The journey race at a glance: the home load, then each tap (heading on screen, then main image). */
+/** The journey race at a glance, in the order it runs: the home load, the return visit, then each tap. */
 function JourneyLine({ metrics }: { metrics: NonNullable<LaneState["metrics"]> }) {
   const steps = metrics.navigationSteps ?? (metrics.navigation ? [metrics.navigation] : []);
   const after = (value: number | null, cap: number) => (value === null ? `> ${(cap / 1000).toFixed(0)} s` : `+${(value / 1000).toFixed(2)} s`);
   return (
     <p className={styles.journeyLine}>
       <span>Home: <b>{metrics.timing.lcp === null ? "no final LCP" : `LCP ${ms(metrics.timing.lcp)}`}</b></span>
+      {metrics.repeat && (metrics.repeat.skipped ? <span>Return visit: <b>skipped</b></span> : <span>Return visit: <b>{metrics.repeat.lcp === null ? `> ${(metrics.repeat.capMs / 1000).toFixed(0)} s` : `LCP ${ms(metrics.repeat.lcp)}`}</b> · {kb(metrics.repeat.net.kb)}</span>)}
       {steps.map((step) => (
         <span key={step.to}>{stepName(step.to)}: {step.skipped ? <b>not reached</b> : <><b>{after(step.content, step.capMs)}</b> after tap · image <b>{after(step.image, step.capMs)}</b></>}</span>
       ))}
