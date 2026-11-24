@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
 import type { LaneId, MarkName, RaceCaps, RaceLink, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
-import { firstPagesIn, frameAt, idleRace, pendingLanes, useRace, verdictFinal, verdictOf, type LaneState, type RaceState } from "@/lib/site-race/use-race";
+import { frameAt, idleRace, pendingLanes, useRace, verdictFinal, verdictOf, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { featuredStage, raceUrl, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
@@ -101,10 +101,11 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   const racing = state.status === "connecting" || state.status === "racing";
   const now = useClock(racing || replaying);
-  // The scoreboard arrives with both first pages, while the visit still runs; its rounds fill in after.
-  const ready = firstPagesIn(state);
   const pending = pendingLanes(state);
   const final = verdictFinal(state);
+  // The results open together, once the whole visit is scored (or the race was stopped): a scoreboard
+  // with rounds still to come read as broken while the lanes were still racing.
+  const resultsOpen = state.status === "finished" || state.status === "failed" || final;
   const verdict: Verdict | null = useMemo(
     () => verdictOf(state),
     // verdictOf reads only the lanes' metrics and which lanes are still on their visit.
@@ -138,7 +139,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   // Reveal the first page's rounds one at a time the moment both first pages are in; the visit's
   // rounds then join as they finish, without running the reveal again. A reopened race shows it whole.
   useEffect(() => {
-    if (!ready) { setRevealed(0); return; }
+    if (!resultsOpen || !verdict) { setRevealed(0); return; }
     if (reduced || !animateReveal.current) { setRevealed(REVEAL_ALL); return; }
     setRevealed(0);
     let step = 0;
@@ -148,13 +149,14 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       if (step > firstRoundsRef.current) { clearInterval(timer); animateReveal.current = false; }
     }, 850);
     return () => clearInterval(timer);
-  }, [ready, reduced]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultsOpen, reduced]);
 
   // The verdict lands below the lanes, out of sight on most screens. Scrolling there by itself would
   // pull the visitor away from the lanes while the visit is still running, so a pill offers it instead;
   // once the scoreboard has been on screen the pill is gone for this race.
   useEffect(() => {
-    if (!ready || !offerScores || boardSeen) return;
+    if (!resultsOpen || !offerScores || boardSeen) return;
     const board = document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard");
     if (!board) return;
     const observer = new IntersectionObserver((entries) => {
@@ -162,7 +164,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     }, { threshold: 0.2 });
     observer.observe(board);
     return () => observer.disconnect();
-  }, [ready, offerScores, boardSeen]);
+  }, [resultsOpen, offerScores, boardSeen]);
   const showScores = () => {
     // The Scorecard (0–100 rings) heads the results; the rounds follow it.
     (document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard"))?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
@@ -348,10 +350,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
             {finished ? (state.source === "live" ? "Race complete" : state.source === "report" ? "Saved race" : "Recorded race") : stopped ? "Stopped" : replaying ? "Replay" : `Step ${Math.min(current + 1, steps.length)} of ${steps.length}`}
             {elapsed && <> · <b>{elapsed}</b></>}
           </p>
-          {racing && ready && (
-            // The scores sit below the lanes, out of sight on a phone: say they are in, and where.
-            <p className={styles.progressScores}><a href="#race-scorecard">First scores are in <ArrowDown size={13} aria-hidden="true" /></a> the visit&apos;s rounds join as it goes</p>
-          )}
         </div>
       )}
 
@@ -385,7 +383,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
       <Track state={state} now={now} maxT={maxT} scrub={scrub} identity={identity} />
 
-      {verdict && (
+      {verdict && resultsOpen && (
         <>
           {/* The photo finish needs every frame, so it waits for the race to end. */}
           {state.status === "finished" && (
@@ -415,7 +413,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           <button type="submit" className={styles.startButton} disabled={racing || !challenge.trim()}><Flag size={16} aria-hidden="true" /> Challenge</button>
         </div>
       </form>
-      {offerScores && ready && verdict && !boardSeen && (
+      {offerScores && resultsOpen && verdict && !boardSeen && (
         <div className={styles.scorePill} role="status">
           <button type="button" className={styles.scorePillGo} onClick={showScores}>
             {pillText} <ArrowDown size={15} aria-hidden="true" />
