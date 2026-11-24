@@ -3,7 +3,8 @@
 //   node scripts/site-race/build-results.mjs <dir-of-race-jsons> [before=astro] [after=next] [afterLabel]
 // Per page and device: the first page (cold load), and for journey races the repeat visit and each
 // tap of the visit. A value that hit its cap counts as the cap, and the cell is flagged censored when
-// most races hit it, so the page can say "> cap" instead of pretending it is a measurement.
+// most races hit it, so the page can say "> cap" instead of pretending it is a measurement. The
+// first-page cap the races ran under is saved as top-level capMs, so the copy never hard-codes it.
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +36,8 @@ const step = (s, key) => (!s ? null : s.skipped || s[key] === null ? [s.capMs, t
 
 const cells = {};
 let races = 0;
+/** The first-page cap of every folded race (lane metrics, else a saved start event), for the page copy. */
+const caps = new Set();
 for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort()) {
   const run = JSON.parse(await readFile(path.join(dir, file), "utf8"));
   if (run.error || !run.results) continue;
@@ -42,6 +45,10 @@ for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort(
   const sides = { before: run.results[laneOf(beforeId)], after: run.results[laneOf(afterId)] };
   if (!sides.before || !sides.after) continue;
   races += 1;
+  for (const m of Object.values(sides)) {
+    const cap = m.capMs ?? run.capMs ?? run.start?.capMs;
+    if (typeof cap === "number") caps.add(cap);
+  }
   const cell = (cells[`${run.page}/${run.profile}`] ??= { n: 0, before: {}, after: {} });
   cell.n += 1;
   for (const [side, m] of Object.entries(sides)) {
@@ -62,7 +69,12 @@ for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort(
   }
 }
 
-const out = { measuredOn: new Date().toISOString().slice(0, 10), after: afterLabel, cells: {} };
+// The page says "> cap" and "stopped at the cap" with this number. Races under different caps should
+// not be mixed; if they are, the longest cap is the honest bound for a censored median.
+const capMs = caps.size ? Math.max(...caps) : null;
+if (caps.size > 1) console.warn(`warning: races ran under different caps (${[...caps].sort((a, b) => a - b).join(", ")} ms); recording capMs ${capMs}`);
+if (capMs === null) console.warn("warning: no lane recorded its cap; capMs left out (the page falls back to 30000)");
+const out = { measuredOn: new Date().toISOString().slice(0, 10), after: afterLabel, ...(capMs === null ? {} : { capMs }), cells: {} };
 for (const [key, c] of Object.entries(cells)) {
   const side = (acc) => Object.fromEntries(Object.entries(acc).map(([k, v]) => [k, fold(v)]));
   const before = side(c.before), after = side(c.after);

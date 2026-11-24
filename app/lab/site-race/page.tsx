@@ -21,6 +21,23 @@ const races = Math.min(...["home/mobile", "model/mobile"].map((key) => cells[key
 const mb = (kb: number | null | undefined) => (kb == null ? null : `${(kb / 1024).toFixed(1)} MB`);
 const stat = (value: string | null, note: string) => (value ? { value, note } : undefined);
 
+// How long the live race waits at each step before it stops a lane. Mirrors RACE_CAPS in
+// packages/contracts (the Worker's LANE_CAP_MS and navigation caps); import it from there once it exists.
+const RACE_CAPS = { firstPageMs: 10_000, repeatMs: 10_000, tapMs: 10_000 } as const;
+const capSeconds = (capMs: number) => `${Math.round(capMs / 100) / 10} s`;
+
+/** The research behind the cap (links checked 2026-11-24); same sources as the race's own note. */
+const PATIENCE_SOURCES = {
+  limits: { name: "Nielsen Norman Group", title: "Response Times: The 3 Important Limits", href: "https://www.nngroup.com/articles/response-times-3-important-limits/" },
+  website: { name: "Nielsen Norman Group", title: "Website Response Times", href: "https://www.nngroup.com/articles/website-response-times/" },
+  mobile: { name: "Google, 2016", title: "The need for mobile speed", href: "https://blog.google/products/admanager/the-need-for-mobile-speed/" },
+} as const;
+// Links are plain text site-wide (globals.css), so a source carries the site's underline itself.
+const sourceLink = { textDecoration: "underline", textDecorationColor: "#bdb3ec", textDecorationThickness: 2, textUnderlineOffset: 3 } as const;
+function Source({ source }: { source: (typeof PATIENCE_SOURCES)[keyof typeof PATIENCE_SOURCES] }) {
+  return <a href={source.href} target="_blank" rel="noreferrer" title={source.title} style={sourceLink}>{source.name}</a>;
+}
+
 /** Where a change shows up: a round of the race's scoreboard and, optionally, the row inside it. */
 type Shows = { round: string; row?: string };
 
@@ -44,10 +61,10 @@ const story: { tone: "before" | "after" | "proof"; icon: LucideIcon; label: stri
 
 // The order the Worker runs it (apps/site-race-api/src/navigation.ts): cold load, repeat view, then the taps.
 const visit: { icon: LucideIcon; title: string; who: string; scored: string[] | null; limit: string }[] = [
-  { icon: House, title: "Home page, cold", who: "First visit, nothing cached.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: "30 s max" },
-  { icon: RotateCcw, title: "Home page again", who: "Returning visitor, cache on.", scored: ["Repeat visit"], limit: "10 s max" },
-  { icon: Hand, title: "Tap to a list page", who: "A tap on a link.", scored: null, limit: "20 s max" },
-  { icon: Hand, title: "Tap to a product page", who: "A tap on a link.", scored: ["Next page"], limit: "20 s max" },
+  { icon: House, title: "Home page, cold", who: "First visit, nothing cached.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: `${capSeconds(RACE_CAPS.firstPageMs)} max` },
+  { icon: RotateCcw, title: "Home page again", who: "Returning visitor, cache on.", scored: ["Repeat visit"], limit: `${capSeconds(RACE_CAPS.repeatMs)} max` },
+  { icon: Hand, title: "Tap to a list page", who: "A tap on a link.", scored: null, limit: `${capSeconds(RACE_CAPS.tapMs)} max` },
+  { icon: Hand, title: "Tap to a product page", who: "A tap on a link.", scored: ["Next page"], limit: `${capSeconds(RACE_CAPS.tapMs)} max` },
 ];
 
 const changes: { icon: LucideIcon; title: string; body: string; how: string; shows: Shows[] }[] = [
@@ -262,6 +279,19 @@ export default function Page() {
               </ul>
             </div>
           </div>
+
+          {/* Same wording as PatienceMethod in components/site-race/patience.tsx, plus the original's full load. */}
+          <p className={styles.parity}>
+            <Timer size={18} aria-hidden="true" />
+            <span>
+              <b>Each step stops at {capSeconds(RACE_CAPS.firstPageMs)}, a visitor&apos;s patience:</b> 10 seconds is about the limit for keeping a user&apos;s attention
+              (<Source source={PATIENCE_SOURCES.limits} />), and a 10-second delay will often make users leave a site (<Source source={PATIENCE_SOURCES.website} />).
+              {" "}On phones, 53% of visits are likely to be abandoned if pages take longer than 3 seconds to load (<Source source={PATIENCE_SOURCES.mobile} />);
+              a page still loading then scores &ldquo;&gt; {capSeconds(RACE_CAPS.firstPageMs)}&rdquo;, and its lane shows the full weight it still had to download.
+              {/* Measured, not a cap: under the earlier 30 s limit the original's product page was still downloading on a phone. */}
+              {" "}The original would keep downloading for 30 s or more; the race shows what a visitor actually sees before leaving.
+            </span>
+          </p>
 
           <div className={styles.caveats}>
             <h3><Info size={18} aria-hidden="true" /> What one race does not prove</h3>

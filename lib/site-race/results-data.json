@@ -1,6 +1,7 @@
 {
   "measuredOn": "2026-11-24",
   "after": "Next.js 16",
+  "capMs": 30000,
   "cells": {
     "home/mobile": {
       "races": 4,

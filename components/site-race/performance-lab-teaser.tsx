@@ -32,6 +32,8 @@ function CheckeredFlag() {
 
 const seconds = (value: number | null | undefined) => value == null ? "—" : `${(value / 1000).toFixed(1)}s`;
 const megabytes = (value: number | null | undefined) => value == null ? "—" : `${(value / 1024).toFixed(1)}MB`;
+/** Where the races behind these medians stopped a lane (results-data capMs; older files: 30 s). */
+const capSeconds = Math.round(((resultsData as { capMs?: number }).capMs ?? 30000) / 100) / 10;
 const reduction = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.max(0, Math.round((1 - after / before) * 100)) : null;
 
 export function PerformanceLabTeaser() {
@@ -68,7 +70,7 @@ export function PerformanceLabTeaser() {
           <div className={styles.kicker}><Gauge size={15} />Live performance lab <span>Next.js 16</span></div>
           <div className={styles.nextIdentity}><span className={styles.nextLogo}><NextMark /></span><span><small>Performance rebuild</small><strong>Built and optimized with Next.js</strong></span></div>
           <h2 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h2>
-          <p>Same pages. Same content. On a phone, a product page whose photo did not appear within 30 seconds now shows it in {seconds(productAfter)}.</p>
+          <p>Same pages. Same content. On a phone, a product page whose photo {product.beforeCapped ? `did not appear within ${capSeconds} seconds` : `took ${seconds(product.before.lcp)} to appear`} now shows it in {seconds(productAfter)}.</p>
           <div className={styles.proof} aria-label="Measured mobile improvements">
             <span><TimerReset size={16} /><b>{productLcpX ? `${product.beforeCapped ? "> " : ""}${productLcpX}` : "Faster"}</b><small>faster product page</small></span>
             <span><TimerReset size={16} /><b>{homeLcpX ?? "Faster"}</b><small>faster home page</small></span>
@@ -81,7 +83,7 @@ export function PerformanceLabTeaser() {
           <SyncAnimations />
           <div className={styles.visualHead}><span><i />Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
-            <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? "> 30s" : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>
+            <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? `> ${capSeconds}s` : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>
             <div className={styles.racePulse} aria-hidden="true"><Zap size={18} fill="currentColor" /></div>
             <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(productAfter)}</strong><small>product photo on screen</small></div>
           </div>
