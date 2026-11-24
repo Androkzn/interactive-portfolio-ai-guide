@@ -17,17 +17,19 @@ export const HATCH_VIEW = { w: 166, h: 66 };
 
 const origin = (x: number, y: number) => ({ transformOrigin: `${x}px ${y}px` }) as CSSProperties;
 
-function NextLogo({ cx, cy, r, id }: { cx: number; cy: number; r: number; id: string }) {
-  // Vector Next.js mark: black disc, white "N" whose diagonal and right stem fade out.
+function NextLogo({ cx, cy, r, id, light = false }: { cx: number; cy: number; r: number; id: string; light?: boolean }) {
+  // Vector Next.js mark: a disc and an "N" whose diagonal and right stem fade out. `light` is the
+  // white variant (white disc, black N) that reads clearly on the violet bodywork.
   const s = r / 90;
+  const ink = light ? "#000" : "#fff";
   return (
     <g transform={`translate(${cx - 90 * s} ${cy - 90 * s}) scale(${s})`}>
       <defs>
-        <linearGradient id={`${id}-a`} x1="109" y1="116.5" x2="144.5" y2="160.5" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
-        <linearGradient id={`${id}-b`} x1="121" y1="54" x2="120.8" y2="106.9" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
+        <linearGradient id={`${id}-a`} x1="109" y1="116.5" x2="144.5" y2="160.5" gradientUnits="userSpaceOnUse"><stop stopColor={ink} /><stop offset="1" stopColor={ink} stopOpacity="0" /></linearGradient>
+        <linearGradient id={`${id}-b`} x1="121" y1="54" x2="120.8" y2="106.9" gradientUnits="userSpaceOnUse"><stop stopColor={ink} /><stop offset="1" stopColor={ink} stopOpacity="0" /></linearGradient>
       </defs>
-      <circle cx="90" cy="90" r="90" fill="#000" />
-      <circle cx="90" cy="90" r="86" fill="none" stroke="#fff" strokeOpacity=".9" strokeWidth="6" />
+      <circle cx="90" cy="90" r="90" fill={light ? "#fff" : "#000"} />
+      <circle cx="90" cy="90" r="86" fill="none" stroke={light ? "#000" : "#fff"} strokeOpacity={light ? ".14" : ".9"} strokeWidth="6" />
       <path d="M149.5 157.5L69.1 54H54v72h12.1V69.4l73.8 95.4a90.2 90.2 0 009.6-7.3z" fill={`url(#${id}-a)`} />
       <rect x="115" y="54" width="12" height="72" fill={`url(#${id}-b)`} />
     </g>
@@ -182,7 +184,7 @@ export function F1Car() {
           <path d="M74 53.4C92 51.2 112 50.4 130 50.6" stroke="#d4ff76" strokeWidth=".75" fill="none" strokeLinecap="round" />
           <path d="M70 56.4C90 55.4 112 55 133 55.6" stroke="#0d0a2a" strokeOpacity=".6" strokeWidth=".5" fill="none" />
           <path d="M132.4 49.6C133.2 46.6 135.6 44.6 139.4 43.6" stroke="#fff" strokeOpacity=".25" strokeWidth=".4" fill="none" />
-          <NextLogo cx={110} cy={45.2} r={4.6} id="rc-podLogo" />
+          <NextLogo cx={107} cy={46.4} r={7} id="rc-podLogo" light />
 
           {/* Mirror on its stalk, outboard of the halo. */}
           <path d="M132.6 36.8L133.8 32.6" stroke="#1a1b20" strokeWidth=".8" />

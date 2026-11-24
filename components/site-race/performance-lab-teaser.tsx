@@ -1,20 +1,31 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Gauge, Image as ImageIcon, TimerReset, Zap } from "lucide-react";
 import resultsData from "@/lib/site-race/results-data.json";
 import styles from "./performance-lab-teaser.module.css";
 import { F1Car, Hatchback } from "./race-cars";
+import { SyncAnimations } from "./sync-animations";
 
 function NextMark() {
   return <svg viewBox="0 0 48 48" role="img" aria-label="Next.js logo"><circle cx="24" cy="24" r="23" fill="#fff" /><path d="M14 14v20M15 14l20 28M28 14h6v20" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
+/**
+ * The chequered flag as a marshal holds it: the gloved hand at the pivot, a stick, and a cloth
+ * built from six columns of chequers so a ripple can run from the stick to the free edge.
+ */
 function CheckeredFlag() {
-  const cells = [];
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 6; x++) if ((x + y) % 2 === 0) cells.push(<rect key={`${x}-${y}`} x={x * 5} y={y * 5} width="5" height="5" />);
+  const columns = Array.from({ length: 6 }, (_, x) => (
+    <g key={x} className={styles.flagCol} style={{ "--i": x } as CSSProperties}>
+      <rect x={6 + x * 7} y="5" width="7" height="26" fill="#f5f4ee" />
+      {[0, 1, 2, 3].filter((y) => (x + y) % 2 === 0).map((y) => <rect key={y} x={6 + x * 7} y={5 + y * 6.5} width="7" height="6.5" fill="#111" />)}
+    </g>
+  ));
   return (
-    <svg viewBox="0 0 34 52" className={styles.flagSvg}>
-      <rect x="1" y="0" width="2" height="52" rx="1" fill="#c9ccc3" />
-      <g className={styles.flagCloth}><rect x="3" y="1" width="30" height="20" fill="#f5f4ee" /><g fill="#111" transform="translate(3 1)">{cells}</g></g>
+    <svg viewBox="0 0 52 62" className={styles.flagSvg}>
+      <rect x="3" y="2" width="2.6" height="57" rx="1.3" fill="#e3e5dc" />
+      <g className={styles.flagCloth}>{columns}</g>
+      <circle cx="4.3" cy="57.5" r="4.4" fill="#ff8a2e" stroke="#151714" strokeWidth="1.1" />
     </svg>
   );
 }
@@ -41,6 +52,8 @@ export function PerformanceLabTeaser() {
   const productWeightX = ratio(product.before.totalKb, product.after.totalKb);
   const productAfter = product.after.lcp ?? 0;
   const lcpGain = reduction(before?.lcp, after?.lcp);
+  // The weight bars to scale: the original is the full track.
+  const weightShare = before.pageKb ? `${Math.max(2, (after.pageKb / before.pageKb) * 100).toFixed(1)}%` : "10%";
   const weightGain = reduction(before?.pageKb, after?.pageKb);
 
   return (
@@ -65,6 +78,7 @@ export function PerformanceLabTeaser() {
         </div>
 
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
+          <SyncAnimations />
           <div className={styles.visualHead}><span><i />Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
             <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? "> 30s" : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>
@@ -74,23 +88,28 @@ export function PerformanceLabTeaser() {
           <div className={styles.chartGrid}>
             <div className={styles.chartCard}>
               <div className={styles.chartTitle}><span>Loading progress</span><b><ArrowDownRight size={14} /> LCP</b></div>
+              {/* Loading progress on the race's clock. x is time: both lines are drawn at the same pace
+                  (202 units over 12–58% of the cycle = 360 units over 12–94%). The Next.js line ends at
+                  the dot, so the dot lights exactly as the F1 car crosses the line (58%); the original
+                  keeps crawling and stays under half, because its photo never arrives in the race. */}
               <svg className={styles.sparkline} viewBox="0 0 360 112" preserveAspectRatio="none" aria-hidden="true">
                 <path className={styles.gridLine} d="M0 24H360M0 56H360M0 88H360" />
-                <path className={styles.originalLine} pathLength="1" d="M0 100 C45 98 72 94 105 90 S155 76 185 72 S242 54 275 45 S330 25 360 16" />
-                <path className={styles.optimizedLine} pathLength="1" d="M0 100 C28 91 45 66 72 52 S116 30 145 22 S215 16 360 14" />
-                <circle className={styles.chartDot} cx="145" cy="22" r="5" />
+                <path className={styles.originalLine} pathLength="1" d="M0 100 C60 99 110 95 160 88 S270 70 360 60" />
+                <path className={styles.optimizedLine} pathLength="1" d="M0 100 C46 98 78 86 110 62 S170 18 202 14" />
+                <circle className={styles.chartDot} cx="202" cy="14" r="5" />
               </svg>
               <div className={styles.legend}><span><i className={styles.orange} />Original</span><span><i className={styles.purple} />Next.js</span></div>
             </div>
             <div className={styles.weightCard}>
               <div className={styles.chartTitle}><span>Product page weight</span><b>{weightGain == null ? "Reduced" : `−${weightGain}%`}</b></div>
               <div className={styles.weightRow}><span>Original</span><div><i className={styles.weightBefore} /></div><b>{megabytes(before?.pageKb)}</b></div>
-              <div className={styles.weightRow}><span>Next.js</span><div><i className={styles.weightAfter} /></div><b>{megabytes(after?.pageKb)}</b></div>
+              <div className={styles.weightRow}><span>Next.js</span><div><i className={styles.weightAfter} style={{ "--finish": weightShare } as CSSProperties} /></div><b>{megabytes(after?.pageKb)}</b></div>
               <div className={styles.optimizations}><span>Images sized</span><span>Photo first</span><span>Less JS</span><span>Next page early</span></div>
             </div>
           </div>
           <div className={styles.race} aria-hidden="true">
             <div className={styles.finishGlow} />
+            {/* The line is painted across the track; the flag is a marshal's, above the track beyond it. */}
             <div className={styles.finishLine} />
             <div className={styles.flag}><CheckeredFlag /></div>
             <span className={styles.finishChip}>Finish · {seconds(productAfter)}</span>
@@ -103,9 +122,9 @@ export function PerformanceLabTeaser() {
           </div>
           <div className={styles.timeline} aria-hidden="true">
             <div className={styles.rail}><i className={styles.railFill} /><i className={styles.railHead} /></div>
-            {["Home page", "Product page", "Race it live"].map((step, index) => (
-              <span key={step} className={`${styles.checkpoint} ${styles[`checkpoint${index}`]}`}><i />{step}</span>
-            ))}
+            {/* What the track shows: the product page opening cold, from the request to its photo on screen. */}
+            <span className={`${styles.checkpoint} ${styles.checkpoint0}`}><i />Page requested</span>
+            <span className={`${styles.checkpoint} ${styles.checkpoint2}`}><i />Photo on screen · {seconds(productAfter)}</span>
           </div>
         </div>
       </div>
