@@ -1,5 +1,5 @@
 {
- "syncedAt": "2026-11-24T18:55:43.828Z",
+ "syncedAt": "2026-11-24T22:35:54.194Z",
  "source": "Project performance reports (real Chrome, cold cache, one load per page and profile)",
  "pageLabels": {
   "/": "Home",
@@ -3536,6 +3536,873 @@
       },
       "lcpElement": "img.scenic-banner-photo",
       "lcpResource": "/images/optimized/photos/hr53-photo-1-1600.08af172674.avif"
+     }
+    }
+   }
+  },
+  {
+   "run": "2026-11-24_1412",
+   "date": "Nov 24, 2026, 2:12 p.m.",
+   "base": "https://92ecff30.hr-concrete-pumps-next.pages.dev",
+   "build": "ddd36b0",
+   "chrome": "158.0.8127.38",
+   "pages": {
+    "/": {
+     "mobile": {
+      "lcp": 2244,
+      "fcp": 1236,
+      "tbt": 50,
+      "cls": 0,
+      "inp": 72,
+      "pageKb": 849,
+      "jsKb": 162,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 32,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 312,
+      "fcp": 304,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 866,
+      "jsKb": 179,
+      "imgKb": 568,
+      "htmlKb": 45,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/pumps/": {
+     "mobile": {
+      "lcp": 2600,
+      "fcp": 1100,
+      "tbt": 55,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 570,
+      "jsKb": 158,
+      "imgKb": 323,
+      "htmlKb": 16,
+      "requests": 29,
+      "imageFormats": {
+       "svg": 3,
+       "avif": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 328,
+      "fcp": 292,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 615,
+      "jsKb": 158,
+      "imgKb": 368,
+      "htmlKb": 16,
+      "requests": 35,
+      "imageFormats": {
+       "svg": 3,
+       "avif": 9,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/boom-pumps/hr40-5rz/": {
+     "mobile": {
+      "lcp": 1836,
+      "fcp": 1228,
+      "tbt": 54,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 560,
+      "jsKb": 160,
+      "imgKb": 307,
+      "htmlKb": 20,
+      "requests": 37,
+      "imageFormats": {
+       "avif": 8,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-1280.a9351bda1c.avif"
+     },
+     "desktop": {
+      "lcp": 284,
+      "fcp": 284,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 449,
+      "jsKb": 160,
+      "imgKb": 196,
+      "htmlKb": 20,
+      "requests": 39,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 10,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-800.c649346886.avif"
+     }
+    },
+    "/boom-pumps/hr21-4zr/": {
+     "mobile": {
+      "lcp": 1624,
+      "fcp": 1144,
+      "tbt": 48,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 522,
+      "jsKb": 160,
+      "imgKb": 269,
+      "htmlKb": 19,
+      "requests": 34,
+      "imageFormats": {
+       "avif": 5,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-1280.dcb44206cc.avif"
+     },
+     "desktop": {
+      "lcp": 324,
+      "fcp": 324,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 434,
+      "jsKb": 160,
+      "imgKb": 181,
+      "htmlKb": 19,
+      "requests": 39,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 10,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-800.79ed6fddb0.avif"
+     }
+    },
+    "/about/": {
+     "mobile": {
+      "lcp": 1848,
+      "fcp": 1248,
+      "tbt": 56,
+      "cls": 0,
+      "inp": 96,
+      "pageKb": 432,
+      "jsKb": 174,
+      "imgKb": 155,
+      "htmlKb": 29,
+      "requests": 26,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 264,
+      "fcp": 264,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 638,
+      "jsKb": 174,
+      "imgKb": 361,
+      "htmlKb": 29,
+      "requests": 31,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/contact/": {
+     "mobile": {
+      "lcp": 1652,
+      "fcp": 1012,
+      "tbt": 53,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 391,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 244,
+      "fcp": 224,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 391,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "svg": 3,
+       "avif": 1,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/es/": {
+     "mobile": {
+      "lcp": 2184,
+      "fcp": 1128,
+      "tbt": 95,
+      "cls": 0,
+      "inp": 120,
+      "pageKb": 850,
+      "jsKb": 162,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 32,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 340,
+      "fcp": 340,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 867,
+      "jsKb": 179,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    }
+   }
+  },
+  {
+   "run": "2026-11-24_1414",
+   "date": "Nov 24, 2026, 2:14 p.m.",
+   "base": "https://eeb1e9f7.hr-concrete-pumps-next.pages.dev",
+   "build": "2767772",
+   "chrome": "158.0.8127.38",
+   "pages": {
+    "/": {
+     "mobile": {
+      "lcp": 1420,
+      "fcp": 848,
+      "tbt": 55,
+      "cls": 0,
+      "inp": 72,
+      "pageKb": 841,
+      "jsKb": 162,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 32,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 340,
+      "fcp": 324,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 858,
+      "jsKb": 179,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/pumps/": {
+     "mobile": {
+      "lcp": 1712,
+      "fcp": 716,
+      "tbt": 47,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 561,
+      "jsKb": 159,
+      "imgKb": 323,
+      "htmlKb": 17,
+      "requests": 29,
+      "imageFormats": {
+       "avif": 3,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 272,
+      "fcp": 252,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 606,
+      "jsKb": 159,
+      "imgKb": 368,
+      "htmlKb": 17,
+      "requests": 35,
+      "imageFormats": {
+       "avif": 9,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/boom-pumps/hr40-5rz/": {
+     "mobile": {
+      "lcp": 836,
+      "fcp": 804,
+      "tbt": 45,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 551,
+      "jsKb": 160,
+      "imgKb": 307,
+      "htmlKb": 20,
+      "requests": 37,
+      "imageFormats": {
+       "avif": 8,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-1280.a9351bda1c.avif"
+     },
+     "desktop": {
+      "lcp": 256,
+      "fcp": 256,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 441,
+      "jsKb": 161,
+      "imgKb": 196,
+      "htmlKb": 20,
+      "requests": 39,
+      "imageFormats": {
+       "avif": 10,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-800.c649346886.avif"
+     }
+    },
+    "/boom-pumps/hr21-4zr/": {
+     "mobile": {
+      "lcp": 820,
+      "fcp": 796,
+      "tbt": 48,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 514,
+      "jsKb": 161,
+      "imgKb": 269,
+      "htmlKb": 19,
+      "requests": 34,
+      "imageFormats": {
+       "avif": 5,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-1280.dcb44206cc.avif"
+     },
+     "desktop": {
+      "lcp": 400,
+      "fcp": 400,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 426,
+      "jsKb": 161,
+      "imgKb": 182,
+      "htmlKb": 19,
+      "requests": 39,
+      "imageFormats": {
+       "avif": 10,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-800.79ed6fddb0.avif"
+     }
+    },
+    "/about/": {
+     "mobile": {
+      "lcp": 1056,
+      "fcp": 864,
+      "tbt": 43,
+      "cls": 0,
+      "inp": 96,
+      "pageKb": 423,
+      "jsKb": 174,
+      "imgKb": 155,
+      "htmlKb": 29,
+      "requests": 26,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 216,
+      "fcp": 212,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 630,
+      "jsKb": 174,
+      "imgKb": 361,
+      "htmlKb": 29,
+      "requests": 31,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/contact/": {
+     "mobile": {
+      "lcp": 1028,
+      "fcp": 816,
+      "tbt": 55,
+      "cls": 0,
+      "inp": 72,
+      "pageKb": 383,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 344,
+      "fcp": 344,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 383,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "svg": 3,
+       "avif": 1,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/es/": {
+     "mobile": {
+      "lcp": 1696,
+      "fcp": 1100,
+      "tbt": 49,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 842,
+      "jsKb": 162,
+      "imgKb": 568,
+      "htmlKb": 47,
+      "requests": 32,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 440,
+      "fcp": 348,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 64,
+      "pageKb": 858,
+      "jsKb": 179,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    }
+   }
+  },
+  {
+   "run": "2026-11-24_1417",
+   "date": "Nov 24, 2026, 2:17 p.m.",
+   "base": "https://124fd5ad.hr-concrete-pumps-next.pages.dev",
+   "build": "a26f882",
+   "chrome": "158.0.8127.38",
+   "pages": {
+    "/": {
+     "mobile": {
+      "lcp": 1388,
+      "fcp": 848,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 841,
+      "jsKb": 163,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 32,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 256,
+      "fcp": 236,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 858,
+      "jsKb": 180,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/pumps/": {
+     "mobile": {
+      "lcp": 1700,
+      "fcp": 744,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 72,
+      "pageKb": 562,
+      "jsKb": 159,
+      "imgKb": 323,
+      "htmlKb": 17,
+      "requests": 29,
+      "imageFormats": {
+       "avif": 3,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 248,
+      "fcp": 248,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 40,
+      "pageKb": 606,
+      "jsKb": 159,
+      "imgKb": 368,
+      "htmlKb": 16,
+      "requests": 35,
+      "imageFormats": {
+       "avif": 9,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     }
+    },
+    "/boom-pumps/hr40-5rz/": {
+     "mobile": {
+      "lcp": 824,
+      "fcp": 804,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 552,
+      "jsKb": 161,
+      "imgKb": 307,
+      "htmlKb": 20,
+      "requests": 37,
+      "imageFormats": {
+       "avif": 8,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-1280.a9351bda1c.avif"
+     },
+     "desktop": {
+      "lcp": 296,
+      "fcp": 296,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 40,
+      "pageKb": 441,
+      "jsKb": 161,
+      "imgKb": 196,
+      "htmlKb": 20,
+      "requests": 39,
+      "imageFormats": {
+       "avif": 10,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR40-5RZ-800.c649346886.avif"
+     }
+    },
+    "/boom-pumps/hr21-4zr/": {
+     "mobile": {
+      "lcp": 1024,
+      "fcp": 992,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 514,
+      "jsKb": 161,
+      "imgKb": 269,
+      "htmlKb": 19,
+      "requests": 34,
+      "imageFormats": {
+       "avif": 5,
+       "svg": 2,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-1280.dcb44206cc.avif"
+     },
+     "desktop": {
+      "lcp": 260,
+      "fcp": 260,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 426,
+      "jsKb": 161,
+      "imgKb": 182,
+      "htmlKb": 19,
+      "requests": 39,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 10,
+       "webp": 2
+      },
+      "lcpElement": "img.model-variant-img",
+      "lcpResource": "/images/optimized/models/HR21-4ZR-800.79ed6fddb0.avif"
+     }
+    },
+    "/about/": {
+     "mobile": {
+      "lcp": 1072,
+      "fcp": 908,
+      "tbt": 12,
+      "cls": 0,
+      "inp": 104,
+      "pageKb": 424,
+      "jsKb": 175,
+      "imgKb": 155,
+      "htmlKb": 30,
+      "requests": 26,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 264,
+      "fcp": 264,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 630,
+      "jsKb": 175,
+      "imgKb": 361,
+      "htmlKb": 29,
+      "requests": 31,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/contact/": {
+     "mobile": {
+      "lcp": 940,
+      "fcp": 724,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 56,
+      "pageKb": 383,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 3,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     },
+     "desktop": {
+      "lcp": 216,
+      "fcp": 216,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 48,
+      "pageKb": 383,
+      "jsKb": 158,
+      "imgKb": 155,
+      "htmlKb": 10,
+      "requests": 25,
+      "imageFormats": {
+       "svg": 3,
+       "avif": 1,
+       "webp": 1
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/mk-dsc-5322-1280.b356865dd0.avif"
+     }
+    },
+    "/es/": {
+     "mobile": {
+      "lcp": 1796,
+      "fcp": 1212,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 72,
+      "pageKb": 842,
+      "jsKb": 163,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 32,
+      "imageFormats": {
+       "avif": 1,
+       "svg": 2,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
+     },
+     "desktop": {
+      "lcp": 224,
+      "fcp": 204,
+      "tbt": 0,
+      "cls": 0,
+      "inp": 40,
+      "pageKb": 859,
+      "jsKb": 180,
+      "imgKb": 568,
+      "htmlKb": 46,
+      "requests": 34,
+      "imageFormats": {
+       "svg": 2,
+       "avif": 1,
+       "webp": 6
+      },
+      "lcpElement": "img.scenic-banner-photo",
+      "lcpResource": "/images/optimized/photos/hr53-photo-1-1200.0b68dd6c30.avif"
      }
     }
    }

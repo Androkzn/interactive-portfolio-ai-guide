@@ -145,7 +145,8 @@ export const stages: Stage[] = [
     build: "next",
     url: "https://92ecff30.hr-concrete-pumps-next.pages.dev",
     commit: "e2b3af0",
-    report: { base: "https://92ecff30.hr-concrete-pumps-next.pages.dev", build: "e2b3af0" },
+    // The deployment was built from ddd36b0: e2b3af0 plus a catalogue copy change.
+    report: { base: "https://92ecff30.hr-concrete-pumps-next.pages.dev", build: "ddd36b0" },
     summary: "On slow 4G the home hero was sharing the link with images nobody could see yet. Now it downloads first, and the home page hydrates no scene code at all.",
     changes: [
       "Below-the-fold scene layers (~280 KB) requested only when the scene nears the viewport, not from the server HTML",
