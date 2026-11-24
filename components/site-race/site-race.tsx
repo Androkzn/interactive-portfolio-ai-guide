@@ -161,7 +161,9 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     if (!board) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) setBoardSeen(true);
-    }, { threshold: 0.2 });
+      // Seen means scrolled to: its top in the upper 40% of the screen. Peeking in at the bottom of a
+      // tall window is not seen, so the pill stays until the visitor goes there, presses it or hides it.
+    }, { rootMargin: "0px 0px -60% 0px" });
     observer.observe(board);
     return () => observer.disconnect();
   }, [resultsOpen, offerScores, boardSeen]);
