@@ -6,6 +6,7 @@ interface __BaseEnv_Env {
 	RACE_LIMITER: RateLimit;
 	CHALLENGE_LIMITER: RateLimit;
 	BROWSER: BrowserRun;
+	CF_VERSION_METADATA: WorkerVersionMetadata;
 	ALLOWED_ORIGINS: "http://localhost:3000,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev";
 }
 declare namespace Cloudflare {

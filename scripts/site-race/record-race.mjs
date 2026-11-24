@@ -4,7 +4,7 @@
 //
 //   node scripts/site-race/record-race.mjs --page model|home|catalogue --b <stage deployment URL> [--profile mobile|desktop]
 //
-// Lane a is always the original (Astro). Lane b defaults to the latest stage in
+// Lane a is always the original site. Lane b defaults to the latest stage in
 // lib/site-race/journey.ts — pass its URL. Output: public/lab/site-race/recorded-<profile>-<page>.ndjson
 //
 // Each line is {"at": ms since race start, "event": RaceEvent}. Frame and milestone

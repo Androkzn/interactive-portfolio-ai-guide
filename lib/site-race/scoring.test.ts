@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LaneMetrics, RaceEvent } from "@/packages/contracts/src/site-race";
-import { compare, formatValue, lcpOrCap, scoreRace } from "./scoring";
+import { compare, formatValue, lcpOrCap, loadOrCap, scoreRace } from "./scoring";
 import { playbook } from "./playbook";
 
 const load = (page: string) => readFileSync(new URL(`../../public/lab/site-race/recorded-mobile-${page}.ndjson`, import.meta.url), "utf8")
@@ -14,6 +14,8 @@ describe("compare", () => {
   it("treats gaps inside 5% or the absolute floor as a draw", () => {
     expect(compare(1000, 1040, "lower")).toBe("tie");
     expect(compare(100, 125, "lower", 30)).toBe("tie");
+    expect(compare(100, 125, "lower", 0, 0.1)).toBe("a");
+    expect(compare(100, 105, "lower", 0, 0.1)).toBe("tie");
     expect(compare(1000, 1200, "lower")).toBe("a");
     expect(compare(0.9, 0.5, "higher")).toBe("a");
   });
@@ -77,5 +79,29 @@ describe("recording", () => {
 describe("playbook", () => {
   it("names the metric every play should move", () => {
     for (const play of playbook) expect(play.moves.length).toBeGreaterThan(3);
+  });
+});
+
+describe("censored values", () => {
+  it("never lets a lower bound win or beat a real value it may exceed", () => {
+    // a stopped at the cap with 25 s so far; b finished at 28 s: a's real value is unknown.
+    expect(compare(25_000, 28_000, "lower", 400, 0.1, { a: true })).toBe("tie");
+    expect(compare(30_000, 3_000, "lower", 400, 0.1, { a: true })).toBe("b");
+    expect(compare(30_000, 30_000, "lower", 400, 0.1, { a: true, b: true })).toBe("tie");
+  });
+  it("scores fully loaded, censored at the cap", () => {
+    const stopped: LaneMetrics = { ...result("a"), capped: true, capMs: 30_000, timing: { ...result("a").timing, load: null } };
+    expect(loadOrCap(stopped)).toEqual({ value: 30_000, censored: true });
+    const done: LaneMetrics = { ...result("b"), capped: false, timing: { ...result("b").timing, load: 3_800 } };
+    const row = scoreRace(stopped, done).rounds[0].rows.find((r) => r.id === "load")!;
+    expect(row.winner).toBe("b");
+    expect(formatValue(row, "a")).toBe("> 30.0 s");
+  });
+  it("marks TBT a lower bound when the lane never reached TTI", () => {
+    const busy: LaneMetrics = { ...result("a"), capped: true, timing: { ...result("a").timing, tti: null, tbt: 100 } };
+    const calm: LaneMetrics = { ...result("b"), capped: false, timing: { ...result("b").timing, tti: 4_000, tbt: 900 } };
+    const tbt = scoreRace(busy, calm).rounds[1].rows.find((r) => r.id === "tbt")!;
+    expect(tbt.censored?.a).toBe(true);
+    expect(tbt.winner).toBe("tie");
   });
 });

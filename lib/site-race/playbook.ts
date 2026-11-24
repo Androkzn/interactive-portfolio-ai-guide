@@ -88,7 +88,7 @@ export const playbook: Play[] = [
     id: "js",
     skill: "Rendering",
     title: "JavaScript: still heavier than the original",
-    body: "Removing framer-motion and per-page component scripts cut what each page loads, but the React runtime remains: about 160 KB against the Astro build's 12 KB on the model page. Next: more Server Components, fewer client boundaries.",
+    body: "Removing framer-motion and per-page component scripts cut what each page loads, but the React runtime remains: about 160 KB against the original site's 12 KB on the model page. Next: more Server Components, fewer client boundaries.",
     moves: "JavaScript · Total blocking time",
     status: "partial",
     stage: "javascript",
@@ -112,9 +112,9 @@ export const playbook: Play[] = [
 ];
 
 export const skillMap: { ask: string; where: string }[] = [
-  { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized Astro site rebuilt end to end in Next.js 16 — then optimized in six deployed, raceable stages." },
-  { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, LCP priority, HTML weight, JavaScript and prefetch — each a commit, each measured, each raceable live." },
-  { ask: "Production Next.js deploys on Cloudflare", where: "Every stage is a Cloudflare Pages deployment; the race itself runs on Workers and Browser Run." },
-  { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed immutable assets are in; HTML edge caching with Cache-Tag purges is the next step, below." },
+  { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized original site rebuilt end to end in Next.js 16, then optimized and measured against the original." },
+  { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, LCP priority, HTML weight and main-thread work: each change measured in real Chrome, and checkable in the live race." },
+  { ask: "Production Next.js deploys on Cloudflare", where: "The optimized build is a Cloudflare Pages deployment; the race itself runs on Workers and Browser Run." },
+  { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed immutable assets are in place. Edge caching of HTML with cache-tag purges is the next step, not done yet." },
   { ask: "Static Site Generation", where: "Round 5 of the race checks that a crawler gets the content without running JavaScript." },
 ];

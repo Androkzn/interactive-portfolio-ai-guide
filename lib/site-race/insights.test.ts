@@ -1,3 +1,4 @@
+import { OWN_HOST_PATTERN } from "../../packages/contracts/src/site-race";
 import { describe, expect, it } from "vitest";
 import { band, CURVES, logNormalScore, performanceScore } from "./lighthouse-score";
 import { emptyHistogram, frameProgress, histogram, speedIndex, visuallyComplete } from "./visual-progress";
@@ -65,7 +66,11 @@ describe("journey", () => {
     expect(stages[0].id).toBe("original");
     expect(stages[0].build).toBe("astro");
     expect(new Set(stages.map((s) => s.id)).size).toBe(stages.length);
-    for (const stage of stages) expect(stage.url).toMatch(/^https:\/\/[a-z0-9.-]+\.pages\.dev$/);
+    // Every stage must be raceable as one of the project's own hosts (the race API checks this).
+    for (const stage of stages) {
+      expect(stage.url).toMatch(/^https:\/\/[a-z0-9.-]+$/);
+      expect(OWN_HOST_PATTERN.test(new URL(stage.url).hostname)).toBe(true);
+    }
   });
   it("finds a stage by any URL on its host", () => {
     expect(stageForUrl(`${latestStage.url}/boom-pumps/hr40-5rz/`)?.id).toBe(latestStage.id);

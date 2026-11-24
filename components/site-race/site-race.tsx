@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
+import { ArrowUpRight, Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, type Round, type Verdict } from "@/lib/site-race/scoring";
-import { latestStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
+import { featuredStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
+import resultsData from "@/lib/site-race/results-data.json";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
 import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
@@ -17,13 +18,15 @@ const MARKS: { name: MarkName; label: string }[] = [
   { name: "ttfb", label: "TTFB" },
   { name: "fcp", label: "FCP" },
   { name: "lcp", label: "LCP" },
-  { name: "dcl", label: "DCL" },
+  // DOMContentLoaded is not shown: async scripts (Next.js) do not delay it while module
+  // scripts (Astro) do, so it would compare two different things. The load event does not have that bias.
+  { name: "load", label: "Loaded" },
 ];
 const PHASE_LABEL: Record<LaneState["phase"], string> = {
   queued: "On the grid",
   launching: "Starting Chrome on Cloudflare…",
   loading: "Loading",
-  settling: "Waiting for the page to settle",
+  settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
   done: "Done",
   failed: "Did not finish",
@@ -32,7 +35,9 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
   mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
   desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
+const FAIRNESS_NOTE = "Before the clock starts, both sites are loaded once at full speed in a discarded session, so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). Each lane is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most.";
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
+type Metrics = { lcp: number | null; load: number | null; tbt: number | null; totalKb: number; imageKb: number };
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
@@ -200,7 +205,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const startChallenge = (event: React.FormEvent) => {
     event.preventDefault();
     if (!challenge.trim()) return;
-    void start(latestStage.url, challenge.trim());
+    void start(featuredStage.url, challenge.trim());
   };
 
   const copyLink = async () => {
@@ -219,6 +224,18 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
   const selectedStage = stageById(stage);
+  // Medians of repeated races for this page and device (scripts/site-race/build-results.mjs),
+  // the same numbers as the result block above the race: not a single sample, not a stage report.
+  const measured = (resultsData.cells as Record<string, { before: Metrics; after: Metrics } | undefined>)[`${page}/${profile}`];
+  const baselineBefore = measured?.before;
+  const baselineAfter = measured?.after;
+  const improvement = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.round((1 - after / before) * 100) : null;
+  const lcpImprovement = improvement(baselineBefore?.lcp, baselineAfter?.lcp);
+  const weightImprovement = improvement(baselineBefore?.totalKb, baselineAfter?.totalKb);
+  // Say what actually improved: a gap under 15% in LCP is within run-to-run noise, so it is not a claim.
+  const headline = lcpImprovement != null && lcpImprovement >= 15 ? `${lcpImprovement}% lower LCP`
+    : weightImprovement != null && weightImprovement >= 15 ? `${weightImprovement}% less data downloaded`
+      : "Measured improvement";
   const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
   const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
   const lightsLabel = {
@@ -235,50 +252,57 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       <div className={styles.head}>
         <div>
           <p className={styles.kicker}><Gauge size={14} aria-hidden="true" /> Live performance lab · real Chrome on Cloudflare&apos;s edge</p>
+          <p className={styles.nextBrand}><span>N</span> Built and optimized with <b>Next.js 16</b></p>
           <h2 id="site-race-title" className={styles.title}>
-            <span className={styles.toneAstro}>Before</span> <span className={styles.vs}>vs</span> <span className={styles.toneNext}>After</span>
+            The result,<br /><span className={styles.toneNext}>before the race.</span>
           </h2>
           <p className={styles.lede}>
-            Before: a real concrete-pump website as it was first built in Astro — nobody ever tuned it. After: the same site rebuilt in
-            Next.js 16 and optimized one commit at a time. Press start and two Chrome browsers launch on Cloudflare at the same moment,
-            load both over the same throttled connection, and stream what they see back to you.
+            Same page and content. The original is the baseline; the Next.js rebuild is the measured result. Run the live race to watch
+            two identical Chrome sessions prove the difference under the same conditions.
           </p>
         </div>
-        <div className={styles.controls}>
+        <div className={styles.heroResult}>
+          <p>Measured · {RACE_PAGES[page].label} · {profile === "mobile" ? "mobile slow 4G" : "desktop"}</p>
+          <div className={styles.heroLcp}>
+            <span><small>Original site</small><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b></span>
+            <ArrowUpRight size={24} aria-hidden="true" />
+            <span><small>Next.js optimized</small><b>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</b></span>
+          </div>
+          <strong>{headline}</strong>
+        </div>
+      </div>
+
+      <div className={styles.resultMetrics} aria-label="Measured performance result">
+        <article><span>LCP</span><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b><i>→</i><strong>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</strong><small>Main content visible</small></article>
+        <article><span>Page weight</span><b>{baselineBefore ? `${(baselineBefore.totalKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.totalKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Total cold-load transfer</small></article>
+        <article><span>Image bytes</span><b>{baselineBefore ? `${(baselineBefore.imageKb / 1024).toFixed(2)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.imageKb / 1024).toFixed(2)}MB` : "—"}</strong><small>Responsive AVIF/WebP</small></article>
+      </div>
+
+      <div className={styles.controls}>
           {racing ? (
             <button type="button" className={styles.startButton} onClick={stop}>Stop race</button>
           ) : (
             <button type="button" className={styles.startButton} onClick={startDuel}>
-              <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Start the race" : "Race again"}
+              <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Prove it in a live race" : "Race again"}
             </button>
           )}
           <button type="button" className={styles.ghostButton} onClick={watchRecording} disabled={racing}>
             <RotateCcw size={15} aria-hidden="true" /> Watch a recorded race
           </button>
-        </div>
       </div>
 
-      <div className={styles.setup}>
+      <details className={styles.settings}>
+        <summary>Race settings <span>{RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
+        <div className={styles.setup}>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Page</legend>
           <div className={styles.segmented} role="radiogroup" aria-label="Page to race">
-            {(Object.keys(RACE_PAGES) as RacePageId[]).map((id) => (
+            {(Object.keys(RACE_PAGES) as RacePageId[]).filter((id) => id !== "catalogue" || page === "catalogue").map((id) => (
               <button key={id} type="button" role="radio" aria-checked={page === id} className={page === id ? styles.segOn : ""} onClick={() => onPage(id)} title={RACE_PAGES[id].detail}>
                 {RACE_PAGES[id].label}{id === "model" && <i className={styles.hot}>biggest change</i>}
               </button>
             ))}
           </div>
-        </fieldset>
-        <fieldset className={styles.setupGroup} disabled={racing}>
-          <legend>After = optimization stage</legend>
-          <label className={styles.stageSelect}>
-            <span className="sr-only">Stage the original races against</span>
-            <select value={stage} onChange={(event) => onStage(event.target.value as StageId)}>
-              {afterStages.map((item, index) => (
-                <option key={item.id} value={item.id}>{index + 1}. {item.short} — {item.title}{item.id === latestStage.id ? " (latest)" : ""}</option>
-              ))}
-            </select>
-          </label>
         </fieldset>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Device</legend>
@@ -287,8 +311,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
             <button type="button" role="radio" aria-checked={profile === "desktop"} className={profile === "desktop" ? styles.segOn : ""} onClick={() => onProfile("desktop")}><Monitor size={15} aria-hidden="true" /> Desktop</button>
           </div>
         </fieldset>
-      </div>
-      {selectedStage.showsIn && <p className={styles.stageNote}>{selectedStage.short} pays off on {selectedStage.showsIn}. The race still includes every earlier optimization.</p>}
+        </div>
+      </details>
 
       <div className={styles.lights} aria-hidden="true" data-state={lightsState}>
         {[1, 2, 3, 4, 5].map((n) => <span key={n} className={lights >= n && lights < 6 && racing ? styles.lightOn : ""} />)}
@@ -300,7 +324,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : `${PROFILE_NOTE[profile]} A lane still downloading after 30 s is stopped there.`)}
+          : `${PROFILE_NOTE[profile]} ${FAIRNESS_NOTE}`)}
       </p>
       {state.status === "finished" && state.reportId && state.source === "live" && (
         <p className={styles.savedNote}>
@@ -340,7 +364,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         <div>
           <p className={styles.kicker}><Swords size={14} aria-hidden="true" /> Challenger round</p>
           <h3>Think your site is faster?</h3>
-          <p>Enter any public website. It races the latest optimized build (<b>{latestStage.short}</b> stage, {RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
+          <p>Enter any public website. It races the latest optimized build (<b>{featuredStage.short}</b> build, {RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
         </div>
         <div className={styles.challengeRow}>
           <input value={challenge} onChange={(event) => setChallenge(event.target.value)} placeholder="your-site.com" inputMode="url" autoComplete="url" aria-label="Website to race" maxLength={300} disabled={racing} />
@@ -370,7 +394,10 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   // Live, a lane learns its own LCP only when it settles, so it reads "still loading";
   // in the photo finish both finish lines are known, so the gap is a real "behind".
   const trailing = !finishedNow && !failed && theirs !== null && t !== null && t > theirs && (scrub === null || scrub >= theirs) ? t - theirs : null;
-  const clockNote = shownT === null ? null : finishedNow ? (hasLcp ? "to LCP" : capped ? "at the cap" : "to first paint") : "elapsed";
+  // The stopwatch stops at LCP, the Speed round's headline metric. A lane stopped at the cap
+  // without a final LCP shows the cap as a lower bound, exactly as the scoreboard does.
+  const censoredClock = finishedNow && !hasLcp && capped;
+  const clockNote = shownT === null ? null : finishedNow ? (hasLcp ? "to LCP" : capped ? "no final LCP" : "to first paint") : "elapsed";
   return (
     <article className={`${styles.lane} ${toneClass(identity.kind)} ${winner ? styles.laneWinner : ""}`} aria-label={`${label} lane`}>
       <header className={styles.laneHead}>
@@ -380,7 +407,7 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
           <span className={styles.stack}>{stack}</span>
         </div>
         <div className={styles.clock}>
-          <output className={styles.stopwatch} aria-label={`${label} time`}>{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
+          <output className={styles.stopwatch} aria-label={`${label} time`}>{censoredClock ? "> " : ""}{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
           {clockNote && <span className={styles.clockNote}>{clockNote}</span>}
         </div>
       </header>
@@ -411,6 +438,29 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   );
 }
 
+/** Minimum gap, % of the track, between two labels in the same row before the later one is dropped. */
+const FLAG_GAP = 9;
+
+/**
+ * Milestone flags for one lane. A fast lane's milestones bunch up within a second on a
+ * 30-second track, so labels alternate above and below the bar, the finish line (LCP)
+ * always keeps its label, and any other label too close to one already placed is
+ * dropped — its line stays, and the value is in the milestone tiles above.
+ */
+function trackFlags(lane: LaneState, maxT: number) {
+  const flags = MARKS.flatMap(({ name, label }, index) => {
+    const t = lane.marks[name];
+    return t === undefined ? [] : [{ name, label, low: index % 2 === 1, x: Math.min(100, (t / maxT) * 100) }];
+  });
+  const placed: Record<"top" | "low", number[]> = { top: [], low: [] };
+  const labelled = new Set<MarkName>();
+  for (const flag of [...flags].sort((p, q) => Number(q.name === "lcp") - Number(p.name === "lcp"))) {
+    const row = placed[flag.low ? "low" : "top"];
+    if (row.every((x) => Math.abs(x - flag.x) >= FLAG_GAP)) { row.push(flag.x); labelled.add(flag.name); }
+  }
+  return flags.map((flag) => ({ ...flag, labelled: labelled.has(flag.name) }));
+}
+
 function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: number; maxT: number; scrub: number | null; identity: (id: LaneId) => LaneIdentity }) {
   return (
     <div className={styles.track} aria-hidden="true">
@@ -423,11 +473,9 @@ function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: n
             <span className={styles.trackName}>{who.role}</span>
             <div className={styles.trackBar}>
               <div className={styles.trackFill} style={{ width: `${Math.min(100, (clock / maxT) * 100)}%` }} />
-              {MARKS.map(({ name, label }, index) => {
-                const t = lane.marks[name];
-                if (t === undefined) return null;
-                return <span key={name} className={`${styles.flag} ${index % 2 ? styles.flagLow : ""}`} style={{ left: `${Math.min(100, (t / maxT) * 100)}%` }}><i />{label}</span>;
-              })}
+              {trackFlags(lane, maxT).map((flag) => (
+                <span key={flag.name} className={`${styles.flag} ${flag.low ? styles.flagLow : ""}`} style={{ left: `${flag.x}%` }}><i />{flag.labelled ? flag.label : null}</span>
+              ))}
             </div>
           </div>
         );
@@ -465,16 +513,18 @@ function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict
           {!reduced && winner && <Confetti tone={tone(winner)} />}
           {winner && loser ? (
             <h3>
-              <span className={tone(winner)}>{name(winner)}</span> wins {byRounds
-                ? `${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]}`
-                : `${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
+              <span className={tone(winner)}>{name(winner)}</span> {byRounds
+                ? `wins ${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]} on rounds`
+                : `edges it ${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
             </h3>
           ) : (
             <h3>Dead heat.</h3>
           )}
           <p>
-            {!byRounds && winner ? `Rounds split ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
-            {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}. Gaps within single-run noise count as a draw.
+            {!byRounds && winner ? `Rounds tied ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
+            {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}.
+            This is one race, one sample: a gap smaller than two runs of the same site differ by (measured, per metric) counts as a draw,
+            and a value capped at 30 s is a lower bound that cannot win.
           </p>
         </div>
       )}
@@ -507,6 +557,7 @@ function RoundCard({ round, index, visible, name, tone }: { round: Round; index:
                     <td key={id} className={`${tone(id)} ${row.winner === id ? styles.cellWin : ""}`}>
                       <span className={styles.bar}><i style={{ width: visible && value !== null ? `${Math.max(4, (value / max) * 100)}%` : 0 }} /></span>
                       <b>{formatValue(row, id)}{row.winner === id && <span className={styles.star} aria-label="better"> ★</span>}</b>
+                      {row.note?.[id] && <small className={styles.cellNote}>{row.note[id]}</small>}
                     </td>
                   );
                 })}

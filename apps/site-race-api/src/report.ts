@@ -1,3 +1,4 @@
+import { MEASURE_VERSION } from "../../../packages/contracts/src/site-race";
 import type { LaneId, LaneMetrics, RaceEvent, RaceLogLine, RaceReportSummary } from "../../../packages/contracts/src/site-race";
 
 /** KV keys are race:<id>; ids sort newest first, so a KV list returns the latest races first. */
@@ -21,7 +22,7 @@ export class RaceLog {
   private frameCount: Record<LaneId, number> = { a: 0, b: 0 };
   private dropped: Partial<Record<LaneId, RaceLogLine>> = {};
 
-  constructor(private readonly started: number) {}
+  constructor(private readonly started: number, private readonly version?: string) {}
 
   add(event: RaceEvent, now = Date.now()) {
     const line: RaceLogLine = { at: Math.max(0, now - this.started), event };
@@ -46,7 +47,7 @@ export class RaceLog {
     this.flushDropped();
     const end = this.lines.at(-1)?.at ?? 0;
     const all: RaceLogLine[] = [
-      { at: 0, event: { type: "recording", recordedAt, reportId } },
+      { at: 0, event: { type: "recording", recordedAt, reportId, measure: MEASURE_VERSION, ...(this.version ? { version: this.version } : {}) } },
       ...this.lines,
       ...tail.map((event) => ({ at: end, event })),
     ];
@@ -55,7 +56,7 @@ export class RaceLog {
 }
 
 /** The list view's row for a saved race. KV metadata is capped at 1 KB, so URLs are trimmed. */
-export function summarize(id: string, savedAt: string, start: StartEvent, metrics: Record<LaneId, LaneMetrics>): RaceReportSummary {
+export function summarize(id: string, savedAt: string, start: StartEvent, metrics: Record<LaneId, LaneMetrics>, version?: string): RaceReportSummary {
   const lane = (key: LaneId) => ({
     url: start.lanes[key].url.slice(0, 200),
     preset: start.lanes[key].preset,
@@ -63,5 +64,5 @@ export function summarize(id: string, savedAt: string, start: StartEvent, metric
     capped: !!metrics[key].capped,
     kb: Math.round(metrics[key].network.totalKb),
   });
-  return { id, savedAt, page: start.page ?? "home", profile: start.profile, lanes: { a: lane("a"), b: lane("b") } };
+  return { id, measure: MEASURE_VERSION, ...(version ? { version: version.slice(0, 40) } : {}), savedAt, page: start.page ?? "home", profile: start.profile, lanes: { a: lane("a"), b: lane("b") } };
 }

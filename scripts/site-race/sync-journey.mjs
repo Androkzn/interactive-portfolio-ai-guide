@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Copies the HR Concrete Pumps performance-report runs into the portfolio, so the
+// Copies the source project's performance-report runs into the portfolio, so the
 // lab page can chart the optimization journey without reaching into another repo
 // at build time.
 //
-//   node scripts/site-race/sync-journey.mjs [--repo "~/Desktop/HR Concrete Pumps Next"]
+//   node scripts/site-race/sync-journey.mjs [--repo "~/Desktop/site-race-source"]
 //
 // Reads <repo>/content/reports/performance/history.json and every run's
 // metrics.json (written by that repo's `npm run perf:report`), keeps the fields
@@ -16,12 +16,12 @@ import os from "node:os";
 import path from "node:path";
 
 const arg = (name, fallback) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : fallback; };
-const repo = path.resolve((arg("repo", process.env.HR_NEXT_REPO ?? "~/Desktop/HR Concrete Pumps Next")).replace(/^~(?=$|\/)/, os.homedir()));
+const repo = path.resolve((arg("repo", process.env.SITE_RACE_SOURCE_REPO ?? "~/Desktop/site-race-source")).replace(/^~(?=$|\/)/, os.homedir()));
 const reports = path.join(repo, "content/reports/performance");
 const out = new URL("../../lib/site-race/journey-data.json", import.meta.url);
 
 if (!existsSync(path.join(reports, "history.json"))) {
-  console.error(`No perf history at ${reports}. Pass --repo <path to the HR Concrete Pumps Next repo>.`);
+  console.error(`No perf history at ${reports}. Pass --repo <path to the source project>.`);
   process.exit(1);
 }
 
@@ -69,7 +69,7 @@ for (const id of runIds) {
 
 const data = {
   syncedAt: new Date().toISOString(),
-  source: "HR Concrete Pumps Next · content/reports/performance (npm run perf:report: real Chrome, cold cache, one load per page and profile)",
+  source: "Project performance reports (real Chrome, cold cache, one load per page and profile)",
   pageLabels: PAGE_LABELS,
   runs,
 };

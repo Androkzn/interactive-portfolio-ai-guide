@@ -1,5 +1,5 @@
 // The optimization journey: every stage is a real, still-running deployment of
-// the HR Concrete Pumps site, so the race can load any of them. The prose is
+// the same original site, so the race can load any of them. The prose is
 // written from the commit messages of each step; the numbers come from the
 // projects' own perf reports via scripts/site-race/sync-journey.mjs
 // (lib/site-race/journey-data.json). Add a stage here when a new optimization
@@ -7,7 +7,7 @@
 
 import journeyData from "./journey-data.json";
 
-export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch";
+export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "tuned" | "edge";
 
 export type Stage = {
   id: StageId;
@@ -35,7 +35,7 @@ export const stages: Stage[] = [
     url: "https://hrconcretepumps.pages.dev",
     commit: "7f66469",
     report: { base: "https://hrconcretepumps.pages.dev" },
-    summary: "The site as it was first shipped, in Astro, never tuned. Light on JavaScript, heavy on everything else.",
+    summary: "The site as it was first shipped, never tuned. Light on JavaScript, heavy on everything else.",
     changes: [
       "Product renders served as full-size PNG (1.2–1.9 MB each) wherever they appear",
       "Decorative home-page scene layers downloaded as lossless images on load",
@@ -135,10 +135,46 @@ export const stages: Stage[] = [
       "Measured on its own: click-to-rendered-<h1> on slow 4G, with and without a 300 ms hover first",
     ],
   },
+  {
+    id: "tuned",
+    short: "Hero first",
+    title: "Hero first: nothing competes with the largest paint",
+    build: "next",
+    url: "https://hr-concrete-pumps-next.pages.dev",
+    commit: "e2b3af0",
+    report: { base: "https://92ecff30.hr-concrete-pumps-next.pages.dev", build: "e2b3af0" },
+    summary: "On slow 4G the home hero was sharing the link with images nobody could see yet. Now it downloads first, and the home page hydrates no scene code at all.",
+    changes: [
+      "Below-the-fold scene layers (~280 KB) requested only when the scene nears the viewport, not from the server HTML",
+      "800 px hero AVIF for 2x phones (71 KB instead of 96 KB) and measured sizes on every banner and model render",
+      "Inter preloaded only on wide layouts: the swap fallback is metric-matched, so phones lose nothing",
+      "Home scenes rendered on the server; their motion code loads per scene near the viewport (−22 KB startup JS)",
+    ],
+  },
+  {
+    id: "edge",
+    short: "Edge",
+    title: "Next.js server on Cloudflare Workers",
+    build: "next",
+    // Workers have no immutable per-deployment URL here (preview URLs are off), so this stage
+    // follows the Worker's latest deployment of branch edge/opennext-workers.
+    url: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev",
+    commit: "f90f4b7",
+    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "f90f4b7" },
+    summary: "The same pages, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
+    changes: [
+      "Prerendered pages answered from the edge cache before the Next.js server loads; content corrections invalidate only the pages that show them (cache tags + revalidateTag)",
+      "A/B test assigned in middleware and served as a prerendered variant: no anti-flicker, no render delay",
+      "Tag lookups cached per data centre for an hour: low-traffic server time 329 → 19 ms",
+      "Contact form as a Server Action that works without JavaScript",
+    ],
+  },
 ];
 
 export const originalStage = stages[0];
 export const latestStage = stages[stages.length - 1];
+/** The static build with every optimization: the race's default "after". */
+export const featuredStage = stages.find((stage) => stage.id === "tuned") ?? latestStage;
 
 export function stageById(id: StageId): Stage {
   return stages.find((stage) => stage.id === id) ?? latestStage;

@@ -1,5 +1,8 @@
 import puppeteer from "@cloudflare/puppeteer";
 import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
+import { MEASURE_VERSION } from "../../../packages/contracts/src/site-race";
+import { newWire, onData, onFinished, onResponse, wireBytes as bytesOf, type Wire } from "./bytes";
+import { computeTti, totalBlockingTime, type Req, type Task } from "./tti";
 import type { HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceProfile, ResourceBucket, ResourceType, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
 type Emit = (event: RaceEvent) => Promise<void>;
@@ -23,8 +26,9 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
 
 const NAV_TIMEOUT_MS = 30_000;
 const SETTLE_MS = 1_200;
-const QUIET_MS = 2_500;
 export const LANE_CAP_MS = 30_000;
+/** Unthrottled warm-up load per lane, in a discarded browser context, before the timed load. */
+const WARM_TIMEOUT_MS = 10_000;
 const FRAME_INTERVAL_MS = 200;
 
 // Runs in the page before any of its own scripts.
@@ -38,11 +42,11 @@ const OBSERVERS = `(() => {
   watch("longtask", (es) => { for (const e of es) r.longTasks.push([e.startTime, e.duration]); });
 })();`;
 
-type Snapshot = { ttfb: number | null; fcp: number | null; lcp: number | null; dcl: number | null; load: number | null; timeOrigin: number };
+type Snapshot = { ttfb: number | null; fcp: number | null; lcp: number | null; dcl: number | null; load: number | null; timeOrigin: number; now: number; longTasks: Task[] };
 
 const SNAPSHOT = `(() => { const n = performance.getEntriesByType("navigation")[0]; const r = window.__race || {};
   const v = (x) => (typeof x === "number" && x > 0 ? Math.round(x) : null);
-  return { ttfb: n ? v(n.responseStart) : null, fcp: v(r.fcp), lcp: v(r.lcp), dcl: n ? v(n.domContentLoadedEventEnd) : null, load: n ? v(n.loadEventEnd) : null, timeOrigin: performance.timeOrigin }; })()`;
+  return { ttfb: n ? v(n.responseStart) : null, fcp: v(r.fcp), lcp: v(r.lcp), dcl: n ? v(n.domContentLoadedEventEnd) : null, load: n ? v(n.loadEventEnd) : null, timeOrigin: performance.timeOrigin, now: performance.now(), longTasks: r.longTasks || [] }; })()`;
 
 // True when an image inside the viewport, larger than the current LCP candidate,
 // is still loading: the LCP will move once it paints, so the current one is not final.
@@ -50,6 +54,14 @@ const LCP_PENDING = `(() => {
   const e = (window.__race || {}).lcpEntry; const size = e ? e.size : 0;
   return [...document.images].some((img) => {
     if (img.complete && img.naturalWidth > 0) return false;
+    // An image nobody can see (a hidden carousel slide, opacity 0 or visibility hidden on it or
+    // an ancestor) or one not requested yet can't become the LCP until it is shown, so it must
+    // not hold the LCP back.
+    if (!img.currentSrc) return false;
+    for (let el = img; el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if (s.visibility === "hidden" || s.display === "none" || Number(s.opacity) === 0) return false;
+    }
     const b = img.getBoundingClientRect();
     const visible = Math.max(0, Math.min(b.right, innerWidth) - Math.max(b.left, 0)) * Math.max(0, Math.min(b.bottom, innerHeight) - Math.max(b.top, 0));
     return visible > size;
@@ -62,7 +74,6 @@ const INSPECT = `(() => {
   const og = (p) => q('meta[property="' + p + '"]')?.getAttribute("content")?.trim() || "";
   const imgs = [...document.images].filter((i) => i.getBoundingClientRect().width > 1);
   const ld = [...document.querySelectorAll('script[type="application/ld+json"]')].flatMap((s) => { try { const j = JSON.parse(s.textContent || ""); const list = Array.isArray(j) ? j : j["@graph"] || [j]; return list.map((x) => x && x["@type"]).flat().filter(Boolean); } catch { return []; } });
-  const fcp = r.fcp || 0; const tbt = (r.longTasks || []).filter(([s]) => s >= fcp).reduce((sum, [, d]) => sum + Math.max(0, d - 50), 0);
   return {
     title: document.title.trim(), description: meta("description"), robots: meta("robots"),
     canonical: q('link[rel="canonical"]')?.getAttribute("href") || "", lang: document.documentElement.lang || "",
@@ -71,7 +82,7 @@ const INSPECT = `(() => {
     ogTitle: og("og:title"), ogImage: og("og:image"), jsonLd: [...new Set(ld)].slice(0, 6),
     images: imgs.length, imagesWithAlt: imgs.filter((i) => i.hasAttribute("alt")).length,
     domNodes: document.getElementsByTagName("*").length,
-    cls: Math.round((r.cls || 0) * 1000) / 1000, tbt: Math.round(tbt), lcpEl: r.lcpEl || null,
+    cls: Math.round((r.cls || 0) * 1000) / 1000, lcpEl: r.lcpEl || null,
     lcp: lcpDetail(), waterfall: waterfall(),
   };
   function lcpDetail() {
@@ -103,12 +114,12 @@ const INSPECT = `(() => {
 
 type Inspect = {
   title: string; description: string; robots: string; canonical: string; lang: string; viewport: string; h1: number; hreflang: number;
-  ogTitle: string; ogImage: string; jsonLd: string[]; images: number; imagesWithAlt: number; domNodes: number; cls: number; tbt: number; lcpEl: string | null;
+  ogTitle: string; ogImage: string; jsonLd: string[]; images: number; imagesWithAlt: number; domNodes: number; cls: number; lcpEl: string | null;
   lcp: (Omit<LcpDetail, "path" | "kb" | "format"> & { url: string | null }) | null;
   waterfall: { url: string; start: number; end: number; initiator: string; blocking: boolean; size: number }[];
 };
 
-type Resp = { url: string; type: string; mime: string; status: number; headers: Record<string, string>; protocol: string | null; bytes: number; finished: boolean };
+type Resp = { url: string; type: string; mime: string; status: number; headers: Record<string, string>; protocol: string | null; bytes: number; finished: boolean; redirect?: boolean };
 
 const kb = (bytes: number) => Math.round((bytes / 1024) * 10) / 10;
 const lower = (headers: Record<string, string>) => Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), String(v)]));
@@ -125,84 +136,124 @@ const bucketOf = (type: string): keyof LaneMetrics["network"]["byType"] => {
 const cacheStatus = (h: Record<string, string>) => h["cf-cache-status"] ?? h["x-vercel-cache"] ?? h["x-cache"] ?? h["x-nextjs-cache"] ?? null;
 const isImmutable = (cc: string | undefined) => !!cc && (/immutable/.test(cc) || Number(/max-age=(\d+)/.exec(cc)?.[1] ?? 0) >= 31_536_000);
 
+/**
+ * Loads the lane's page once at full speed in a separate, discarded browser context, so
+ * the CDN edge in front of it is warm. Same procedure for every lane. The timed load
+ * that follows still starts cold on the browser side: its own context, HTTP cache
+ * disabled, service workers bypassed, no connection reused (contexts do not share sockets).
+ */
+async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[RaceProfile]): Promise<void> {
+  const context = await browser.createBrowserContext();
+  try {
+    const page = await context.newPage();
+    if (profile.userAgent) await page.setUserAgent(profile.userAgent);
+    await page.setViewport(profile.viewport);
+    const cdp = await page.createCDPSession();
+    await cdp.send("Network.enable");
+    await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
+    await page.goto(url, { waitUntil: "load", timeout: WARM_TIMEOUT_MS }).catch(() => {});
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
 export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal): Promise<LaneMetrics | null> {
   const profile = PROFILES[profileId];
   let browser: Browser | null = null;
   const responses = new Map<string, Resp>();
+  const wires = new Map<string, Wire>();
   let lastFrameAt = 0;
   let timeOrigin: number | null = null;
   const pendingFrames: { abs: number; jpeg: string }[] = [];
-  const marks = new Set<MarkName>();
+  const marks = new Map<MarkName, number>();
   let netTimer: ReturnType<typeof setInterval> | null = null;
 
   let capped = false;
-  // Bytes on the wire per request as they arrive. loadingFinished only reports a
-  // request's size once it completes, so a 2 MB image still streaming would
-  // otherwise look like a quiet network.
-  const received = new Map<string, number>();
-  // Start of every request on the browser's monotonic clock (seconds), to place
-  // still-downloading requests on the waterfall: Resource Timing only lists finished ones.
-  const requested = new Map<string, { url: string; ts: number; type: string }>();
+  // Every http(s) request the page issued, on the browser's monotonic clock (seconds):
+  // places still-downloading requests on the waterfall (Resource Timing lists only finished
+  // ones), counts requests, and gives the in-flight timeline for TTI's network-quiet rule.
+  const requested = new Map<string, { url: string; ts: number; type: string; end: number | null }>();
   let navTs: number | null = null;
   const failed = new Set<string>();
-  let lastActivity = Date.now();
-  const touch = () => { lastActivity = Date.now(); };
-  const wireBytes = () => {
+  let redirects = 0;
+  const bytesNow = (id: string, r: Resp) => (r.redirect ? r.bytes : bytesOf(wires.get(id) ?? newWire()));
+  const totalBytes = () => {
     let total = 0;
-    for (const [id, bytes] of received) {
-      const r = responses.get(id);
-      total += r?.finished ? r.bytes : bytes;
-    }
-    for (const [id, r] of responses) if (!received.has(id)) total += r.bytes;
+    for (const [id, r] of responses) if (/^https?:/.test(r.url)) total += bytesNow(id, r);
     return total;
   };
+  const requestCount = () => [...requested.values()].filter((q) => /^https?:/.test(q.url)).length + redirects;
+  const pageMs = (ts: number) => (navTs === null ? 0 : (ts - navTs) * 1000);
+  const netTimeline = (): Req[] => [...requested.values()]
+    .filter((q) => /^https?:/.test(q.url))
+    .map((q) => ({ start: pageMs(q.ts), end: q.end === null ? null : pageMs(q.end) }));
   const adoptOrigin = async (origin: number) => {
     timeOrigin = origin;
     await emit({ type: "origin", lane, timeOrigin: origin });
     for (const f of pendingFrames.splice(0)) await emit({ type: "frame", lane, t: Math.round(f.abs - origin), jpeg: f.jpeg });
   };
 
-  const emitMark = async (name: MarkName, t: number | null) => {
-    if (t === null || marks.has(name)) return;
-    marks.add(name);
+  /** Emits a milestone once; `update` re-sends it if the final value differs from what was shown. */
+  const emitMark = async (name: MarkName, t: number | null, update = false) => {
+    if (t === null || (marks.has(name) && (!update || marks.get(name) === t))) return;
+    marks.set(name, t);
     await emit({ type: "mark", lane, name, t });
   };
 
   try {
     await emit({ type: "phase", lane, phase: "launching" });
     browser = await puppeteer.launch(env.BROWSER, { keep_alive: 60_000 });
-    const page: Page = await browser.newPage();
+    await warmUp(browser, url, profile);
+    if (signal.aborted) return null;
+    const context = await browser.createBrowserContext();
+    const page: Page = await context.newPage();
     if (profile.userAgent) await page.setUserAgent(profile.userAgent);
     await page.setViewport(profile.viewport);
     await page.evaluateOnNewDocument(OBSERVERS);
     const cdp: CDPSession = await page.createCDPSession();
     await cdp.send("Network.enable");
     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
+    await cdp.send("Network.setBypassServiceWorker", { bypass: true }).catch(() => {});
     if (profile.network) await cdp.send("Network.emulateNetworkConditions", { offline: false, ...profile.network });
     if (profile.cpu > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: profile.cpu });
 
     cdp.on("Network.requestWillBeSent", (e) => {
-      touch();
-      requested.set(e.requestId, { url: e.request.url, ts: e.timestamp, type: e.type ?? "Other" });
+      // A redirect reuses the request id: keep the hop as its own response and request.
+      if (e.redirectResponse) {
+        const hop = e.redirectResponse;
+        redirects += 1;
+        responses.set(`${e.requestId}:r${redirects}`, { url: hop.url, type: e.type ?? "Other", mime: hop.mimeType, status: hop.status, headers: lower(hop.headers as Record<string, string>), protocol: hop.protocol ?? null, bytes: Math.max(0, hop.encodedDataLength ?? 0), finished: true, redirect: true });
+        wires.delete(e.requestId);
+      }
+      const known = requested.get(e.requestId);
+      requested.set(e.requestId, { url: e.request.url, ts: known?.ts ?? e.timestamp, type: e.type ?? "Other", end: null });
       if (navTs === null && e.type === "Document") navTs = e.timestamp;
     });
     cdp.on("Network.responseReceived", (e) => {
-      touch();
       const r = e.response;
-      responses.set(e.requestId, { url: r.url, type: e.type ?? "Other", mime: r.mimeType, status: r.status, headers: lower(r.headers as Record<string, string>), protocol: r.protocol ?? null, bytes: 0, finished: false });
+      const headers = lower(r.headers as Record<string, string>);
+      responses.set(e.requestId, { url: r.url, type: e.type ?? "Other", mime: r.mimeType, status: r.status, headers, protocol: r.protocol ?? null, bytes: 0, finished: false });
+      const w = newWire();
+      onResponse(w, r.encodedDataLength, headers["content-encoding"]);
+      wires.set(e.requestId, w);
     });
     cdp.on("Network.dataReceived", (e) => {
-      touch();
-      received.set(e.requestId, (received.get(e.requestId) ?? 0) + (e.encodedDataLength || e.dataLength || 0));
-      const r = responses.get(e.requestId);
-      if (r && !r.finished) r.bytes = received.get(e.requestId) ?? 0;
+      const w = wires.get(e.requestId);
+      if (w) onData(w, e.dataLength, e.encodedDataLength);
     });
     cdp.on("Network.loadingFinished", (e) => {
-      touch();
+      const w = wires.get(e.requestId);
+      if (w) onFinished(w, e.encodedDataLength);
       const r = responses.get(e.requestId);
-      if (r) { r.bytes = Math.max(e.encodedDataLength, r.bytes); r.finished = true; }
+      if (r) r.finished = true;
+      const q = requested.get(e.requestId);
+      if (q) q.end = e.timestamp;
     });
-    cdp.on("Network.loadingFailed", (e) => { touch(); failed.add(e.requestId); });
+    cdp.on("Network.loadingFailed", (e) => {
+      failed.add(e.requestId);
+      const q = requested.get(e.requestId);
+      if (q) q.end = e.timestamp;
+    });
 
     cdp.on("Page.screencastFrame", (frame) => {
       void cdp.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {});
@@ -221,7 +272,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     });
 
     netTimer = setInterval(() => {
-      void emit({ type: "net", lane, requests: responses.size, kb: kb(wireBytes()) }).catch(() => {});
+      void emit({ type: "net", lane, requests: requestCount(), kb: kb(totalBytes()) }).catch(() => {});
     }, 400);
 
     await emit({ type: "phase", lane, phase: "loading" });
@@ -231,43 +282,63 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     const navigation = page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS }).then(() => { committed = true; }, (error) => { navError = error; });
     const navWall = Date.now();
 
-    // Poll the page's own timeline so milestones light up as they happen. The lane ends at
-    // the load event, or once the page has painted its LCP and no byte has arrived for
-    // QUIET_MS, or at the cap: a 6 MB page on slow 4G may never fire load inside a demo,
-    // and that is a result too.
+    // Poll the page's own timeline so milestones light up as they happen. Every lane follows
+    // the same stop rule: the load event has fired AND TTI is established (5 s with no long
+    // task and ≤ 2 requests in flight, Lighthouse's rule) — so TBT has the same, standard
+    // window on both sides — or the cap: a 6 MB page on slow 4G may never get there, and
+    // that is a result too.
+    let tti: number | null = null;
+    let settlingShown = false;
+    let last: Snapshot | null = null;
     while (!signal.aborted) {
       await Promise.race([navigation, new Promise((resolve) => setTimeout(resolve, 250))]);
       if (navError) throw navError;
       const snap = (await page.evaluate(SNAPSHOT).catch(() => null)) as Snapshot | null;
       if (snap && snap.timeOrigin > 0) {
+        last = snap;
         if (timeOrigin === null && snap.ttfb !== null) await adoptOrigin(snap.timeOrigin);
         await emitMark("ttfb", snap.ttfb);
         await emitMark("fcp", snap.fcp);
         await emitMark("dcl", snap.dcl);
-        if (snap.load !== null) break;
-        if (committed && snap.lcp !== null && Date.now() - lastActivity > QUIET_MS) break;
+        await emitMark("load", snap.load);
+        if (committed && snap.load !== null) {
+          // After load every image in the DOM has loaded: the LCP is final unless a bigger one
+          // is still coming into the viewport. Show it now rather than when the lane stops.
+          if (!marks.has("lcp") && snap.lcp !== null && !((await page.evaluate(LCP_PENDING).catch(() => true)) as boolean)) await emitMark("lcp", snap.lcp);
+          if (!settlingShown) { settlingShown = true; await emit({ type: "phase", lane, phase: "settling" }); }
+          tti = computeTti(snap.fcp, snap.longTasks, netTimeline(), snap.now);
+          if (tti !== null) break;
+        }
       }
       if (Date.now() - startedAt > LANE_CAP_MS) { capped = true; break; }
     }
     if (signal.aborted) return null;
     const stoppedAt = Date.now() - navWall;
 
-    await emit({ type: "phase", lane, phase: "settling", ...(capped ? { detail: `Still downloading at the ${LANE_CAP_MS / 1000} s cap` } : {}) });
-    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+    if (capped) {
+      const detail = last?.load == null ? `Still downloading at the ${LANE_CAP_MS / 1000} s cap` : `Main thread or network still busy at the ${LANE_CAP_MS / 1000} s cap`;
+      await emit({ type: "phase", lane, phase: "settling", detail });
+      // Only a capped lane needs the grace period: a lane that stopped on its own rule is quiet already.
+      await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+    }
     const snap = (await page.evaluate(SNAPSHOT)) as Snapshot;
-    // A capped lane's LCP still counts if nothing bigger is loading in the viewport.
-    const lcpFinal = !capped || !((await page.evaluate(LCP_PENDING).catch(() => true)) as boolean);
+    // A lane still loading may yet paint a bigger LCP: it counts only if nothing bigger is loading in the viewport.
+    const lcpFinal = snap.load !== null || !((await page.evaluate(LCP_PENDING).catch(() => true)) as boolean);
     if (timeOrigin === null) await adoptOrigin(snap.timeOrigin);
     await emitMark("ttfb", snap.ttfb);
     await emitMark("fcp", snap.fcp);
     await emitMark("dcl", snap.dcl);
-    if (lcpFinal) await emitMark("lcp", snap.lcp);
+    if (lcpFinal) await emitMark("lcp", snap.lcp, true);
     await emitMark("load", snap.load);
     await cdp.send("Page.stopScreencast").catch(() => {});
+    const observedMs = Math.round(snap.now);
+    // TBT window: [FCP, TTI]; a capped lane without TTI is counted to where it was stopped (lower bound).
+    const tbt = totalBlockingTime(snap.longTasks, snap.fcp, tti ?? observedMs);
 
     await emit({ type: "phase", lane, phase: "inspecting" });
     const inspect = (await page.evaluate(INSPECT)) as Inspect;
     const finalUrl = page.url();
+    for (const [id, r] of responses) r.bytes = bytesNow(id, r);
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
@@ -278,7 +349,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
       // …and requested but still waiting for a response (queued behind the bandwidth).
       ...[...requested.entries()].filter(([id]) => !responses.has(id) && !failed.has(id)).map(([id, q]) => ({ url: q.url, type: q.type, start: startOf(id), bytes: 0 })),
     ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
-    const metrics = await assemble(url, finalUrl, snap, inspect, [...responses.values()], capped, inFlight, lcpFinal);
+    const metrics = await assemble(url, finalUrl, snap, inspect, [...responses.values()], capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: requestCount() });
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
   } catch (error) {
@@ -296,10 +367,10 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
 
 type InFlight = { url: string; type: string; start: number; end: number; bytes: number };
 
-async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: Inspect, all: Resp[], capped: boolean, inFlight: InFlight[] = [], lcpFinal = true): Promise<LaneMetrics> {
+async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: Inspect, all: Resp[], capped: boolean, inFlight: InFlight[] = [], lcpFinal = true, extra: { tti: number | null; tbt: number | null; observedMs: number; requests: number }): Promise<LaneMetrics> {
   const origin = new URL(finalUrl).origin;
   const site = new URL(finalUrl).hostname.split(".").slice(-2).join(".");
-  const doc = all.find((r) => r.type === "Document" && (r.url === finalUrl || r.url === url)) ?? all.find((r) => r.type === "Document");
+  const doc = all.find((r) => r.type === "Document" && !r.redirect && r.url === finalUrl) ?? all.find((r) => r.type === "Document" && !r.redirect);
   const byType: LaneMetrics["network"]["byType"] = { document: b(), script: b(), stylesheet: b(), image: b(), font: b(), other: b() };
   let total = 0;
   const thirdParty = new Set<string>();
@@ -384,6 +455,8 @@ async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: 
   waterfall.sort((x, y) => x.start - y.start);
 
   return {
+    measure: MEASURE_VERSION,
+    observedMs: extra.observedMs,
     capped,
     capMs: LANE_CAP_MS,
     lcpDetail,
@@ -393,8 +466,8 @@ async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: 
     finalUrl,
     status: doc?.status ?? null,
     // A capped lane still loading a bigger in-viewport image has no final LCP yet.
-    timing: { ttfb: snap.ttfb, fcp: snap.fcp, lcp: lcpFinal ? snap.lcp : null, domContentLoaded: snap.dcl, load: snap.load, tbt: inspect.tbt, cls: inspect.cls },
-    network: { requests: all.length, totalKb: kb(total), byType, protocol: doc?.protocol ?? null, thirdPartyHosts: [...thirdParty].slice(0, 12) },
+    timing: { ttfb: snap.ttfb, fcp: snap.fcp, lcp: lcpFinal ? snap.lcp : null, domContentLoaded: snap.dcl, load: snap.load, tti: extra.tti, tbt: extra.tbt, cls: inspect.cls },
+    network: { requests: extra.requests, totalKb: kb(total), byType, protocol: doc?.protocol ?? null, thirdPartyHosts: [...thirdParty].slice(0, 12) },
     edge: {
       documentCache: doc ? cacheStatus(doc.headers) : null,
       documentCacheControl: doc?.headers["cache-control"] ?? null,
@@ -404,7 +477,7 @@ async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: 
       edgeHtmlMs, robotsTxt, sitemapXml,
     },
     seo,
-    document: { htmlKb: kb(html?.length ?? 0), domNodes: inspect.domNodes, wordsWithoutJs, lcpElement: inspect.lcpEl },
+    document: { htmlKb: kb(html ? new TextEncoder().encode(html).length : 0), transferKb: doc ? kb(doc.bytes) : undefined, domNodes: inspect.domNodes, wordsWithoutJs, lcpElement: inspect.lcpEl },
   };
 }
 
