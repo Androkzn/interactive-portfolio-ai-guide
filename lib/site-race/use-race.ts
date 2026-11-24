@@ -109,7 +109,9 @@ function reducer(state: RaceState, action: Action): RaceState {
         case "phase":
           return updateLane(state, event.lane, (lane) => ({
             phase: event.phase,
-            phaseDetail: event.detail ?? (event.phase === "inspecting" || event.phase === "revisiting" || event.phase === "navigating" || event.phase === "done" ? lane.phaseDetail : null),
+            // A cap note ("still downloading at the 10 s cap") belongs to the first page: it may stay while
+            // that page is inspected, but the visit's own steps show their own label, not the first page's cap.
+            phaseDetail: event.detail ?? (event.phase === "inspecting" || event.phase === "done" ? lane.phaseDetail : null),
             ...(event.phase === "failed" ? { error: event.detail ?? "Failed" } : {}),
             // The settling phase with a note is the cap (site-race/1 says it only in words).
             ...(event.cap ? { cap: event.cap } : event.phase === "settling" && event.detail && !lane.cap ? { cap: /still downloading/i.test(event.detail) ? "loading" : "busy" } : {}),
