@@ -155,7 +155,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   // once the scoreboard has been on screen the pill is gone for this race.
   useEffect(() => {
     if (!ready || !offerScores || boardSeen) return;
-    const board = document.getElementById("race-scoreboard");
+    const board = document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard");
     if (!board) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) setBoardSeen(true);
@@ -164,7 +164,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     return () => observer.disconnect();
   }, [ready, offerScores, boardSeen]);
   const showScores = () => {
-    document.getElementById("race-scoreboard")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    // The Scorecard (0–100 rings) heads the results; the rounds follow it.
+    (document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard"))?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
     setBoardSeen(true);
   };
 
@@ -349,7 +350,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           </p>
           {racing && ready && (
             // The scores sit below the lanes, out of sight on a phone: say they are in, and where.
-            <p className={styles.progressScores}><a href="#race-scoreboard">First scores are in <ArrowDown size={13} aria-hidden="true" /></a> the visit&apos;s rounds join as it goes</p>
+            <p className={styles.progressScores}><a href="#race-scorecard">First scores are in <ArrowDown size={13} aria-hidden="true" /></a> the visit&apos;s rounds join as it goes</p>
           )}
         </div>
       )}

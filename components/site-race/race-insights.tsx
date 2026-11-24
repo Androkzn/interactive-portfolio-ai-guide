@@ -78,7 +78,7 @@ function useCountUp(target: number | null, reduced: boolean, duration = 1200) {
 
 export function RaceScorecard({ state, progress, identity }: { state: RaceState; progress: Record<LaneId, LaneProgress> | null; identity: (id: LaneId) => LaneIdentity }) {
   return (
-    <section className={styles.panel} aria-labelledby="scorecard-title">
+    <section className={styles.panel} aria-labelledby="scorecard-title" id="race-scorecard" style={{ scrollMarginTop: 20 }}>
       <header className={styles.panelHead}>
         <h3 id="scorecard-title"><Gauge size={18} aria-hidden="true" /> Scorecard</h3>
         <p>Lighthouse-style estimate: Lighthouse 10&apos;s weights and scoring curves applied to this race&apos;s numbers. Speed Index comes from the screencast frames. Not an official Lighthouse report.</p>
