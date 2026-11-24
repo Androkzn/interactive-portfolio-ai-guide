@@ -6,7 +6,8 @@
 .back { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin-bottom: 14px; color: #5142b7; font-size: var(--text-caption); font-weight: 700; }
 .back:hover { color: #32249d; }
 
-.section { max-width: 1180px; margin: clamp(56px, 7vw, 96px) auto 0; }
+/* Full width of .main, like the result block and the race above: every block shares one edge. */
+.section { margin: clamp(56px, 7vw, 96px) 0 0; }
 .section h2 { max-width: 26ch; margin: 0 0 22px; font-size: var(--text-title); line-height: 1.04; letter-spacing: -.04em; text-wrap: balance; }
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--muted); font: 700 var(--text-meta)/1.4 var(--font-code); letter-spacing: .07em; text-transform: uppercase; }
 .lede { max-width: 70ch; margin: -8px 0 22px; color: var(--muted); }
