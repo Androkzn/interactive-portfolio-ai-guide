@@ -17,7 +17,7 @@ const changes: { what: string; how: string; shows: string }[] = [
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: home page, tap, model page, in one race.";
+  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: home page, catalogue, model page and a return visit, in one race.";
 
 export const metadata: Metadata = {
   title,
@@ -56,7 +56,7 @@ export default function Page() {
               the same site, with the same content and routes, rebuilt in Next.js 16 and optimized. Nothing was removed to make it fast.
             </p>
             <p>
-              One press of the button races both sites through the same visit: open the home page cold, tap a pump model, see its page.
+              One press of the button races both sites through the same visit: open the home page cold, tap through to the pump catalogue and on to a model, then come back as a returning visitor.
               Two real Chrome sessions on Cloudflare do it at the same moment and stream what they see, their paint milestones and every
               request straight to your screen. The numbers at the top are medians of repeated races; the live race lets you check them.
             </p>
@@ -85,7 +85,7 @@ export default function Page() {
           <h2 id="lab-method">How the race is measured — and what it does not prove.</h2>
           <div className={styles.columns}>
             <ul className={styles.list}>
-              <li><b>The visit.</b> Each lane opens the home page cold. As soon as its main photo is on screen and the link is visible, a finger taps a pump model, as a visitor would, without waiting for the rest of the page. The race then measures how long the model page takes to show its name and its photo.</li>
+              <li><b>The visit.</b> Each lane opens the home page cold. As soon as its main photo is on screen and the link is visible, a finger taps through to the pump catalogue, then to the HR40-5RZ page, as a visitor would, without waiting for the rest of the page. For each tap the race measures how long the new page takes to show its heading and its main image (capped at 20 s), and what it downloaded. If there is time left, the home page is then reloaded with the browser cache on: what a returning visitor pays.</li>
               <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel, browser cache disabled for the first page.</li>
               <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown. Desktop is 1440 px, unthrottled.</li>
               <li><b>Timings.</b> Read from the page&apos;s own PerformanceObserver: paint, largest-contentful-paint, layout-shift and longtask entries.</li>
