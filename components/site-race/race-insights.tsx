@@ -26,7 +26,11 @@ export function useVisualProgress(state: RaceState): Record<LaneId, LaneProgress
     void (async () => {
       const out = {} as Record<LaneId, LaneProgress>;
       for (const [id, frames, lane] of [["a", framesA, state.lanes.a], ["b", framesB, state.lanes.b]] as const) {
-        const points = await progressFromFrames(frames);
+        // Speed Index describes the first page only: in a journey race the screencast goes on to the
+        // catalogue, the model page and the repeat visit, and the last of those frames must not become
+        // the "visually complete" target for the home page.
+        const cut = lane.metrics?.firstPageEndMs ?? lane.metrics?.tappedAt;
+        const points = await progressFromFrames(cut == null ? frames : frames.filter((frame) => frame.t <= cut));
         out[id] = { points, si: speedIndex(points), complete: visuallyComplete(points), capped: !!lane.metrics?.capped };
       }
       if (!cancelled) setResult(out);

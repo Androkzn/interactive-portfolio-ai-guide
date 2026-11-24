@@ -174,6 +174,8 @@ export type LaneMetrics = {
   navigationSteps?: NavigationMetrics[];
   /** Journey races: the visitor tapped at this page time (ms), so load/TTI not reached by then are lower bounds. */
   tappedAt?: number;
+  /** Page time (ms) when the first page's own observation ended: frames after it belong to the journey, not the first page. */
+  firstPageEndMs?: number;
   /** The same URL loaded again in the same browser with the HTTP cache on (absent in older races). */
   repeat?: RepeatMetrics | null;
 };

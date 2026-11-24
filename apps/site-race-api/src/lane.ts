@@ -361,6 +361,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
       ...[...requested.entries()].filter(([id]) => !responses.has(id) && !failed.has(id)).map(([id, q]) => ({ url: q.url, type: q.type, start: startOf(id), bytes: 0 })),
     ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
     const metrics = await assemble(url, finalUrl, snap, inspect, firstPage, capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: firstRequests });
+    metrics.firstPageEndMs = observedMs;
     if (looks) Object.assign(metrics, { ...looks, ...(tapped ? { tappedAt: observedMs } : {}) });
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
