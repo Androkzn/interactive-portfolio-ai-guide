@@ -20,6 +20,13 @@ export const TOUCH_DWELL_MS = 100;
 export const HOVER_DWELL_MS = 300;
 /** Longest wait for the previous page to finish before a step; then the step starts anyway. */
 export const SETTLE_CAP_MS = 10_000;
+/**
+ * A step ends the moment its main image paints, while the page is often still settling: the model
+ * page's name, figures and button rise in over ~1.4 s. The screencast runs this much longer after
+ * the last step, so the lane's last frame is the page a visitor sees rather than an empty band.
+ * Pictures only: nothing is measured in it, and it is the same for every lane.
+ */
+export const FINAL_FRAMES_MS = 1_800;
 
 type Throttle = { latency: number; downloadThroughput: number; uploadThroughput: number } | null;
 
@@ -311,6 +318,7 @@ export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, p
       await settle(page, cdp, opts.network);
       steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net, opts.network).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
     }
+    if (!signal.aborted) await wait(FINAL_FRAMES_MS);
     return finish(steps, repeat);
   } finally {
     net.dispose();

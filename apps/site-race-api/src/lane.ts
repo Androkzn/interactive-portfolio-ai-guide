@@ -179,9 +179,16 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
   const wires = new Map<string, Wire>();
   let lastFrameAt = 0;
   // The newest frame that the 200 ms thinning dropped: flushed when the first page ends, so its
-  // final visual state is always recorded (it is the "visually complete" target for Speed Index).
+  // final visual state is always recorded (it is the "visually complete" target for Speed Index),
+  // and again when the journey ends, so the lane's last frame is its last page as it settled.
   let trailing: { abs: number; jpeg: string } | null = null;
   let timeOrigin: number | null = null;
+  const flushTrailing = async () => {
+    if (!trailing || timeOrigin === null) return;
+    const last = trailing as { abs: number; jpeg: string };
+    trailing = null;
+    await emit({ type: "frame", lane, t: Math.round(last.abs - timeOrigin), jpeg: last.jpeg }).catch(() => {});
+  };
   const pendingFrames: { abs: number; jpeg: string }[] = [];
   const marks = new Map<MarkName, number>();
   let netTimer: ReturnType<typeof setInterval> | null = null;
@@ -351,11 +358,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     if (lcpFinal) await emitMark("lcp", snap.lcp, true);
     await emitMark("load", snap.load);
     await cdp.send("Page.stopScreencast").catch(() => {});
-    if (trailing && timeOrigin !== null) {
-      const last = trailing as { abs: number; jpeg: string };
-      trailing = null;
-      await emit({ type: "frame", lane, t: Math.round(last.abs - timeOrigin), jpeg: last.jpeg }).catch(() => {});
-    }
+    await flushTrailing();
     const observedMs = Math.round(snap.now);
     // TBT window: [FCP, TTI]; a capped lane without TTI is counted to where it was stopped (lower bound).
     const tbt = totalBlockingTime(snap.longTasks, snap.fcp, tti ?? observedMs);
@@ -368,6 +371,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     const firstPage = [...responses.values()].map((r) => ({ ...r }));
     const firstRequests = requestCount();
     const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { network: profile.network }, signal) : null;
+    if (looks) await flushTrailing();
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
