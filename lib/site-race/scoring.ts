@@ -83,9 +83,9 @@ export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on 
  * loses only when even its lower bound is clearly worse, otherwise it is a draw.
  */
 export function compare(a: number | null, b: number | null, better: Better, floor = 0, rel = 0.05, censored: Partial<Record<LaneId, boolean>> = {}): LaneId | "tie" | null {
-  if (a === null && b === null) return null;
-  if (a === null) return "b";
-  if (b === null) return "a";
+  // A missing measurement scores nothing: it must not hand the other lane a point. (Lanes that
+  // were stopped at a cap are not missing: callers pass the cap as a censored lower bound.)
+  if (a === null || b === null) return null;
   if (censored.a && censored.b) return "tie";
   const gap = Math.abs(a - b);
   const winner: LaneId = (better === "lower" ? a < b : a > b) ? "a" : "b";

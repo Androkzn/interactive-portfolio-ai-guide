@@ -20,7 +20,7 @@ describe("compare", () => {
     expect(compare(0.9, 0.5, "higher")).toBe("a");
   });
   it("gives the metric to the lane that has a value", () => {
-    expect(compare(null, 300, "lower")).toBe("b");
+    expect(compare(null, 300, "lower")).toBeNull();
     expect(compare(null, null, "lower")).toBeNull();
   });
 });
