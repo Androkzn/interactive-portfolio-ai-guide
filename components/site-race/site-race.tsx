@@ -7,7 +7,7 @@ import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
-import { featuredStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
+import { featuredStage, raceUrl, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
 import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
@@ -193,7 +193,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       await runReplay(recordingFor(page, profile));
     }
   };
-  const startDuel = () => void start("astro", stageById(stage).url);
+  const startDuel = () => void start("astro", raceUrl(stage));
 
   // The journey below can ask for a race of a particular stage.
   const lastSignal = useRef(startSignal);
@@ -208,7 +208,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const startChallenge = (event: React.FormEvent) => {
     event.preventDefault();
     if (!challenge.trim()) return;
-    void start(featuredStage.url, challenge.trim());
+    void start(raceUrl(featuredStage.id), challenge.trim());
   };
 
   const copyLink = async () => {

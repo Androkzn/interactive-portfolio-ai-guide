@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Archive, ArrowLeft, ArrowUp, ArrowUpRight, Braces, ChevronDown, Cpu, Dices, Equal, EyeOff,
   FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Mail, Monitor, Phone, Rocket,
-  RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Users, Wifi, Zap,
+  RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Type, Users, Wifi, Zap,
 } from "lucide-react";
 import { LabExperience } from "@/components/site-race/lab-experience";
 import resultsData from "@/lib/site-race/results-data.json";
@@ -65,8 +65,8 @@ const changes: { icon: LucideIcon; title: string; body: string; how: string; sho
   },
   {
     icon: Cpu, title: "Less work at start-up",
-    body: "No animation library: the browser's Web Animations API does the motion. Each page loads only its own scripts, and home sections render on the server.",
-    how: "Web Animations API · per-page scripts · server rendering",
+    body: "No animation library: the browser's Web Animations API does the motion. Each page loads only its own scripts, home sections render on the server, and Chrome compiles the start-up code off the main thread.",
+    how: "Web Animations API · per-page scripts · server rendering · compile hints",
     shows: [{ round: "Smoothness", row: "Total blocking time" }],
   },
   {
@@ -113,6 +113,7 @@ const caveats: { icon: LucideIcon; text: ReactNode }[] = [
   { icon: Dices, text: <><b>One race is one sample.</b> Close calls can flip between runs; the numbers at the top are medians of {Number.isFinite(races) ? `${races} races` : "repeated races"}.</> },
   { icon: Users, text: <><b>Lab, not field.</b> One controlled phone profile, no real-user (CrUX) data.</> },
   { icon: Braces, text: <><b>The original ships less JavaScript</b> on most pages. React has a start-up cost, so where images do not dominate, the original&apos;s main thread can be the freer one.</> },
+  { icon: Type, text: <><b>A fallback font on a phone.</b> On a first visit the Next.js site keeps a metric-matched Arial rather than re-lay out the page when Inter arrives late, so the two screens can differ in typeface.</> },
   { icon: EyeOff, text: <><b>Preview hosts.</b> Both sites are marked noindex on purpose, so the Indexable check fails for both.</> },
   { icon: Globe, text: <><b>Live sites.</b> Both lanes load the sites as they are now: redeploy either one and the next race shows it.</> },
   { icon: Swords, text: <><b>Your site.</b> In the challenger round it races the Next.js site on the first page only. Public http(s) domains, two races a minute.</> },

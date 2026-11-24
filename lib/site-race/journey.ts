@@ -3,11 +3,14 @@
 // written from the commit messages of each step; the numbers come from the
 // projects' own perf reports via scripts/site-race/sync-journey.mjs
 // (lib/site-race/journey-data.json). Add a stage here when a new optimization
-// step is deployed, then re-run the sync.
+// step is deployed, then re-run the sync. The Pages project's production alias
+// is not a stage of its own: it always belongs to the newest Pages stage, so a
+// new production deploy needs its own stage (and immutable URL) here.
 
+import { RACE_PRESETS } from "../../packages/contracts/src/site-race";
 import journeyData from "./journey-data.json";
 
-export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "tuned" | "edge";
+export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "tuned" | "deferred" | "compile" | "edge";
 
 export type Stage = {
   id: StageId;
@@ -140,15 +143,48 @@ export const stages: Stage[] = [
     short: "Hero first",
     title: "Hero first: nothing competes with the largest paint",
     build: "next",
-    url: "https://hr-concrete-pumps-next.pages.dev",
+    url: "https://92ecff30.hr-concrete-pumps-next.pages.dev",
     commit: "e2b3af0",
-    report: { base: "https://92ecff30.hr-concrete-pumps-next.pages.dev", build: "e2b3af0" },
+    // The deployment was built from ddd36b0: e2b3af0 plus a catalogue copy change.
+    report: { base: "https://92ecff30.hr-concrete-pumps-next.pages.dev", build: "ddd36b0" },
     summary: "On slow 4G the home hero was sharing the link with images nobody could see yet. Now it downloads first, and the home page hydrates no scene code at all.",
     changes: [
       "Below-the-fold scene layers (~280 KB) requested only when the scene nears the viewport, not from the server HTML",
       "800 px hero AVIF for 2x phones (71 KB instead of 96 KB) and measured sizes on every banner and model render",
       "Inter preloaded only on wide layouts: the swap fallback is metric-matched, so phones lose nothing",
       "Home scenes rendered on the server; their motion code loads per scene near the viewport (−22 KB startup JS)",
+    ],
+  },
+  {
+    id: "deferred",
+    short: "JS after hero",
+    title: "Scripts after the hero: Next.js waits for the main photo",
+    build: "next",
+    url: "https://eeb1e9f7.hr-concrete-pumps-next.pages.dev",
+    commit: "2767772",
+    report: { base: "https://eeb1e9f7.hr-concrete-pumps-next.pages.dev", build: "2767772" },
+    summary: "On slow 4G the hero was still sharing the link with the Next.js scripts. Now they are requested once it has loaded: the page is server-rendered, and its links work before hydration.",
+    changes: [
+      "Next.js chunks start from a small loader at the end of <body> once the fetchpriority=high image has loaded — at once if it is already there or absent, 2.5 s at most",
+      "Home on a phone, 6 cloud races vs the previous build: LCP 2100 → 1212 ms, TBT 359 → 142 ms, FCP 1080 → 890 ms, CLS 0; model page and desktop home within noise",
+      "Inter subset to the glyphs the English and Spanish pages use: 48 → 39 KB, with the full weight axis and every OpenType feature",
+      "The intent prefetch of a model page also preloads its hero render (not on 2G); with Save-Data on, nothing is fetched before the tap",
+    ],
+  },
+  {
+    id: "compile",
+    short: "Compile hints",
+    title: "Compile hints: start-up code compiled off the main thread",
+    build: "next",
+    url: "https://124fd5ad.hr-concrete-pumps-next.pages.dev",
+    commit: "a26f882",
+    report: { base: "https://124fd5ad.hr-concrete-pumps-next.pages.dev", build: "a26f882" },
+    summary: "Nearly all of the home page's blocking time was one boot task, and two thirds of it was V8 compiling functions on the main thread as each first ran. Chrome now compiles the start-up chunks in the background while they download.",
+    changes: [
+      "//# allFunctionsCalledOnLoad (Chrome 136+, ignored elsewhere) on the 9 chunks the pages boot with: main-thread compiles in the boot task 416 → 0 in a local trace",
+      "Home on a phone, medians of 8 cloud races vs the previous build: TBT 236 → 42 ms (lower in 7 of 8), TTI 4.6 → 2.7 s; LCP and FCP within noise",
+      "Inter is now font-display: optional, because a swap after first paint re-laid out 810 of 824 layout objects; it is used when it is there at first paint",
+      "Trade-off: a first visit on a slow phone keeps the metric-matched Arial fallback for the whole visit — now with a bold face, so headings keep their weight",
     ],
   },
   {
@@ -159,36 +195,54 @@ export const stages: Stage[] = [
     // Workers have no immutable per-deployment URL here (preview URLs are off), so this stage
     // follows the Worker's latest deployment of branch edge/opennext-workers.
     url: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev",
-    commit: "f90f4b7",
-    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "f90f4b7" },
-    summary: "The same pages, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
+    commit: "2055379",
+    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "2055379" },
+    summary: "The same pages and every step above, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
     changes: [
       "Prerendered pages answered from the edge cache before the Next.js server loads; content corrections invalidate only the pages that show them (cache tags + revalidateTag)",
       "A/B test assigned in middleware and served as a prerendered variant: no anti-flicker, no render delay",
-      "Tag lookups cached per data centre for an hour: low-traffic server time 329 → 19 ms",
-      "Contact form as a Server Action that works without JavaScript",
+      "Hero first in the response path: HTMLRewriter moves the Next.js chunks behind the hero on every HTML page — prerendered, regenerated or A/B variant — and leaves RSC requests alone",
+      "Tag lookups cached per data centre for an hour (low-traffic server time 329 → 19 ms); the contact form is a Server Action that works without JavaScript",
+      "Lab run, phone (4x CPU, slow 4G), 7 pages, before and after the earlier steps came over: median LCP 2.08 → 0.87 s",
     ],
   },
 ];
 
 export const originalStage = stages[0];
 export const latestStage = stages[stages.length - 1];
-/** The static build with every optimization: the race's default "after". */
-export const featuredStage = stages.find((stage) => stage.id === "tuned") ?? latestStage;
+
+/** The Pages project's production alias (the race's "next" preset). It moves to every production deploy. */
+const production = new URL(RACE_PRESETS.next.url);
+const onPages = (stage: Stage) => new URL(stage.url).host.endsWith(`.${production.host}`);
+
+/**
+ * The newest build on Cloudflare Pages, the one the production alias serves: the static
+ * build with every optimization and the race's default "after".
+ */
+export const featuredStage = [...stages].reverse().find(onPages) ?? latestStage;
 
 export function stageById(id: StageId): Stage {
   return stages.find((stage) => stage.id === id) ?? latestStage;
 }
 
-/** Which stage a raced URL belongs to, by host. */
+/** Which stage a raced URL belongs to, by host. The production alias belongs to the newest Pages stage. */
 export function stageForUrl(url: string | undefined | null): Stage | null {
   if (!url) return null;
   try {
     const host = new URL(url).host;
+    if (host === production.host) return featuredStage;
     return stages.find((stage) => new URL(stage.url).host === host) ?? null;
   } catch {
     return null;
   }
+}
+
+/**
+ * What a race loads for a stage: the live production alias for the build it serves, so a
+ * redeploy shows in the next race, and every other stage's own deployment.
+ */
+export function raceUrl(id: StageId): string {
+  return id === featuredStage.id ? production.origin : stageById(id).url;
 }
 
 export type PageMetrics = {
