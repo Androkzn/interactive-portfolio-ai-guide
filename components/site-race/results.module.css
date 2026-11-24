@@ -26,7 +26,7 @@
 .title span { background: linear-gradient(90deg, #b9aeff, #7ee2a8); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lede { max-width: 66ch; margin: 16px 0 0; color: #c9cbc3; }
 
-.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 30px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 30px; }
 .tile {
   display: grid;
   gap: 14px;
@@ -81,3 +81,14 @@
 }
 @media (max-width: 1000px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+
+.group { margin-top: 30px; }
+.groupTitle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 12px; color: #f5f4ee; font-size: 1.15rem; letter-spacing: -.01em; }
+.groupTitle small { color: #9a9d94; font-size: var(--text-meta); font-weight: 500; }
+.group .grid { margin-top: 0; }
+.tileHero { border-color: #9085e980; background: linear-gradient(180deg, #25233a, #181a17); }
+.tileHero .gain strong { font-size: clamp(3rem, 5.4vw, 4.2rem); }
+.facts { display: grid; gap: 8px; margin: 24px 0 0; padding: 0; list-style: none; }
+.facts li { display: flex; gap: 10px; align-items: flex-start; color: #c9cbc3; font-size: var(--text-caption); }
+.facts svg { flex: none; margin-top: 3px; color: #cfc8ff; }
+.facts b { color: #f5f4ee; }

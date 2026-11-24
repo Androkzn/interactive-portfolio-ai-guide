@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Gauge, Image as ImageIcon, TimerReset, Zap } from "lucide-react";
+import resultsData from "@/lib/site-race/results-data.json";
 import styles from "./performance-lab-teaser.module.css";
 
 function NextMark() {
@@ -11,10 +12,13 @@ const megabytes = (value: number | null | undefined) => value == null ? "—" : 
 const reduction = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.max(0, Math.round((1 - after / before) * 100)) : null;
 
 export function PerformanceLabTeaser() {
-  // Same numbers as the lab's result block (components/site-race/results.tsx): home page,
-  // mobile slow 4G, median of 5 races, the live original vs the live Next.js build.
-  const before = { lcp: 4400, pageKb: 5905 };
-  const after = { lcp: 2060, pageKb: 811 };
+  // Same medians as the lab's result block (lib/site-race/results-data.json): phone on slow 4G.
+  const cells = resultsData.cells as Record<string, { races: number; beforeCapped: boolean; before: Record<string, number | null>; after: Record<string, number | null> }>;
+  const product = cells["model/mobile"];
+  const homeCell = cells["home/mobile"];
+  const before = { lcp: homeCell.before.lcp ?? 0, pageKb: homeCell.before.totalKb ?? 0 };
+  const after = { lcp: homeCell.after.lcp ?? 0, pageKb: homeCell.after.totalKb ?? 0 };
+  const productAfter = product.after.lcp ?? 0;
   const lcpGain = reduction(before?.lcp, after?.lcp);
   const weightGain = reduction(before?.pageKb, after?.pageKb);
 
@@ -25,20 +29,20 @@ export function PerformanceLabTeaser() {
           <div className={styles.kicker}><Gauge size={15} />Live performance lab <span>Next.js 16</span></div>
           <div className={styles.nextIdentity}><span className={styles.nextLogo}><NextMark /></span><span><small>Performance rebuild</small><strong>Built and optimized with Next.js</strong></span></div>
           <h2 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h2>
-          <p>Same pages. Same content. A measurable rebuild focused on images, loading priority, HTML weight and JavaScript.</p>
+          <p>Same pages. Same content. On a phone, a product page whose photo did not appear within 30 seconds now shows it in {seconds(productAfter)}.</p>
           <div className={styles.proof} aria-label="Measured mobile improvements">
-            <span><TimerReset size={16} /><b>{lcpGain == null ? "Faster" : `${lcpGain}%`}</b><small>lower median LCP</small></span>
+            <span><TimerReset size={16} /><b>{lcpGain == null ? "Faster" : `${lcpGain}%`}</b><small>faster home page</small></span>
             <span><ImageIcon size={16} /><b>{weightGain == null ? "Lighter" : `${weightGain}%`}</b><small>less page weight</small></span>
           </div>
           <Link className={styles.cta} href="/lab/site-race/">See the result · race it live <ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>
 
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
-          <div className={styles.visualHead}><span><i />Home page · phone on slow 4G · median of 5 races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
+          <div className={styles.visualHead}><span><i />Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
-            <div className={styles.scoreOriginal}><span>Original site</span><strong>{seconds(before?.lcp)}</strong><small>main content on screen</small></div>
+            <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? "> 30s" : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>
             <div className={styles.racePulse} aria-hidden="true"><Zap size={18} fill="currentColor" /></div>
-            <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(after?.lcp)}</strong><small>main content on screen</small></div>
+            <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(productAfter)}</strong><small>product photo on screen</small></div>
           </div>
           <div className={styles.chartGrid}>
             <div className={styles.chartCard}>
@@ -55,11 +59,11 @@ export function PerformanceLabTeaser() {
               <div className={styles.chartTitle}><span>Page weight</span><b>{weightGain == null ? "Reduced" : `−${weightGain}%`}</b></div>
               <div className={styles.weightRow}><span>Original</span><div><i className={styles.weightBefore} /></div><b>{megabytes(before?.pageKb)}</b></div>
               <div className={styles.weightRow}><span>Next.js</span><div><i className={styles.weightAfter} /></div><b>{megabytes(after?.pageKb)}</b></div>
-              <div className={styles.optimizations}><span>AVIF</span><span>LCP priority</span><span>Less JS</span><span>Prefetch</span></div>
+              <div className={styles.optimizations}><span>Images sized</span><span>Photo first</span><span>Less JS</span><span>Next page early</span></div>
             </div>
           </div>
           <div className={styles.timeline} aria-hidden="true">
-            {["Original", "Images", "JavaScript", "LCP", "HTML", "Next.js"].map((step, index) => <span key={step} className={index === 5 ? styles.timelineDone : ""}><i />{step}</span>)}
+            {["Home page", "Product page", "Race it live"].map((step, index) => <span key={step} className={index === 2 ? styles.timelineDone : ""}><i />{step}</span>)}
           </div>
         </div>
       </div>
