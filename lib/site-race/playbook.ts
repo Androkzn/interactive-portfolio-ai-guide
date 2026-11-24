@@ -113,8 +113,8 @@ export const playbook: Play[] = [
 
 export const skillMap: { ask: string; where: string }[] = [
   { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized original site rebuilt end to end in Next.js 16, then optimized and measured against the original." },
-  { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, LCP priority, HTML weight and main-thread work: each change measured in real Chrome, and checkable in the live race." },
+  { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, loading priority, main-thread work and prefetching the next page: each change measured in real Chrome, and visible in one live race." },
   { ask: "Production Next.js deploys on Cloudflare", where: "The optimized build is a Cloudflare Pages deployment; the race itself runs on Workers and Browser Run." },
-  { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed immutable assets are in place. Edge caching of HTML with cache-tag purges is the next step, not done yet." },
+  { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed files cached for a year at the edge and in the browser. HTML edge caching with cache-tag purges is the next step, not done yet." },
   { ask: "Static Site Generation", where: "Round 5 of the race checks that a crawler gets the content without running JavaScript." },
 ];
