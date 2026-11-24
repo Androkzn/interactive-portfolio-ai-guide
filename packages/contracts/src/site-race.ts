@@ -11,7 +11,7 @@ export const SITE_RACE_PROTOCOL = "site-race/1" as const;
  *  v2: bytes = encoded transfer size; TBT from FCP to TTI (Lighthouse); lanes observed until
  *      load + a 5 s quiet window; both CDNs warmed identically before the timed load.
  */
-export const MEASURE_VERSION = "v2" as const;
+export const MEASURE_VERSION = "v3" as const;
 
 export type LaneId = "a" | "b";
 export type RaceProfile = "mobile" | "desktop";

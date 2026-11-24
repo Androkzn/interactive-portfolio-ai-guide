@@ -56,25 +56,28 @@ export const NOISE: Record<string, { abs: number; rel: number }> = {
   load: { abs: 300, rel: 0.1 },
   tbt: { abs: 300, rel: 0.4 },
   cls: { abs: 0.02, rel: 0.1 },
-  // Bytes are deterministic now (p90 of same-site gaps < 1 KB, 0.3%); small floors only.
-  total: { abs: 10, rel: 0.02 },
-  images: { abs: 10, rel: 0.02 },
+  // Bytes: JS and HTML are deterministic; the whole page is not quite (the home slider fetches its
+  // next slide on a timer): v3 A/A p80 28 KB / 3.6% on mobile, so the floor sits above that.
+  total: { abs: 30, rel: 0.04 },
+  images: { abs: 30, rel: 0.04 },
   js: { abs: 5, rel: 0.02 },
   requests: { abs: 1, rel: 0 },
   share: { abs: 0.02, rel: 0 },
   "edge-html": { abs: 15, rel: 0.1 },
   html: { abs: 5, rel: 0.02 },
   words: { abs: 10, rel: 0.05 },
-  // Second page and repeat visit: not calibrated by A/A runs yet; set like LCP (paint-bound timings)
-  // and like Weight (bytes), so a gap must clear the same noise as the first-load rows.
-  "nav-content": { abs: 250, rel: 0.1 },
-  "nav-image": { abs: 250, rel: 0.1 },
-  "nav-kb": { abs: 10, rel: 0.02 },
-  "repeat-lcp": { abs: 250, rel: 0.1 },
-  "repeat-kb": { abs: 10, rel: 0.02 },
+  // Taps and the repeat visit, v3 Worker: 9 A/A journey races (5 Next.js, 4 original), same build on
+  // two hosts. Tap → heading/image p80: 345 ms / 35% mobile, 170–258 ms / 67% desktop (small values);
+  // tap bytes p80 64 KB / 7% mobile, 38 KB / 15% desktop; repeat LCP p80 140 ms mobile, 288 ms desktop;
+  // repeat bytes p80 0.4 KB mobile, 130 KB desktop (one outlier); repeat requests 0–1.
+  "nav-content": { abs: 350, rel: 0.3 },
+  "nav-image": { abs: 350, rel: 0.3 },
+  "nav-kb": { abs: 50, rel: 0.15 },
+  "repeat-lcp": { abs: 300, rel: 0.4 },
+  "repeat-kb": { abs: 30, rel: 0.2 },
   "repeat-requests": { abs: 1, rel: 0 },
 };
-export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
+export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, plus 9 A/A journey races on the v3 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
 
 /**
  * Who wins one metric, or a draw when the gap is within single-run noise (`floor` absolute,
