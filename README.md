@@ -17,6 +17,14 @@ Build the static export:
 npm run build
 ```
 
+Publish to Cloudflare Pages (andreitekhtelev.dev): build, verify the export, upload. Uses your local `wrangler login`, no token needed:
+
+```bash
+npm run deploy
+```
+
+CI (`.github/workflows/ci.yml`) publishes automatically on a push to `main` only when the repository secrets `CLOUDFLARE_API_TOKEN` (Cloudflare Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID` are set; without them it verifies the build and skips the upload.
+
 ## Published projects
 
 The portfolio currently contains House of Commons Citizen Companion, Symply Health, Symply Budget and Symply House. Their Device Lab entries load independently deployed Web builds connected to their production APIs. Authentication and account-scoped actions remain user-initiated; native iOS and Android binaries are not misrepresented as browser runtimes.

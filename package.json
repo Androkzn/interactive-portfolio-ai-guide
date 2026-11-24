@@ -13,7 +13,8 @@
     "worker:types": "wrangler types apps/guide-api/worker-configuration.d.ts --config apps/guide-api/wrangler.jsonc",
     "content:validate": "node scripts/agentic-architect/validate-approved-corpus.mjs",
     "eval:grounding": "node scripts/agentic-architect/run-grounding-evals.mjs",
-    "test:static-export": "node scripts/verify-static-export.mjs"
+    "test:static-export": "node scripts/verify-static-export.mjs",
+    "deploy": "npm run build && node scripts/verify-static-export.mjs && wrangler pages deploy out --project-name=interactive-portfolio-ai-guide --branch=main"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
