@@ -205,6 +205,14 @@
 .verdictSoFar { border-style: dashed; background: linear-gradient(135deg, #1f1f2c, #1b1c1a); animation: none; }
 .verdictSoFar h3 { font-size: clamp(1.4rem, 3.4vw, 2.4rem); }
 .scoreboard { scroll-margin-top: 20px; }
+/* Floating shortcut to the scorecard: offered, never forced; sits above the thumb zone, off the lanes' content. */
+.scorePill { position: fixed; z-index: 40; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 2px; max-width: calc(100vw - 32px); padding: 4px; border: 1px solid #ffffff1f; border-radius: 999px; background: #151614f2; box-shadow: 0 12px 36px #0007, 0 0 0 4px #d4ff7614; transform: translateX(-50%); animation: score-pill-in .35s cubic-bezier(.2, 1.2, .4, 1); backdrop-filter: blur(8px); }
+.scorePillGo { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; color: #111; border: 0; border-radius: 999px; background: #d4ff76; font: 800 var(--text-meta)/1.2 inherit; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scorePillGo:hover, .scorePillGo:focus-visible { background: #e4ff9e; }
+.scorePillClose { display: grid; place-items: center; width: 36px; height: 36px; color: #c9ccc3; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.scorePillClose:hover, .scorePillClose:focus-visible { color: #fff; background: #ffffff14; }
+@keyframes score-pill-in { from { opacity: 0; transform: translate(-50%, 16px); } }
+@media (prefers-reduced-motion: reduce) { .scorePill { animation: none; } }
 
 .verdict { position: relative; margin-top: 22px; padding: clamp(20px, 3vw, 34px); border: 1px solid #4b4772; border-radius: 20px; background: linear-gradient(135deg, #24233a, #1b1c1a); text-align: center; overflow: hidden; animation: verdict-in .7s cubic-bezier(.2, 1.4, .4, 1); }
 .verdict h3 { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0; font-size: clamp(1.8rem, 4.6vw, 3.4rem); letter-spacing: -.04em; line-height: 1; }

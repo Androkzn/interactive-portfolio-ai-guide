@@ -95,8 +95,9 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const stateRef = useRef(state);
   /** The scoreboard reveals round by round only for a race that is being watched as it happens. */
   const animateReveal = useRef(false);
-  /** A race the visitor started brings its scoreboard into view once, the moment it appears. */
-  const scrollToScores = useRef(false);
+  /** A race the visitor started offers its scoreboard with a floating pill (never scrolls by itself). */
+  const [offerScores, setOfferScores] = useState(false);
+  const [boardSeen, setBoardSeen] = useState(false);
 
   const racing = state.status === "connecting" || state.status === "racing";
   const now = useClock(racing || replaying);
@@ -115,6 +116,15 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   firstRoundsRef.current = firstRounds;
   const winnerLane = verdict && verdict.winner !== "tie" ? verdict.winner : null;
   const identity = (id: LaneId) => laneIdentity(state.lanes[id], id, stage);
+  // The pill's line: who leads (or won) and by how many rounds, then where to look.
+  const pillText = (() => {
+    if (!verdict) return "";
+    const { a, b } = verdict.roundsWon;
+    const lead: LaneId | null = final ? (verdict.winner === "tie" ? null : verdict.winner) : a === b ? null : a > b ? "a" : "b";
+    const score = lead ? `${verdict.roundsWon[lead]}–${verdict.roundsWon[lead === "a" ? "b" : "a"]}` : `${a}–${b}`;
+    if (!lead) return final ? `A draw, ${score} · See the scorecard` : `Level ${score} so far · See the scorecard`;
+    return `${identity(lead).label} ${final ? "wins" : "leads"} ${score} · See the scorecard`;
+  })();
   const progress = useVisualProgress(state);
 
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -140,21 +150,23 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     return () => clearInterval(timer);
   }, [ready, reduced]);
 
-  // The verdict lands below the lanes, out of sight on most screens: bring the scoreboard's top
-  // into view once, for a race the visitor started (never for a reopened or recorded one). Focus
-  // stays where it is; the tally's aria-live region announces the scores as before.
+  // The verdict lands below the lanes, out of sight on most screens. Scrolling there by itself would
+  // pull the visitor away from the lanes while the visit is still running, so a pill offers it instead;
+  // once the scoreboard has been on screen the pill is gone for this race.
   useEffect(() => {
-    if (!ready || !scrollToScores.current) return;
-    scrollToScores.current = false;
+    if (!ready || !offerScores || boardSeen) return;
     const board = document.getElementById("race-scoreboard");
     if (!board) return;
-    const box = board.getBoundingClientRect();
-    const fullyVisible = box.top >= 0 && box.bottom <= window.innerHeight;
-    // Its top already on screen: the visitor is looking at it (or followed the "first scores" link).
-    const topInView = box.top >= 0 && box.top < window.innerHeight / 2;
-    if (fullyVisible || topInView) return;
-    board.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-  }, [ready, reduced]);
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setBoardSeen(true);
+    }, { threshold: 0.2 });
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, [ready, offerScores, boardSeen]);
+  const showScores = () => {
+    document.getElementById("race-scoreboard")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    setBoardSeen(true);
+  };
 
   // The track and the photo finish cover the first page. The visit's later steps add frames far past
   // it (the last page settled, ~30 s in), which would squash a 10 s first page into a third of the axis;
@@ -208,7 +220,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   // Every finished race is saved by the Worker; a ?report=<id> link opens that one race.
   const openSaved = useCallback(async (id: string) => {
     animateReveal.current = false;
-    scrollToScores.current = false;
+    setOfferScores(false);
     const opened = await openReport(id);
     const setup = opened ? setupOf(opened) : null;
     if (!setup) return;
@@ -229,7 +241,10 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setReplaying(false);
     dropReportParam();
     animateReveal.current = true;
-    scrollToScores.current = true;
+    setOfferScores(true);
+    setBoardSeen(false);
+    // The first-visit hint about the start button has done its job.
+    window.dispatchEvent(new Event("site-race:start"));
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
     const theirs = !b.includes(".") || stageForUrl(b) !== null;
@@ -399,6 +414,14 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           <button type="submit" className={styles.startButton} disabled={racing || !challenge.trim()}><Flag size={16} aria-hidden="true" /> Challenge</button>
         </div>
       </form>
+      {offerScores && ready && verdict && !boardSeen && (
+        <div className={styles.scorePill} role="status">
+          <button type="button" className={styles.scorePillGo} onClick={showScores}>
+            {pillText} <ArrowDown size={15} aria-hidden="true" />
+          </button>
+          <button type="button" className={styles.scorePillClose} onClick={() => setBoardSeen(true)} aria-label="Hide the scorecard shortcut"><X size={14} aria-hidden="true" /></button>
+        </div>
+      )}
     </section>
   );
 }
