@@ -140,9 +140,9 @@ export const stages: Stage[] = [
     short: "Hero first",
     title: "Hero first: nothing competes with the largest paint",
     build: "next",
-    url: "https://8ba6e89f.hr-concrete-pumps-next.pages.dev",
-    commit: "decc322",
-    report: { base: "https://8ba6e89f.hr-concrete-pumps-next.pages.dev", build: "decc322" },
+    url: "https://56ce28ef.hr-concrete-pumps-next.pages.dev",
+    commit: "e2b3af0",
+    report: { base: "https://56ce28ef.hr-concrete-pumps-next.pages.dev", build: "e2b3af0" },
     summary: "On slow 4G the home hero was sharing the link with images nobody could see yet. Now it downloads first, and the home page hydrates no scene code at all.",
     changes: [
       "Below-the-fold scene layers (~280 KB) requested only when the scene nears the viewport, not from the server HTML",

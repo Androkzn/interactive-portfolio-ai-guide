@@ -2,12 +2,12 @@ import styles from "./results.module.css";
 
 // Before → after in one glance. Medians of 5 races of the home page on the
 // mobile profile (390 px, slow 4G, 4× CPU), original d0d11b6f vs Next.js
-// 8ba6e89f, run through the same race Worker on 2026-11-24.
+// 56ce28ef, run through the same race Worker on 2026-11-24.
 const RESULTS = [
-  { label: "Main content on screen", sub: "Largest contentful paint", before: "4.4 s", after: "2.1 s", gain: "2× faster" },
+  { label: "Main content on screen", sub: "Largest contentful paint", before: "4.4 s", after: "2.06 s", gain: "2× faster" },
   { label: "Page fully loaded", sub: "Load event", before: "> 30 s", after: "2.4 s", gain: "12× faster" },
-  { label: "Data downloaded", sub: "Page weight", before: "5.9 MB", after: "0.86 MB", gain: "7× less" },
-  { label: "Page frozen while loading", sub: "Total blocking time", before: "455 ms", after: "227 ms", gain: "2× less" },
+  { label: "Data downloaded", sub: "Page weight", before: "5.9 MB", after: "0.81 MB", gain: "7× less" },
+  { label: "Page frozen while loading", sub: "Total blocking time", before: "640 ms", after: "385 ms", gain: "40% less" },
 ];
 
 export function RaceResults() {
