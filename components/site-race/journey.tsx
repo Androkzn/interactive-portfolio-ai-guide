@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ArrowDownRight, ArrowUpRight, Flag, GitCommitHorizontal, Route, Table2 } from "lucide-react";
 import type { RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
@@ -84,7 +84,9 @@ export function Journey({ page, profile, stage, onPage, onStage, onRace }: {
     ? { from: first.metrics.lcp, to: last.metrics.lcp } : null;
 
   return (
-    <section className={styles.journey} id="journey" aria-labelledby="journey-title">
+    // The stepper and every chart lay out one column per stage, however many stages there are.
+    <section className={styles.journey} id="journey" aria-labelledby="journey-title"
+      style={{ "--stages": stages.length, "--stages-half": Math.ceil(stages.length / 2) } as CSSProperties}>
       <header className={styles.head}>
         <p className={styles.kicker}><Route size={14} aria-hidden="true" /> The optimization journey</p>
         <h2 id="journey-title">
