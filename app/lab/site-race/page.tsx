@@ -83,7 +83,7 @@ export default function Page() {
               <li><b>Lab, not field.</b> No real-user (CrUX) data: this is how the page behaves under one controlled profile, not across visitors.</li>
               <li><b>One cold page.</b> The race loads a single URL with an empty cache. Navigation, prefetching and repeat visits are not measured — which is why the Prefetch stage cannot win anything here.</li>
               <li><b>Live, not frozen.</b> The after build is still being optimized. The race always measures what is deployed today, so the gap you see is the current state, not a best-ever screenshot.</li>
-              <li><b>Review hosts.</b> Both builds run on pages.dev preview hosts marked noindex on purpose, so the Indexable check fails for both.</li>
+              <li><b>Review hosts.</b> Every build runs on a preview host (pages.dev, or workers.dev for the Edge stage) marked noindex on purpose, so the Indexable check fails for all of them.</li>
               <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>
             </ul>
           </div>

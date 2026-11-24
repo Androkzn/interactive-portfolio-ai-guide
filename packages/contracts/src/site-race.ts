@@ -37,10 +37,11 @@ export type RacePageId = keyof typeof RACE_PAGES;
 
 /**
  * Hosts that belong to this project: either build's production alias, any of its
- * immutable deployment URLs (<hash>.project.pages.dev) and branch aliases. Lanes
+ * immutable deployment URLs (<hash>.project.pages.dev) and branch aliases, and the Next.js
+ * build's Cloudflare Worker (edge stage). Lanes
  * on these hosts count as "ours" (not a visitor's challenger) and take the race page path.
  */
-export const OWN_HOST_PATTERN = /^(?:[a-z0-9-]+\.)?(?:hrconcretepumps|hr-concrete-pumps-next)\.pages\.dev$/;
+export const OWN_HOST_PATTERN = /^(?:(?:[a-z0-9-]+\.)?(?:hrconcretepumps|hr-concrete-pumps-next)\.pages\.dev|hr-concrete-pumps-next-edge\.a-tekhtelev\.workers\.dev)$/;
 
 export type TimingMetrics = {
   /** Navigation Timing responseStart, ms from navigation start. */
