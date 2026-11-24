@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer } from "lucide-react";
+import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
@@ -37,6 +37,22 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
   desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
 const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (home, catalogue, model page), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, a tap to the catalogue, a tap to a model page. Before each step the previous page may finish downloading, so every step measures itself.";
+/**
+ * The race's plan as the visitor sees it: one step per stage of the visit. A step is done when
+ * both lanes have moved past it, so the bar always shows the slower lane's progress.
+ * Challenger races (a visitor's site) stop after the first page.
+ */
+type ProgressStep = { id: string; label: string; phases: LaneState["phase"][] };
+const PROGRESS_STEPS: ProgressStep[] = [
+  { id: "start", label: "Starting two Chromes", phases: ["queued", "launching"] },
+  { id: "home", label: "Home page, cold", phases: ["loading", "settling", "inspecting"] },
+  { id: "repeat", label: "Return visit", phases: ["revisiting"] },
+  { id: "taps", label: "Taps through the site", phases: ["navigating"] },
+  { id: "score", label: "Scoring", phases: ["done", "failed"] },
+];
+/** Index of the step a lane is on. */
+const stepOf = (lane: LaneState, steps: ProgressStep[]) => Math.max(0, steps.findIndex((step) => step.phases.includes(lane.phase)));
+const clockText = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
@@ -63,7 +79,6 @@ export type SiteRaceProps = {
 export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, startSignal }: SiteRaceProps) {
   const { state, runLive, runReplay, openReport, show, stop } = useRace();
   const reduced = usePrefersReducedMotion();
-  const [lights, setLights] = useState(0);
   const [challenge, setChallenge] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [scrub, setScrub] = useState<number | null>(null);
@@ -88,15 +103,11 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   useEffect(() => { stateRef.current = state; }, [state]);
 
-  // Start lights: five reds while Chrome boots on Cloudflare, lights out on the first frame.
-  const firstFrame = state.lanes.a.frames.length > 0 || state.lanes.b.frames.length > 0;
+  // Elapsed time on the progress bar: from the press of the button (Chrome takes a few seconds to start).
+  const raceStart = useRef<number | null>(null);
   useEffect(() => {
-    if (state.status !== "connecting" && state.status !== "racing") return;
-    if (firstFrame) { setLights(6); return; }
-    setLights(0);
-    const timer = setInterval(() => setLights((value) => Math.min(5, value + 1)), reduced ? 50 : 420);
-    return () => clearInterval(timer);
-  }, [state.status, state.source, firstFrame, reduced]);
+    if (state.status === "connecting") raceStart.current = performance.now();
+  }, [state.status]);
 
   // Reveal the scoreboard one round at a time after a race; a reopened race shows it whole.
   useEffect(() => {
@@ -215,16 +226,13 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
-  const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
-  const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
-  const lightsLabel = {
-    replay: "Replay",
-    go: "GO",
-    scoring: "Scoring",
-    armed: "Starting Chrome…",
-    over: state.source === "report" ? "Saved race" : "Race over",
-    idle: state.status === "failed" ? "Stopped" : "Ready",
-  }[lightsState];
+  // Progress: the slower lane's step; a race between this project's builds has the whole visit.
+  const journey = LANES.every((id) => state.lanes[id].info?.own !== false);
+  const steps = journey ? PROGRESS_STEPS : PROGRESS_STEPS.filter((step) => step.id !== "repeat" && step.id !== "taps");
+  const finished = state.status === "finished";
+  const stopped = state.status === "failed";
+  const current = finished ? steps.length : Math.min(...LANES.map((id) => stepOf(state.lanes[id], steps)));
+  const elapsed = racing && state.source === "live" && raceStart.current !== null ? clockText(Math.max(0, now - raceStart.current)) : null;
 
   return (
     <section ref={sectionRef} className={styles.race} aria-labelledby="site-race-title" id="race">
@@ -260,10 +268,25 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         <p className={styles.fairNote}>{FAIRNESS_NOTE}</p>
       </details>
 
-      <div className={styles.lights} aria-hidden="true" data-state={lightsState}>
-        {[1, 2, 3, 4, 5].map((n) => <span key={n} className={lights >= n && lights < 6 && racing ? styles.lightOn : ""} />)}
-        <strong key={lightsState}>{lightsLabel}</strong>
-      </div>
+      {state.status !== "idle" && (
+        <div className={styles.progress} data-state={finished ? "done" : stopped ? "stopped" : "running"}>
+          <ol aria-label="Race progress">
+            {steps.map((step, index) => {
+              const status = index < current ? "done" : index === current ? (stopped ? "stopped" : "active") : "next";
+              return (
+                <li key={step.id} data-status={status} aria-current={status === "active" ? "step" : undefined}>
+                  <span className={styles.progressDot} aria-hidden="true">{status === "done" ? <Check size={13} /> : status === "stopped" ? <X size={13} /> : index + 1}</span>
+                  <span className={styles.progressLabel}>{step.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+          <p className={styles.progressMeta}>
+            {finished ? (state.source === "live" ? "Race complete" : state.source === "report" ? "Saved race" : "Recorded race") : stopped ? "Stopped" : replaying ? "Replay" : `Step ${Math.min(current + 1, steps.length)} of ${steps.length}`}
+            {elapsed && <> · <b>{elapsed}</b></>}
+          </p>
+        </div>
+      )}
 
       <p className={styles.status} role="status" aria-live="polite">
         {notice ?? (state.status === "failed" ? state.error
