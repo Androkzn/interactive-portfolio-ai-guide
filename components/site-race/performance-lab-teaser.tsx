@@ -12,7 +12,7 @@ const reduction = (before: number | null | undefined, after: number | null | und
 
 export function PerformanceLabTeaser() {
   // Same numbers as the lab's result block (components/site-race/results.tsx): home page,
-  // mobile slow 4G, median of 5 races, original d0d11b6f vs Next.js 56ce28ef.
+  // mobile slow 4G, median of 5 races, the live original vs the live Next.js build.
   const before = { lcp: 4400, pageKb: 5905 };
   const after = { lcp: 2060, pageKb: 811 };
   const lcpGain = reduction(before?.lcp, after?.lcp);

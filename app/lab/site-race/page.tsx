@@ -80,7 +80,7 @@ export default function Page() {
               <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip. That is why the numbers at the top are medians of several races per page and device.</li>
               <li><b>Lab, not field.</b> No real-user (CrUX) data: this is how the page behaves under one controlled profile, not across visitors.</li>
               <li><b>One cold page.</b> The race loads a single URL with an empty cache. Opening a second page, prefetching and repeat visits are not measured.</li>
-              <li><b>Pinned builds.</b> Both sides are fixed deployments: the original as first shipped, and the current optimized build (named in the race settings). When a newer build ships, the race and the numbers at the top are updated together.</li>
+              <li><b>Live sites.</b> Both sides are the live sites, loaded fresh on every race: redeploy either one and the next race shows it. The numbers at the top are stored medians of repeated races and are refreshed by re-running the measurement.</li>
               <li><b>Review hosts.</b> Both builds run on preview hosts (pages.dev) marked noindex on purpose, so the Indexable check fails for both of them.</li>
               <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>
             </ul>
