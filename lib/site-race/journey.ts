@@ -195,14 +195,15 @@ export const stages: Stage[] = [
     // Workers have no immutable per-deployment URL here (preview URLs are off), so this stage
     // follows the Worker's latest deployment of branch edge/opennext-workers.
     url: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev",
-    commit: "f90f4b7",
-    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "f90f4b7" },
-    summary: "The same pages, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
+    commit: "2055379",
+    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "2055379" },
+    summary: "The same pages and every step above, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
     changes: [
       "Prerendered pages answered from the edge cache before the Next.js server loads; content corrections invalidate only the pages that show them (cache tags + revalidateTag)",
       "A/B test assigned in middleware and served as a prerendered variant: no anti-flicker, no render delay",
-      "Tag lookups cached per data centre for an hour: low-traffic server time 329 → 19 ms",
-      "Contact form as a Server Action that works without JavaScript",
+      "Hero first in the response path: HTMLRewriter moves the Next.js chunks behind the hero on every HTML page — prerendered, regenerated or A/B variant — and leaves RSC requests alone",
+      "Tag lookups cached per data centre for an hour (low-traffic server time 329 → 19 ms); the contact form is a Server Action that works without JavaScript",
+      "Lab run, phone (4x CPU, slow 4G), 7 pages, before and after the earlier steps came over: median LCP 2.08 → 0.87 s",
     ],
   },
 ];
