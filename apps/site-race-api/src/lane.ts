@@ -201,8 +201,26 @@ async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[
  * The lane sends its own results: the first page as soon as it is measured, then again after each
  * step of the visit, then the whole visit (site-race/2), so the verdict never waits for the visit.
  */
-export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal, journeyEnabled = false): Promise<LaneMetrics | null> {
+/**
+ * Both timed loads start together. Each lane launches, warms its site's CDN and sets up throttling
+ * on its own, and those take different times (a page with background requests waits longer for the
+ * network to go quiet); each lane then waits here, so the visitor sees both screens start at once.
+ * A lane that fails before the start lets the other go; a lane stuck in its warm-up is not waited for
+ * longer than the timeout. Timings are per lane from its own navigation either way.
+ */
+export type StartGate = { arrive: () => Promise<void>; abandon: () => void };
+export function startGate(count: number, timeoutMs: number): StartGate {
+  let waiting = count;
+  let open!: () => void;
+  const opened = new Promise<void>((resolve) => { open = resolve; });
+  const timer = setTimeout(() => open(), timeoutMs);
+  const done = () => { waiting -= 1; if (waiting <= 0) { clearTimeout(timer); open(); } };
+  return { arrive: () => { done(); return opened; }, abandon: done };
+}
+
+export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal, journeyEnabled = false, gate?: StartGate): Promise<LaneMetrics | null> {
   const profile = PROFILES[profileId];
+  let atGate = false;
   let browser: Browser | null = null;
   const responses = new Map<string, Resp>();
   const wires = new Map<string, Wire>();
@@ -321,6 +339,12 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
       if (timeOrigin === null) pendingFrames.push({ abs, jpeg: frame.data });
       else void emit({ type: "frame", lane, t: Math.round(abs - timeOrigin), jpeg: frame.data }).catch(() => {});
     });
+    atGate = true;
+    if (gate) {
+      await emit({ type: "phase", lane, phase: "launching", detail: "Ready — waiting for the other browser" }).catch(() => {});
+      await gate.arrive();
+    }
+    if (signal.aborted) return null;
     await cdp.send("Page.startScreencast", {
       format: "jpeg",
       quality: 38,
@@ -447,6 +471,8 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     await emit({ type: "error", lane, message }).catch(() => {});
     return null;
   } finally {
+    // A lane that never reached the start does not hold the other one back.
+    if (gate && !atGate) gate.abandon();
     if (netTimer) clearInterval(netTimer);
     await browser?.close().catch(() => {});
   }

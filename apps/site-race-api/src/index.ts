@@ -1,9 +1,12 @@
 import { OWN_HOST_PATTERN, RACE_PAGES, RACE_PRESETS, SITE_RACE_PROTOCOL } from "../../../packages/contracts/src/site-race";
 import type { LaneId, LaneMetrics, RaceEvent, RaceLaneInfo, RacePageId, RacePresetId, RaceProfile, RaceReportSummary } from "../../../packages/contracts/src/site-race";
-import { LANE_CAP_MS, linkOf, PROFILES, runLane } from "./lane";
+import { LANE_CAP_MS, linkOf, PROFILES, runLane, startGate } from "./lane";
 import { NAV_CAP_MS, REPEAT_CAP_MS } from "./navigation";
 import { newReportId, RaceLog, REPORT_ID, REPORT_PREFIX, summarize } from "./report";
 import { normalizeRaceUrl } from "./url-guard";
+
+/** How long a lane that is ready waits for the other browser before it starts alone. */
+const START_GATE_TIMEOUT_MS = 20_000;
 
 const SAVE_TIMEOUT_MS = 8_000;
 
@@ -140,7 +143,9 @@ export default {
         // builds: a challenger's site has none of these pages, and a skipped step must not score.
         const journey = !!a.lane.own && !!b.lane.own;
         // Each lane streams its own results (first page, each step, the whole visit) as it gets them.
-        const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal, journey)));
+        // Both timed loads start at the same moment, after each lane's own launch and warm-up.
+        const gate = startGate(lanes.length, START_GATE_TIMEOUT_MS);
+        const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal, journey, gate)));
         clearInterval(heartbeat);
         const elapsedMs = Date.now() - started;
         const [metricsA, metricsB] = results;
