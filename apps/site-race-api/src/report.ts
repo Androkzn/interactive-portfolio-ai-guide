@@ -13,9 +13,11 @@ export function newReportId(now = Date.now(), random: string = crypto.randomUUID
 type StartEvent = Extract<RaceEvent, { type: "start" }>;
 
 /**
- * Collects what a race emits into the same replayable log the recordings use.
- * Every second frame per lane is dropped to halve the size, except each lane's
- * last frame: the report opens on the final screen, so that one must survive.
+ * Collects what a race emits into the same replayable log the recordings use, partial results
+ * included, so a reopened race fills in the way it did live. Every second frame per lane is
+ * dropped to halve the size, except two a report needs: each lane's first-page last frame (the
+ * "visually complete" target of Speed Index; it is sent just before the lane starts inspecting)
+ * and its last frame, which the report opens on.
  */
 export class RaceLog {
   private lines: RaceLogLine[] = [];
@@ -30,13 +32,14 @@ export class RaceLog {
       if (this.frameCount[event.lane]++ % 2 === 1) { this.dropped[event.lane] = line; return; }
       delete this.dropped[event.lane];
     }
-    // Results come after both lanes stopped filming: put any held-back last frame before them.
-    if (event.type === "result") this.flushDropped();
+    // The first page ends where the lane starts inspecting; a result comes once the lane stopped
+    // filming what it covers. Either way the lane's held-back frame is its last one so far: keep it.
+    if (event.type === "result" || (event.type === "phase" && event.phase === "inspecting")) this.flushDropped([event.lane]);
     this.lines.push(line);
   }
 
-  private flushDropped() {
-    for (const lane of ["a", "b"] as LaneId[]) {
+  private flushDropped(lanes: LaneId[] = ["a", "b"]) {
+    for (const lane of lanes) {
       const line = this.dropped[lane];
       if (line) this.lines.push(line);
       delete this.dropped[lane];
@@ -64,5 +67,5 @@ export function summarize(id: string, savedAt: string, start: StartEvent, metric
     capped: !!metrics[key].capped,
     kb: Math.round(metrics[key].network.totalKb),
   });
-  return { id, measure: MEASURE_VERSION, ...(version ? { version: version.slice(0, 40) } : {}), savedAt, page: start.page ?? "home", profile: start.profile, lanes: { a: lane("a"), b: lane("b") } };
+  return { id, measure: MEASURE_VERSION, ...(version ? { version: version.slice(0, 40) } : {}), savedAt, page: start.page ?? "home", profile: start.profile, ...(start.capMs ? { capMs: start.capMs } : {}), lanes: { a: lane("a"), b: lane("b") } };
 }

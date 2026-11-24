@@ -2,7 +2,19 @@
 // portfolio's race page (components/site-race). The Worker streams these as
 // Server-Sent Events, one JSON object per `data:` line.
 
-export const SITE_RACE_PROTOCOL = "site-race/1" as const;
+/**
+ * Event stream version. The page replays every version it ever saved, so bump it when the
+ * stream changes shape and keep reading the old one.
+ *  site-race/1: each lane's `result` is sent once, after both lanes finished the whole visit.
+ *  site-race/2: each lane sends `result` as soon as its first page is measured (`partial:
+ *    "first-page"`), again after each step of its visit (`partial: "visit"`), and a last time
+ *    without `partial` when it is done. Every `result` holds all the lane's numbers so far and
+ *    replaces the previous one, so a client that ignores `partial` still ends on the full
+ *    result. Also new: the caps and the throttled link in `start`, the warm-up's full-page
+ *    weight (`warmup`), and why a lane stopped at the cap (`phase.cap`).
+ */
+export const SITE_RACE_PROTOCOL = "site-race/2" as const;
+export type SiteRaceProtocol = "site-race/1" | typeof SITE_RACE_PROTOCOL;
 
 /**
  * Measurement method. Bump when what a number means changes, so saved reports stay
@@ -10,8 +22,25 @@ export const SITE_RACE_PROTOCOL = "site-race/1" as const;
  *  v1: bytes double-counted (decoded + encoded), TBT until each lane stopped, no warm-up.
  *  v2: bytes = encoded transfer size; TBT from FCP to TTI (Lighthouse); lanes observed until
  *      load + a 5 s quiet window; both CDNs warmed identically before the timed load.
+ *  v3: the visit after the first page (repeat visit, taps), first page capped at 30 s, taps at 20 s.
+ *  v4: every step capped at a visitor's patience (RACE_CAPS, 10 s), so a stopped lane's lower
+ *      bounds sit at 10 s; the first page's full weight comes from the warm-up load.
  */
-export const MEASURE_VERSION = "v3" as const;
+export const MEASURE_VERSION = "v4" as const;
+
+/**
+ * How long the visitor waits at each step before the lane is stopped and the step scores as
+ * "> cap", a lower bound. 10 s is "about the limit for keeping the user's attention" (Nielsen,
+ * NN/g, "Response Times: The 3 Important Limits"); on phones most visitors are gone long
+ * before: "53% of visits are likely to be abandoned if pages take longer than 3 seconds to
+ * load" (Google, "The need for mobile speed", 2016). Waiting longer would only make the race's
+ * own visitor wait for a page nobody would wait for. A lane that reaches TTI sooner still stops
+ * on its own rule. The Worker runs on these; the page's copy reads them.
+ */
+export const RACE_CAPS = { firstPageMs: 10_000, repeatMs: 10_000, tapMs: 10_000 } as const;
+export type RaceCaps = { firstPageMs: number; repeatMs: number; tapMs: number };
+/** The caps of races run before site-race/2 (measure v3 and older), for saved data that does not record its own. */
+export const LEGACY_CAPS: RaceCaps = { firstPageMs: 30_000, repeatMs: 10_000, tapMs: 20_000 };
 
 export type LaneId = "a" | "b";
 export type RaceProfile = "mobile" | "desktop";
@@ -148,6 +177,19 @@ export type WaterfallEntry = {
   inFlight?: boolean;
 };
 
+/**
+ * The first page in full, from the warm-up load before the clock starts: same page, viewport and
+ * user agent, cache off, unthrottled, counted the same way as `network.totalKb` up to the load
+ * event (everything "Fully loaded" waits for). No extra load and no extra time: the warm-up runs
+ * anyway. A lane stopped at the cap had only part of it; this is the rest of the story.
+ */
+export type FullPageWeight = {
+  kb: number;
+  requests: number;
+  /** False when the warm-up's load event did not fire in time: `kb` is then what had arrived (a lower bound). */
+  loaded: boolean;
+};
+
 export type LaneMetrics = {
   /** Measurement method (see MEASURE_VERSION); absent means v1. */
   measure?: string;
@@ -158,8 +200,10 @@ export type LaneMetrics = {
   status: number | null;
   /** True when the lane hit the time cap before its stop condition (v2: load event + TTI quiet window). */
   capped: boolean;
-  /** The cap this lane ran under, ms. */
+  /** The cap this lane ran under, ms. Absent in the oldest races (see LEGACY_CAPS). */
   capMs?: number;
+  /** The first page's full weight from the warm-up (site-race/2); null when the warm-up could not count it. */
+  fullPage?: FullPageWeight | null;
   lcpDetail?: LcpDetail | null;
   images?: { byFormat: Record<string, ResourceBucket>; heaviest: HeavyResource[] };
   waterfall?: WaterfallEntry[];
@@ -170,7 +214,10 @@ export type LaneMetrics = {
   document: DocumentMetrics;
   /** Second page: a click on a link both builds share, after the first load (absent in older races). */
   navigation?: NavigationMetrics | null;
-  /** Every tap of the journey in order (home → catalogue → model page); `navigation` is the last. */
+  /**
+   * Every tap of the journey in order (home → catalogue → model page); `navigation` is the last.
+   * A partial result (site-race/2) lists the taps made so far and sets `navigation` only once all are done.
+   */
   navigationSteps?: NavigationMetrics[];
   /** Journey races: the visitor tapped at this page time (ms), so load/TTI not reached by then are lower bounds. */
   tappedAt?: number;
@@ -236,16 +283,33 @@ export type MarkName = "ttfb" | "fcp" | "lcp" | "dcl" | "load";
 
 export type RaceLaneInfo = { url: string; label: string; stack: string; preset: RacePresetId | null; own?: boolean };
 
+/** The throttled connection both lanes load over: what a download time can be estimated from. */
+export type RaceLink = { downMbps: number; rttMs: number };
+
+/** Why a lane stopped at the cap: still downloading (no load event yet), or loaded but never quiet for TTI. */
+export type CapReason = "loading" | "busy";
+
+/** A partial result: the first page alone, or the first page plus the visit's steps so far. */
+export type ResultStage = "first-page" | "visit";
+
 export type RaceEvent =
-  | { type: "start"; protocol: typeof SITE_RACE_PROTOCOL; raceId: string; profile: RaceProfile; profileLabel: string; page?: RacePageId; capMs?: number; lanes: Record<LaneId, RaceLaneInfo> }
-  | { type: "phase"; lane: LaneId; phase: LanePhase; detail?: string }
+  /** `capMs` is the first page's cap (absent in the oldest races); `caps` and `link` are site-race/2 (`link` null: unthrottled). */
+  | { type: "start"; protocol: SiteRaceProtocol; raceId: string; profile: RaceProfile; profileLabel: string; page?: RacePageId; capMs?: number; caps?: RaceCaps; link?: RaceLink | null; lanes: Record<LaneId, RaceLaneInfo> }
+  /** `cap` is set on the "settling" phase a lane enters when it hits the first-page cap (site-race/2). */
+  | { type: "phase"; lane: LaneId; phase: LanePhase; detail?: string; cap?: CapReason }
+  /** The warm-up load's count of the first page in full, sent before the timed load starts (site-race/2). */
+  | { type: "warmup"; lane: LaneId; fullPage: FullPageWeight | null }
   /** performance.timeOrigin of the lane's page, epoch ms; frames are timed against it. */
   | { type: "origin"; lane: LaneId; timeOrigin: number }
   /** One screencast frame. `t` is ms since navigation start (may be negative before it). */
   | { type: "frame"; lane: LaneId; t: number; jpeg: string }
   | { type: "mark"; lane: LaneId; name: MarkName; t: number }
   | { type: "net"; lane: LaneId; requests: number; kb: number }
-  | { type: "result"; lane: LaneId; metrics: LaneMetrics }
+  /**
+   * A lane's numbers. site-race/1: once, at the end. site-race/2: `partial` while the lane's visit
+   * is still going (see SITE_RACE_PROTOCOL); each replaces the previous one, the last has no `partial`.
+   */
+  | { type: "result"; lane: LaneId; metrics: LaneMetrics; partial?: ResultStage }
   | { type: "error"; lane?: LaneId; message: string }
   /** `reportId` is set when the finished race was saved and can be reopened at /reports/<id>. */
   | { type: "done"; elapsedMs: number; reportId?: string };
@@ -263,5 +327,7 @@ export type RaceReportSummary = {
   savedAt: string;
   page: RacePageId;
   profile: RaceProfile;
+  /** The first page's cap the race ran under, ms; absent in older rows (LEGACY_CAPS). */
+  capMs?: number;
   lanes: Record<LaneId, { url: string; preset: RacePresetId | null; lcp: number | null; capped: boolean; kb: number }>;
 };
