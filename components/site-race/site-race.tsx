@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
+import { ArrowDown, Check, Flag, Gauge, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
 import type { LaneId, MarkName, RaceCaps, RaceLink, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, pendingLanes, useRace, verdictFinal, verdictOf, type LaneState, type RaceState } from "@/lib/site-race/use-race";
-import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
+import { REPORT_ID, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { featuredStage, raceUrl, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
@@ -32,10 +32,6 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   navigating: "Tapping through the site",
   done: "Done",
   failed: "Did not finish",
-};
-const PROFILE_NOTE: Record<RaceProfile, string> = {
-  mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
-  desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
 /** The fine print, with the caps the race shown ran under (the current ones before any race). */
 const fairnessNote = (caps: RaceCaps) => `Before the clock starts, both sites are visited once at full speed in a discarded session (every page of the visit), so both CDN caches are warmed identically; that load also weighs each first page in full. The timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s. One still loading at ${capSeconds(caps.firstPageMs)}, a visitor's patience, is stopped there; one that loaded in time may take those 5 s to show it is quiet. Its rounds are scored the moment both home pages are done. Then each lane, in the same order: the home page again with the cache on (${capSeconds(caps.repeatMs)} at most), then two taps through the site (${capSeconds(caps.tapMs)} each); their rounds fill in as they finish. Before each step the previous page may finish downloading, so every step measures itself.`;
@@ -89,8 +85,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const [scrub, setScrub] = useState<number | null>(null);
   const [replaying, setReplaying] = useState(false);
   const [revealed, setRevealed] = useState(0);
-  /** "copied" after a copy, or the link itself when the clipboard refused. */
-  const [copied, setCopied] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const stateRef = useRef(state);
   /** The scoreboard reveals round by round only for a race that is being watched as it happens. */
@@ -117,6 +111,24 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   firstRoundsRef.current = firstRounds;
   const winnerLane = verdict && verdict.winner !== "tie" ? verdict.winner : null;
   const identity = (id: LaneId) => laneIdentity(state.lanes[id], id, stage);
+  // One line under the progress: who is through and who we are still waiting for, then the winner.
+  const raceStatus = (() => {
+    if (state.source === "report" && state.recordedAt) return `Saved race from ${when(state.recordedAt)}`;
+    if (state.source === "replay" && state.recordedAt) return `Recorded race from ${when(state.recordedAt)}`;
+    if (state.status === "finished" && verdict) {
+      if (verdict.winner === "tie") return "Race complete · A draw";
+      const w = verdict.winner, l = w === "a" ? "b" : "a";
+      return `Race complete · Winner: ${identity(w).label} (${verdict.roundsWon[w]}–${verdict.roundsWon[l]})`;
+    }
+    if (racing) {
+      const done = LANES.filter((id) => state.lanes[id].complete);
+      if (done.length === 1) {
+        const other = LANES.find((id) => id !== done[0])!;
+        return `${identity(done[0]).label} finished first · waiting for ${identity(other).label}…`;
+      }
+    }
+    return null;
+  })();
   // The pill's line: who leads (or won) and by how many rounds, then where to look.
   const pillText = (() => {
     if (!verdict) return "";
@@ -278,19 +290,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     void start(raceUrl(featuredStage.id), challenge.trim());
   };
 
-  const copyLink = async () => {
-    if (!state.reportId) return;
-    const link = reportLink(state.reportId, window.location.href);
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied("copied");
-      setTimeout(() => setCopied(null), 1800);
-    } catch {
-      // No clipboard (permissions, insecure origin): show the link to copy by hand.
-      setCopied(link);
-    }
-  };
-
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
   // Progress: the slower lane's step; a race between this project's builds has the whole visit.
@@ -356,20 +355,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       )}
 
       <p className={styles.status} role="status" aria-live="polite">
-        {notice ?? (state.status === "failed" ? state.error
-          : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
-          : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
-          : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : PROFILE_NOTE[profile])}
+        {notice ?? (state.status === "failed" ? state.error : raceStatus)}
       </p>
-      {state.status === "finished" && state.reportId && state.source === "live" && (
-        <p className={styles.savedNote}>
-          <Check size={14} aria-hidden="true" /> Report saved
-          {copied && copied !== "copied"
-            ? <a href={copied}>{copied}</a>
-            : <button type="button" onClick={() => void copyLink()}><Link2 size={14} aria-hidden="true" /> {copied ? "Link copied" : "Copy link"}</button>}
-        </p>
-      )}
 
       <div className={styles.arena}>
         {/* The winner glows once the verdict is final, not while the visit can still change it. */}
