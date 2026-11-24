@@ -64,8 +64,12 @@ function reducer(state: RaceState, action: Action): RaceState {
       return { ...state, recordedAt: action.recordedAt, reportId: action.reportId ?? state.reportId };
     case "load":
       return action.state;
-    case "fail":
-      return { ...state, status: "failed", error: action.message };
+    case "fail": {
+      // A lane still running when the race ends says so instead of "loading"; it keeps its phase,
+      // so the progress bar shows the step where the race stopped.
+      const end = (lane: LaneState): LaneState => (lane.phase === "done" || lane.phase === "failed" ? lane : { ...lane, phaseDetail: action.message });
+      return { ...state, status: "failed", error: action.message, lanes: { a: end(state.lanes.a), b: end(state.lanes.b) } };
+    }
     case "event": {
       const { event, now } = action;
       switch (event.type) {
@@ -145,7 +149,13 @@ export function useRace() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const stop = useCallback(() => abortRef.current?.abort(), []);
+  /** Stops a live race or a replay where it is: the frames so far stay, the race reads as stopped. */
+  const stop = useCallback(() => {
+    const current = abortRef.current;
+    if (!current || current.signal.aborted) return;
+    current.abort();
+    dispatch({ type: "fail", message: "Race stopped." });
+  }, []);
 
   const fresh = () => {
     abortRef.current?.abort();
@@ -170,10 +180,11 @@ export function useRace() {
         dispatch({ type: "event", event, now: performance.now() });
         if (event.type === "done") finished = true;
       }
-      if (!finished) dispatch({ type: "fail", message: "The connection to the race closed early." });
+      if (!finished && !abort.signal.aborted) dispatch({ type: "fail", message: "The connection to the race closed early." });
       return { ok: finished, status: 200 };
     } catch {
-      if (abort.signal.aborted) return { ok: false as const, status: 0 };
+      // Stopped on purpose (or replaced by a newer race): not a service failure, so no fallback.
+      if (abort.signal.aborted) return { ok: false as const, status: 0, aborted: true };
       dispatch({ type: "fail", message: "Could not reach the race service." });
       return { ok: false as const, status: 0 };
     }

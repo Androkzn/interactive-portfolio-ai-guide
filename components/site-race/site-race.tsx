@@ -186,7 +186,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
     const theirs = !b.includes(".") || stageForUrl(b) !== null;
-    if (!result.ok && (result.status === 429 || result.status === 0 || result.status >= 500) && ours && theirs) {
+    if (!result.ok && !("aborted" in result) && (result.status === 429 || result.status === 0 || result.status >= 500) && ours && theirs) {
       setNotice(result.status === 429
         ? "The live browsers are busy cooling down, so here is a recorded race instead."
         : "The live race service is unreachable right now, so here is a recorded race instead.");
