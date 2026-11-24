@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Gauge, Image as ImageIcon, TimerReset, Zap } from "lucide-react";
-import { latestMeasuredStage, stageMetrics } from "@/lib/site-race/journey";
 import styles from "./performance-lab-teaser.module.css";
 
 function NextMark() {
@@ -12,9 +11,10 @@ const megabytes = (value: number | null | undefined) => value == null ? "—" : 
 const reduction = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.max(0, Math.round((1 - after / before) * 100)) : null;
 
 export function PerformanceLabTeaser() {
-  const latest = latestMeasuredStage();
-  const before = stageMetrics("original", "*", "mobile");
-  const after = stageMetrics(latest.id, "*", "mobile");
+  // Same numbers as the lab's result block (components/site-race/results.tsx): home page,
+  // mobile slow 4G, median of 5 races, original d0d11b6f vs Next.js 8ba6e89f.
+  const before = { lcp: 4400, pageKb: 5905 };
+  const after = { lcp: 2120, pageKb: 862 };
   const lcpGain = reduction(before?.lcp, after?.lcp);
   const weightGain = reduction(before?.pageKb, after?.pageKb);
 
@@ -34,11 +34,11 @@ export function PerformanceLabTeaser() {
         </div>
 
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
-          <div className={styles.visualHead}><span><i />Measured · mobile slow 4G</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
+          <div className={styles.visualHead}><span><i />Home page · phone on slow 4G · median of 5 races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
-            <div className={styles.scoreOriginal}><span>Original site</span><strong>{seconds(before?.lcp)}</strong><small>median LCP</small></div>
+            <div className={styles.scoreOriginal}><span>Original site</span><strong>{seconds(before?.lcp)}</strong><small>main content on screen</small></div>
             <div className={styles.racePulse} aria-hidden="true"><Zap size={18} fill="currentColor" /></div>
-            <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(after?.lcp)}</strong><small>median LCP</small></div>
+            <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(after?.lcp)}</strong><small>main content on screen</small></div>
           </div>
           <div className={styles.chartGrid}>
             <div className={styles.chartCard}>
