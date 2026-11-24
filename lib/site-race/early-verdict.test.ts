@@ -9,7 +9,7 @@ import { firstPagesIn, foldRaceLog, pendingLanes, verdictFinal, verdictOf } from
 // A recorded journey race (site-race/1: both results at the very end) and the same race as the
 // site-race/2 Worker streams it: each lane's first page as soon as it is measured, its visit
 // after the repeat visit, its final numbers when it is done. Same numbers, earlier.
-const oldLog = parseRaceLog(readFileSync(new URL("../../public/lab/site-race/recorded-mobile-home.ndjson", import.meta.url), "utf8"));
+const oldLog = parseRaceLog(readFileSync(new URL("./fixtures/race-v1-mobile-home.ndjson", import.meta.url), "utf8"));
 const finalOf = (lane: LaneId) => (oldLog.find((line) => line.event.type === "result" && line.event.lane === lane)!.event as { metrics: LaneMetrics }).metrics;
 const firstPage = (m: LaneMetrics): LaneMetrics => { const { repeat: _r, navigation: _n, navigationSteps: _s, ...rest } = m; return { ...rest, capMs: RACE_CAPS.firstPageMs }; };
 const full = (lane: LaneId): LaneMetrics => ({ ...finalOf(lane), capMs: RACE_CAPS.firstPageMs, fullPage: { kb: 5914.9, requests: 40, loaded: true } });
@@ -127,7 +127,7 @@ describe("old saved races (site-race/1)", () => {
   });
 
   it("without a journey keep their five rounds", () => {
-    const state = foldRaceLog(parseRaceLog(readFileSync(new URL("../../public/lab/site-race/recorded-mobile-model.ndjson", import.meta.url), "utf8")), "report");
+    const state = foldRaceLog(parseRaceLog(readFileSync(new URL("./fixtures/race-v1-mobile-model.ndjson", import.meta.url), "utf8")), "report");
     expect(verdictOf(state)!.rounds).toHaveLength(5);
     expect(state.lanes.a.cap).toBe("loading");
   });
