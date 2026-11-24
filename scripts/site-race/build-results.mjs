@@ -29,6 +29,12 @@ const first = {
   load: (m) => [m.timing.load ?? (m.capped ? m.capMs ?? 30000 : null), m.timing.load === null && m.capped],
   tbt: (m) => [m.timing.tbt, m.capped && m.timing.tti === null],
   totalKb: (m) => [m.network.totalKb, m.capped && m.timing.load === null],
+  // A lane cut off by the cap before its load event has only part of the page: take the whole page
+  // from the warm-up load (protocol 2). Every other lane observed its full load, so what arrived is the
+  // page (the warm-up counts to the load event and misses scripts that start after the hero).
+  fullPageKb: (m) => (m.capped && m.timing.load === null
+    ? (m.fullPage?.kb != null ? [m.fullPage.kb, false] : [m.network.totalKb, true])
+    : [m.network.totalKb, false]),
   imageKb: (m) => [m.network.byType.image.kb, m.capped && m.timing.load === null],
   jsKb: (m) => [m.network.byType.script.kb, m.capped && m.timing.load === null],
 };
