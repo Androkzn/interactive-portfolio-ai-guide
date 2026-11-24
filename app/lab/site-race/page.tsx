@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Archive, ArrowLeft, ArrowUp, ArrowUpRight, Braces, ChevronDown, Cpu, Dices, Equal, EyeOff,
   FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Mail, Monitor, Phone, Rocket,
-  RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Users, Wifi, Zap,
+  RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Type, Users, Wifi, Zap,
 } from "lucide-react";
 import { LabExperience } from "@/components/site-race/lab-experience";
 import resultsData from "@/lib/site-race/results-data.json";
@@ -20,6 +20,25 @@ const home = cells["home/mobile"];
 const races = Math.min(...["home/mobile", "model/mobile"].map((key) => cells[key]?.races ?? Infinity));
 const mb = (kb: number | null | undefined) => (kb == null ? null : `${(kb / 1024).toFixed(1)} MB`);
 const stat = (value: string | null, note: string) => (value ? { value, note } : undefined);
+// Seconds the original's whole home page needs on the race's slow-4G link (1.6 Mbps), bytes alone.
+const fullLoadSeconds = home?.before.totalKb ? Math.round((home.before.totalKb * 1024 * 8) / 1.6e6) : null;
+
+// How long the live race waits at each step before it stops a lane. Mirrors RACE_CAPS in
+// packages/contracts (the Worker's LANE_CAP_MS and navigation caps); import it from there once it exists.
+const RACE_CAPS = { firstPageMs: 10_000, repeatMs: 10_000, tapMs: 10_000 } as const;
+const capSeconds = (capMs: number) => `${Math.round(capMs / 100) / 10} s`;
+
+/** The research behind the cap (links checked 2026-11-24); same sources as the race's own note. */
+const PATIENCE_SOURCES = {
+  limits: { name: "Nielsen Norman Group", title: "Response Times: The 3 Important Limits", href: "https://www.nngroup.com/articles/response-times-3-important-limits/" },
+  website: { name: "Nielsen Norman Group", title: "Website Response Times", href: "https://www.nngroup.com/articles/website-response-times/" },
+  mobile: { name: "Google, 2016", title: "The need for mobile speed", href: "https://blog.google/products/admanager/the-need-for-mobile-speed/" },
+} as const;
+// Links are plain text site-wide (globals.css), so a source carries the site's underline itself.
+const sourceLink = { textDecoration: "underline", textDecorationColor: "#bdb3ec", textDecorationThickness: 2, textUnderlineOffset: 3 } as const;
+function Source({ source }: { source: (typeof PATIENCE_SOURCES)[keyof typeof PATIENCE_SOURCES] }) {
+  return <a href={source.href} target="_blank" rel="noreferrer" title={source.title} style={sourceLink}>{source.name}</a>;
+}
 
 /** Where a change shows up: a round of the race's scoreboard and, optionally, the row inside it. */
 type Shows = { round: string; row?: string };
@@ -27,27 +46,27 @@ type Shows = { round: string; row?: string };
 const story: { tone: "before" | "after" | "proof"; icon: LucideIcon; label: string; title: string; body: string; stat?: { value: string; note: string }; cta?: boolean }[] = [
   {
     tone: "before", icon: Snail, label: "Before", title: "The original site",
-    body: "Live and never tuned for speed: full-size images everywhere and no loading priorities, so the main photo queues behind everything else.",
+    body: "Live and never tuned for speed: full-size images everywhere and no loading priorities, so the main photo competes with everything else for the connection.",
     stat: stat(mb(home?.before.totalKb), "for the home page on a phone"),
   },
   {
     tone: "after", icon: Rocket, label: "After", title: "The same site in Next.js 16",
-    body: "The same pages and content in both languages, rebuilt and optimized. Nothing was removed to make it fast.",
+    body: "The same pages and content in both languages, rebuilt and optimized. No page, section or image was dropped to make it fast.",
     stat: stat(mb(home?.after.totalKb), "for the same page"),
   },
   {
     tone: "proof", icon: Flag, label: "The proof", title: "One live race",
-    body: "Two real Chrome browsers on Cloudflare make the same visit with the same phone and connection. You watch both screens.",
+    body: "Two real Chrome browsers on Cloudflare make the same visit on the same device and connection. You watch both screens.",
     cta: true,
   },
 ];
 
 // The order the Worker runs it (apps/site-race-api/src/navigation.ts): cold load, repeat view, then the taps.
 const visit: { icon: LucideIcon; title: string; who: string; scored: string[] | null; limit: string }[] = [
-  { icon: House, title: "Home page, cold", who: "First visit, nothing cached.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: "30 s max" },
-  { icon: RotateCcw, title: "Home page again", who: "Returning visitor, cache on.", scored: ["Repeat visit"], limit: "10 s max" },
-  { icon: Hand, title: "Tap to a list page", who: "A tap on a link.", scored: null, limit: "20 s max" },
-  { icon: Hand, title: "Tap to a product page", who: "A tap on a link.", scored: ["Next page"], limit: "20 s max" },
+  { icon: House, title: "Home page, cold", who: "First visit: empty browser, CDNs warmed for both.", scored: ["Speed", "Smoothness", "Weight", "Edge cache", "Search"], limit: `Until loaded and quiet (TTI) · ${capSeconds(RACE_CAPS.firstPageMs)} max` },
+  { icon: RotateCcw, title: "Return visit: home again", who: "Returning visitor, cache on.", scored: ["Repeat visit"], limit: `Until loaded · ${capSeconds(RACE_CAPS.repeatMs)} max` },
+  { icon: Hand, title: "Tap to a list page", who: "A tap on a link (desktop: a click).", scored: null, limit: `Until its main image paints · ${capSeconds(RACE_CAPS.tapMs)} max` },
+  { icon: Hand, title: "Tap to a product page", who: "A tap on a link (desktop: a click).", scored: ["Next page"], limit: `Until its main image paints · ${capSeconds(RACE_CAPS.tapMs)} max` },
 ];
 
 const changes: { icon: LucideIcon; title: string; body: string; how: string; shows: Shows[] }[] = [
@@ -65,8 +84,8 @@ const changes: { icon: LucideIcon; title: string; body: string; how: string; sho
   },
   {
     icon: Cpu, title: "Less work at start-up",
-    body: "No animation library: the browser's Web Animations API does the motion. Each page loads only its own scripts, and home sections render on the server.",
-    how: "Web Animations API · per-page scripts · server rendering",
+    body: "No animation library: the browser's Web Animations API does the motion. Each page loads only its own scripts, home sections render on the server, and Chrome compiles the start-up code off the main thread.",
+    how: "Web Animations API · per-page scripts · server rendering · compile hints",
     shows: [{ round: "Smoothness", row: "Total blocking time" }],
   },
   {
@@ -111,8 +130,9 @@ const verdict: { icon: LucideIcon; text: string }[] = [
 
 const caveats: { icon: LucideIcon; text: ReactNode }[] = [
   { icon: Dices, text: <><b>One race is one sample.</b> Close calls can flip between runs; the numbers at the top are medians of {Number.isFinite(races) ? `${races} races` : "repeated races"}.</> },
-  { icon: Users, text: <><b>Lab, not field.</b> One controlled phone profile, no real-user (CrUX) data.</> },
+  { icon: Users, text: <><b>Lab, not field.</b> One controlled phone profile (and a desktop option), no real-user (CrUX) data.</> },
   { icon: Braces, text: <><b>The original ships less JavaScript</b> on most pages. React has a start-up cost, so where images do not dominate, the original&apos;s main thread can be the freer one.</> },
+  { icon: Type, text: <><b>A fallback font on a phone.</b> On a first visit the Next.js site keeps a metric-matched Arial rather than re-lay out the page when Inter arrives late, so the two screens can differ in typeface.</> },
   { icon: EyeOff, text: <><b>Preview hosts.</b> Both sites are marked noindex on purpose, so the Indexable check fails for both.</> },
   { icon: Globe, text: <><b>Live sites.</b> Both lanes load the sites as they are now: redeploy either one and the next race shows it.</> },
   { icon: Swords, text: <><b>Your site.</b> In the challenger round it races the Next.js site on the first page only. Public http(s) domains, two races a minute.</> },
@@ -175,13 +195,13 @@ export default function Page() {
                 <h3>{name}</h3>
                 <p className={styles.storyText}>{body}</p>
                 {figure && <p className={styles.storyFoot}><b>{figure.value}</b> {figure.note}</p>}
-                {cta && <p className={styles.storyFoot}><a className={styles.storyLink} href="#race"><ArrowUp size={15} aria-hidden="true" /> Start the race</a></p>}
+                {cta && <p className={styles.storyFoot}><a className={styles.storyLink} href="#race"><ArrowUp size={15} aria-hidden="true" /> Race it yourself</a></p>}
               </li>
             ))}
           </ul>
 
           <div className={styles.visit}>
-            <h3 className={styles.subhead}>One press, one visit: the same four steps for both sites</h3>
+            <h3 className={styles.subhead}>One press, one visit: four measured steps, the same for both sites</h3>
             <ol className={styles.steps}>
               {visit.map(({ icon: Icon, title: name, who, scored, limit }, index) => (
                 <li key={name} className={styles.step}>
@@ -261,6 +281,19 @@ export default function Page() {
               </ul>
             </div>
           </div>
+
+          {/* Same wording as PatienceMethod in components/site-race/patience.tsx, plus the original's full load. */}
+          <p className={styles.parity}>
+            <Timer size={18} aria-hidden="true" />
+            <span>
+              <b>No step waits longer than {capSeconds(RACE_CAPS.firstPageMs)}, a visitor&apos;s patience:</b> 10 seconds is about the limit for keeping a user&apos;s attention
+              (<Source source={PATIENCE_SOURCES.limits} />), and a 10-second delay will often make users leave a site (<Source source={PATIENCE_SOURCES.website} />).
+              {" "}On phones, 53% of visits are likely to be abandoned if pages take longer than 3 seconds to load (<Source source={PATIENCE_SOURCES.mobile} />);
+              a page still loading by then scores &ldquo;&gt; {capSeconds(RACE_CAPS.firstPageMs)}&rdquo;.
+              {/* Physics, not a cap: the original's measured home page weight over the race's 1.6 Mbps link. */}
+              {fullLoadSeconds && <>{" "}The original&apos;s home page weighs {mb(home?.before.totalKb)}: at 1.6 Mbps that alone needs about {fullLoadSeconds} s to arrive, so the race stops where a visitor would rather than wait for it.</>}
+            </span>
+          </p>
 
           <div className={styles.caveats}>
             <h3><Info size={18} aria-hidden="true" /> What one race does not prove</h3>

@@ -16,8 +16,9 @@ const home = cells["home/mobile"];
 const model = cells["model/mobile"];
 const desktopModel = cells["model/desktop"];
 
-/** The race stops a lane after 30 s. */
-const CAP_MS = 30000;
+/** Where the races behind these medians stopped a lane (build-results.mjs records it; older files: 30 s). */
+const CAP_MS = (resultsData as { capMs?: number }).capMs ?? 30000;
+const CAP_S = Math.round(CAP_MS / 100) / 10;
 const sec = (ms: number | null) => Number(((ms ?? 0) / 1000).toFixed(2));
 const mb = (kb: number | null) => Number(((kb ?? 0) / 1024).toFixed(2));
 
@@ -78,6 +79,9 @@ const GROUPS = [
 ].map((group) => ({ ...group, rows: group.rows.filter((item): item is Row => item !== null) })).filter((group) => group.rows.length > 0);
 
 const anyCapped = GROUPS.some((group) => group.rows.some((r) => r.capped));
+/** The headline's "before": "over <cap>" when the original's product photo never painted in time. */
+const productBefore = model.before.lcp ?? CAP_MS;
+const productBeforeText = beforeCensored(model, "lcp", productBefore) ? `over ${CAP_S} s` : `${Number((productBefore / 1000).toFixed(1))} s`;
 const show = (v: number, unit: string, capped?: boolean) => `${capped ? "> " : ""}${v} ${unit}`;
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -87,7 +91,7 @@ export function RaceResults() {
       <div className={styles.glow} aria-hidden="true" />
       <p className={styles.kicker}><i aria-hidden="true" />The result · phone on slow 4G</p>
       <h2 id="race-results-title" className={styles.title}>
-        Same site, same content.<br /><span>The product page: from over 30 s to {Number(((model.after.lcp ?? 0) / 1000).toFixed(1))} s.</span>
+        Same site, same content.<br /><span>The product page: from {productBeforeText} to {Number(((model.after.lcp ?? 0) / 1000).toFixed(1))} s.</span>
       </h2>
       <p className={styles.lede}>
         Before: the original site, never tuned. After: rebuilt in Next.js, with images sized for the screen, the main photo loaded
@@ -100,7 +104,7 @@ export function RaceResults() {
           <p className={styles.legend}>
             <span><i className={styles.keyBefore} aria-hidden="true" />Before · original site</span>
             <span><i className={styles.keyAfter} aria-hidden="true" />After · Next.js</span>
-            {anyCapped && <span><i className={styles.keyCapped} aria-hidden="true" />Still loading at the 30&nbsp;s cut-off</span>}
+            {anyCapped && <span><i className={styles.keyCapped} aria-hidden="true" />Still loading at the {CAP_S}&nbsp;s cut-off</span>}
           </p>
           <span className={cx(styles.colLabel, styles.colGain)}>Gain</span>
         </div>

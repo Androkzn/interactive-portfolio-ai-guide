@@ -46,8 +46,8 @@
 .deltaFlat, .deltaNone { color: var(--ink-3); }
 .deltaGood small, .deltaBad small { color: var(--ink-3); font-weight: 600; }
 
-/* Stepper */
-.stepper { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 22px 0 14px; padding: 0; list-style: none; }
+/* Stepper: every stage in one row where they fit (--stages is set on .journey), two rows below that */
+.stepper { position: relative; display: grid; grid-template-columns: repeat(var(--stages, 7), minmax(0, 1fr)); gap: 8px; margin: 22px 0 14px; padding: 0; list-style: none; }
 .stepper::before { content: ""; position: absolute; top: 25px; left: 4%; right: 4%; height: 2px; background: linear-gradient(90deg, var(--before), var(--after)); opacity: .45; }
 .step { position: relative; display: grid; justify-items: center; gap: 4px; width: 100%; min-height: 96px; padding: 8px 4px; color: var(--ink); border: 1px solid transparent; border-radius: 14px; background: transparent; text-align: center; }
 .step:hover { background: #ffffff08; }
@@ -92,7 +92,7 @@
 .multipleTitle { display: grid; gap: 2px; margin: 0 0 8px; }
 .multipleTitle b { font-size: var(--text-caption); }
 .multipleTitle span { color: var(--ink-3); font-size: var(--text-micro); }
-.columns { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; height: 170px; border-bottom: 1px solid #4a4c46; }
+.columns { display: grid; grid-template-columns: repeat(var(--stages, 7), minmax(0, 1fr)); gap: 2px; height: 170px; border-bottom: 1px solid #4a4c46; }
 .column { display: grid; grid-template-rows: 1fr auto; min-width: 0; cursor: pointer; outline: none; border-radius: 4px; }
 .column:focus-visible { box-shadow: 0 0 0 2px #cfc8ff; }
 .colPlot { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 0; }
@@ -100,7 +100,8 @@
 .colBefore .colPlot i { background: var(--before); }
 .colAfter .colPlot i { background: var(--after); }
 .columnHover .colPlot i { filter: brightness(1.3); }
-.colValue { margin-bottom: 4px; color: var(--ink); font: 700 var(--text-micro)/1 var(--font-code); white-space: nowrap; }
+/* A value is wider than a narrow column: it sits above the neighbouring bars, on the panel colour. */
+.colValue { position: relative; z-index: 1; margin-bottom: 4px; padding: 1px 2px; color: var(--ink); border-radius: 3px; background: #1c1e1b; font: 700 var(--text-micro)/1 var(--font-code); white-space: nowrap; }
 .colMissing { margin-bottom: 4px; color: var(--ink-3); font: 600 var(--text-micro)/1 var(--font-code); }
 .multiple { container-type: inline-size; }
 .colName { display: grid; justify-items: center; overflow: hidden; padding-top: 6px; color: var(--ink-3); font-size: .6rem; font-weight: 700; text-align: center; white-space: nowrap; }
@@ -118,6 +119,10 @@
 .originalNote { margin: 14px 0 0; color: var(--ink-3); font-size: var(--text-meta); }
 .originalNote code { color: var(--ink-2); }
 
+@media (max-width: 1430px) {
+  .stepper { grid-template-columns: repeat(var(--stages-half, 4), minmax(0, 1fr)); }
+  .stepper::before { display: none; }
+}
 @media (max-width: 1100px) {
   .tiles, .multiples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
