@@ -51,8 +51,7 @@ export default function Page() {
             <p>
               Nothing in the race is a stored number dressed up as live. When you press start, a Worker launches two Chrome sessions on
               Cloudflare Browser Run, applies the same mobile throttling the projects&apos; own performance reports use, and streams the
-              screencast, the paint milestones, the network log and the response headers straight to your screen. The journey&apos;s
-              charts come from those reports; every stage in them is still deployed, so you can race it.
+              screencast, the paint milestones, the network log and the response headers straight to your screen.
             </p>
           </div>
         </section>
@@ -73,10 +72,9 @@ export default function Page() {
               <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel, browser cache disabled.</li>
               <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown — the profile in both projects&apos; perf-report scripts.</li>
               <li><b>Timings.</b> Read from the page&apos;s own PerformanceObserver: paint, largest-contentful-paint, layout-shift and longtask entries.</li>
-              <li><b>Finish line.</b> The load event, or the moment the page has painted its LCP and no byte has arrived for 2.5 s. A lane still downloading at 30 s stops there: its LCP is reported as “&gt; 30 s”, and the requests still in flight are drawn hatched on the waterfall.</li>
-              <li><b>Scoring.</b> A gap within 5% (or a small absolute floor per metric) is a draw. A round goes to whoever wins more of its metrics.</li>
+              <li><b>Finish line.</b> The load event once the page is interactive (Lighthouse&apos;s TTI rule), with both sites&apos; CDN caches warmed identically before the start. A lane still downloading at 30 s stops there: its LCP is reported as “&gt; 30 s”, and the requests still in flight are drawn hatched on the waterfall.</li>
+              <li><b>Scoring.</b> A gap within the run-to-run noise measured for that metric is a draw. A round goes to whoever wins more of its metrics.</li>
               <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the race&apos;s own numbers. Speed Index is computed from the screencast the way speedline does it — colour histograms against the first and last frame — so it is an estimate, not a Lighthouse report.</li>
-              <li><b>Journey numbers.</b> From each stage&apos;s run of the project&apos;s <code>perf:report</code> (Playwright + Chrome, cold cache, the same mobile profile), synced into this site by a script; one load per page and stage.</li>
             </ul>
             <ul className={styles.list}>
               <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip.</li>

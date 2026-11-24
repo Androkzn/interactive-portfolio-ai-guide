@@ -295,17 +295,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           </div>
         </fieldset>
         <fieldset className={styles.setupGroup} disabled={racing}>
-          <legend>After = optimization stage</legend>
-          <label className={styles.stageSelect}>
-            <span className="sr-only">Stage the original races against</span>
-            <select value={stage} onChange={(event) => onStage(event.target.value as StageId)}>
-              {afterStages.map((item, index) => (
-                <option key={item.id} value={item.id}>{index + 1}. {item.short} — {item.title}{item.id === latestStage.id ? " (latest)" : ""}</option>
-              ))}
-            </select>
-          </label>
-        </fieldset>
-        <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Device</legend>
           <div className={styles.segmented} role="radiogroup" aria-label="Device profile">
             <button type="button" role="radio" aria-checked={profile === "mobile"} className={profile === "mobile" ? styles.segOn : ""} onClick={() => onProfile("mobile")}><Smartphone size={15} aria-hidden="true" /> Mobile · slow 4G</button>
@@ -313,7 +302,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           </div>
         </fieldset>
         </div>
-        {selectedStage.showsIn && <p className={styles.stageNote}>{selectedStage.short} pays off on {selectedStage.showsIn}. The race still includes every earlier optimization.</p>}
       </details>
 
       <div className={styles.lights} aria-hidden="true" data-state={lightsState}>

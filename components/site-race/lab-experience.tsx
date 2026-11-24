@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { featuredStage, type StageId } from "@/lib/site-race/journey";
-import { Journey } from "./journey";
+import { RaceResults } from "./results";
 import { SiteRace } from "./site-race";
 
 /**
@@ -25,8 +25,8 @@ export function LabExperience() {
 
   return (
     <>
+      <RaceResults />
       <SiteRace page={page} stage={stage} profile={profile} onPage={setPage} onStage={setStage} onProfile={setProfile} startSignal={startSignal} />
-      <Journey page={page} profile={profile} stage={stage} onPage={setPage} onStage={setStage} onRace={raceStage} />
     </>
   );
 }
