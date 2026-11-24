@@ -15,7 +15,7 @@ describe("saved reports", () => {
     expect(state.source).toBe("report");
     expect(state.lanes.a.metrics && state.lanes.b.metrics).toBeTruthy();
     expect(state.lanes.a.frames.length).toBeGreaterThan(5);
-    expect(setupOf(state)).toEqual({ page: "model", stage: "prefetch", profile: "mobile" });
+    expect(setupOf(state)).toEqual({ page: "model", stage: featuredStage.id, profile: "mobile" });
   });
 
   it("give a race against the production alias to the stage the race runs by default", () => {
