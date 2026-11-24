@@ -29,7 +29,7 @@ describe("RaceLog", () => {
     for (let t = 0; t < 2; t += 1) log.add(frame("b", t), t);
     log.add({ type: "result", lane: "a", metrics: metrics("a") }, 10);
     const lines = parse(log.toNdjson("2026-11-24T00:00:00.000Z", "id", [{ type: "done", elapsedMs: 11, reportId: "id" }]));
-    expect(lines[0].event).toEqual({ type: "recording", recordedAt: "2026-11-24T00:00:00.000Z", reportId: "id" });
+    expect(lines[0].event).toEqual({ type: "recording", recordedAt: "2026-11-24T00:00:00.000Z", reportId: "id", measure: "v2" });
     const frames = lines.filter((line) => line.event.type === "frame").map((line) => (line.event as { jpeg: string }).jpeg);
     expect(frames.sort()).toEqual(["a0", "a2", "a4", "b0", "b1"]);
     const firstResult = lines.findIndex((line) => line.event.type === "result");
