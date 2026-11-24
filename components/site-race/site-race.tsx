@@ -239,8 +239,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
             <span className={styles.toneAstro}>Before</span> <span className={styles.vs}>vs</span> <span className={styles.toneNext}>After</span>
           </h2>
           <p className={styles.lede}>
-            Before: a real concrete-pump website as it was first built in Astro — nobody ever tuned it. After: the same site rebuilt in
-            Next.js 16 and optimized one commit at a time. Press start and two Chrome browsers launch on Cloudflare at the same moment,
+            Before: the original site as it was first shipped — nobody ever tuned it. After: the same site rebuilt in Next.js 16 and
+            optimized one commit at a time. Press start and two Chrome browsers launch on Cloudflare at the same moment,
             load both over the same throttled connection, and stream what they see back to you.
           </p>
         </div>

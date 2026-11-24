@@ -1,5 +1,5 @@
 // The optimization journey: every stage is a real, still-running deployment of
-// the HR Concrete Pumps site, so the race can load any of them. The prose is
+// the same original site, so the race can load any of them. The prose is
 // written from the commit messages of each step; the numbers come from the
 // projects' own perf reports via scripts/site-race/sync-journey.mjs
 // (lib/site-race/journey-data.json). Add a stage here when a new optimization
@@ -35,7 +35,7 @@ export const stages: Stage[] = [
     url: "https://hrconcretepumps.pages.dev",
     commit: "7f66469",
     report: { base: "https://hrconcretepumps.pages.dev" },
-    summary: "The site as it was first shipped, in Astro, never tuned. Light on JavaScript, heavy on everything else.",
+    summary: "The site as it was first shipped, never tuned. Light on JavaScript, heavy on everything else.",
     changes: [
       "Product renders served as full-size PNG (1.2–1.9 MB each) wherever they appear",
       "Decorative home-page scene layers downloaded as lossless images on load",

@@ -140,7 +140,7 @@ export function Journey({ page, profile, stage, onPage, onStage, onRace }: {
       <div className={styles.detail}>
         <article className={styles.stageCard}>
           <p className={styles.stageMeta}>
-            <span className={current.stage.build === "astro" ? styles.badgeBefore : styles.badgeAfter}>{current.stage.build === "astro" ? "Astro" : "Next.js 16"}</span>
+            <span className={current.stage.build === "astro" ? styles.badgeBefore : styles.badgeAfter}>{current.stage.build === "astro" ? "Original site" : "Next.js optimized site"}</span>
             <GitCommitHorizontal size={14} aria-hidden="true" /> <code>{current.stage.commit}</code>
             {current.run && <span> · report {current.run.run.replace("_", " ")}</span>}
           </p>
@@ -239,7 +239,7 @@ export function Journey({ page, profile, stage, onPage, onStage, onRace }: {
         </p>
       </figure>
       <p className={styles.originalNote}>
-        The original stays online, untouched, at <code>{new URL(originalStage.url).host}</code> — every comparison on this page is against it.
+        The original stays online and untouched — every comparison on this page is measured against the same baseline.
       </p>
     </section>
   );

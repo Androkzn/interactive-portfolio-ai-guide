@@ -1,6 +1,6 @@
 {
  "syncedAt": "2026-11-24T07:53:25.477Z",
- "source": "HR Concrete Pumps Next · content/reports/performance (npm run perf:report: real Chrome, cold cache, one load per page and profile)",
+ "source": "Project performance reports (real Chrome, cold cache, one load per page and profile)",
  "pageLabels": {
   "/": "Home",
   "/pumps/": "Pump catalogue",

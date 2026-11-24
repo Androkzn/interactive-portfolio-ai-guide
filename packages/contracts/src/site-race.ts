@@ -9,12 +9,12 @@ export type RaceProfile = "mobile" | "desktop";
 
 /**
  * Sites the race knows by name. Anything else is a visitor's challenger URL.
- * The story is before → after: the Astro build is the original site as it was,
- * never tuned; the Next.js build is the same site rebuilt specifically to be fast.
+ * The story is before → after: the original site as it was, never tuned, and
+ * the same site rebuilt in Next.js specifically to be fast.
  */
 export const RACE_PRESETS = {
-  astro: { url: "https://hrconcretepumps.pages.dev/", role: "Before", label: "Astro", stack: "Original site · not optimized" },
-  next: { url: "https://hr-concrete-pumps-next.pages.dev/", role: "After", label: "Next.js", stack: "Rebuilt in Next.js 16 · optimized" },
+  astro: { url: "https://hrconcretepumps.pages.dev/", role: "Before", label: "Original site", stack: "Original site · not optimized" },
+  next: { url: "https://hr-concrete-pumps-next.pages.dev/", role: "After", label: "Next.js optimized site", stack: "Rebuilt in Next.js 16 · optimized" },
 } as const;
 export type RacePresetId = keyof typeof RACE_PRESETS;
 
@@ -22,7 +22,7 @@ export type RacePresetId = keyof typeof RACE_PRESETS;
 export const RACE_PAGES = {
   home: { path: "/", label: "Home", detail: "Hero photo slider, scene animation" },
   catalogue: { path: "/pumps/", label: "Pump catalogue", detail: "Model cards with product renders" },
-  model: { path: "/boom-pumps/hr40-5rz/", label: "Model page", detail: "HR40-5RZ: large product renders, specs" },
+  model: { path: "/boom-pumps/hr40-5rz/", label: "Model page", detail: "Large product renders and specifications" },
 } as const;
 export type RacePageId = keyof typeof RACE_PAGES;
 

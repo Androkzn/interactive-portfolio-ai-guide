@@ -3,7 +3,7 @@ import { ArrowUpRight, Gauge } from "lucide-react";
 import styles from "./performance-lab-teaser.module.css";
 
 /**
- * Homepage entry to the live Astro vs Next.js race. It carries no numbers on
+ * Homepage entry to the live original vs Next.js race. It carries no numbers on
  * purpose: results come from the race itself, measured when the visitor runs it.
  */
 export function PerformanceLabTeaser() {
@@ -14,7 +14,7 @@ export function PerformanceLabTeaser() {
           <div className="section-eyebrow"><Gauge size={14} />Live performance lab</div>
           <h2 id="performance-lab-title">From <span className={styles.astro}>slow</span> to <span className={styles.next}>fast</span>. <em>Live.</em></h2>
           <p>
-            A real website as it was first shipped in Astro, never optimized — rebuilt in Next.js 16, then made fast one deployed
+            An original website as it was first shipped, never optimized — rebuilt in Next.js 16, then made fast one deployed
             commit at a time: images, LCP priority, HTML weight, JavaScript, prefetch. Two Chrome browsers on Cloudflare&apos;s edge race
             the original against any stage, live — then race your own site against the latest build.
           </p>

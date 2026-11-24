@@ -13,9 +13,9 @@ export type LaneIdentity = { kind: "before" | "after" | "challenger"; role: stri
 export function laneIdentity(lane: LaneState, id: LaneId, selected: StageId): LaneIdentity {
   const info = lane.info;
   const stage = info ? (info.preset === "astro" ? originalStage : stageForUrl(info.url)) : id === "a" ? originalStage : stageById(selected);
-  if (stage?.id === "original") return { kind: "before", role: "Before", label: "Original", stack: "Astro · shipped as-is, never optimized" };
-  if (stage) return { kind: "after", role: "After", label: `Next.js · ${stage.short}`, stack: stage.title };
-  if (info?.preset === "next") return { kind: "after", role: "After", label: "Next.js", stack: RACE_PRESETS.next.stack };
+  if (stage?.id === "original") return { kind: "before", role: "Before", label: "Original site", stack: "Shipped as-is · never optimized" };
+  if (stage) return { kind: "after", role: "After", label: `Next.js optimized · ${stage.short}`, stack: stage.title };
+  if (info?.preset === "next") return { kind: "after", role: "After", label: "Next.js optimized site", stack: RACE_PRESETS.next.stack };
   return { kind: "challenger", role: "Challenger", label: info?.label ?? "Your site", stack: "Visitor's site · as served today" };
 }
 

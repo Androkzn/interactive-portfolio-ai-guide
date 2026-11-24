@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, CircleDashed, CircleDot, FlaskConical } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, FlaskConical } from "lucide-react";
 import { LabExperience } from "@/components/site-race/lab-experience";
-import { stageById } from "@/lib/site-race/journey";
-import { playbook, skillMap } from "@/lib/site-race/playbook";
+import { skillMap } from "@/lib/site-race/playbook";
 import { contactUrl, emailUrl } from "@/lib/site-links";
 import styles from "@/components/site-race/lab-page.module.css";
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An unoptimized Astro website rebuilt in Next.js 16 and optimized one deployed commit at a time — images, LCP priority, HTML weight, JavaScript, prefetch. Race any stage against the original live, in real Chrome on Cloudflare's edge, or race your own site against the latest build.";
+  "An original website rebuilt and optimized in Next.js 16 one deployed commit at a time — images, LCP priority, HTML weight, JavaScript and prefetch. Race any stage against the original live, in real Chrome on Cloudflare's edge, or race your own site against the latest build.";
 
 export const metadata: Metadata = {
   title,
@@ -44,11 +43,10 @@ export default function Page() {
           <h2 id="lab-why">Take a slow website. Make it fast. Prove it live.</h2>
           <div className={styles.columns}>
             <p>
-              HR Concrete Pumps is a real product catalogue: boom pumps, specifications, three languages and a lot of photography.
-              The <b>before</b> is the site as it was first built in Astro — shipped as-is, never tuned, heavy images and all. The <b>after</b> is
-              the same site, same content and routes, rebuilt in Next.js 16 and then optimized in small, deployed steps. The point is the
-              transformation, not the framework: the straight port was <i>slower</i> than the original, and Astro can be fast too — this
-              particular build simply never was optimized.
+              The <b>before</b> is the original site as it was first shipped — never tuned, heavy images and all. The <b>after</b> is the same
+              site, with the same content and routes, rebuilt in Next.js 16 and optimized in small, deployed steps. The point is the
+              transformation: the straight port was initially <i>slower</i> than the original, then each focused change moved a measurable
+              part of the experience forward.
             </p>
             <p>
               Nothing in the race is a stored number dressed up as live. When you press start, a Worker launches two Chrome sessions on
@@ -66,30 +64,6 @@ export default function Page() {
               <li key={item.ask}><b>{item.ask}</b><span>{item.where}</span></li>
             ))}
           </ul>
-        </section>
-
-        <section className={styles.section} aria-labelledby="lab-playbook">
-          <h2 id="lab-playbook">The playbook — done, half-done, next.</h2>
-          <p className={styles.intro}>
-            <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span> ships in the latest stage and shows in the race.{" "}
-            <span className={styles.partial}><CircleDot size={14} aria-hidden="true" /> Partial</span> has started but still loses a metric to the original.{" "}
-            <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span> is not built yet — each names the metric that should move, so a future race can prove it.
-          </p>
-          <ol className={styles.plays}>
-            {playbook.map((play) => (
-              <li key={play.id} className={play.status === "next" ? styles.playNext : styles.playDone}>
-                <div className={styles.playMeta}>
-                  <span className={styles.skill}>{play.skill}</span>
-                  {play.status === "in-place" && <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span>}
-                  {play.status === "partial" && <span className={styles.partial}><CircleDot size={14} aria-hidden="true" /> Partial</span>}
-                  {play.status === "next" && <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span>}
-                </div>
-                <h3>{play.title}</h3>
-                <p>{play.body}</p>
-                <p className={styles.moves}>Moves: <b>{play.moves}</b>{play.stage && <> · <a href="#journey">stage “{stageById(play.stage).short}”</a></>}</p>
-              </li>
-            ))}
-          </ol>
         </section>
 
         <section className={styles.section} aria-labelledby="lab-method">

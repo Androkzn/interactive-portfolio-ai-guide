@@ -6,7 +6,7 @@
   // Cloudflare Browser Run: one headless Chrome per lane, launched per race.
   "browser": { "binding": "BROWSER" },
   "ratelimits": [
-    // Astro vs Next.js: 3 races per minute per IP.
+    // Original vs optimized: 3 races per minute per IP.
     { "name": "RACE_LIMITER", "namespace_id": "4201", "simple": { "limit": 3, "period": 60 } },
     // A visitor's own site against the champion: 2 per minute per IP.
     { "name": "CHALLENGE_LIMITER", "namespace_id": "4202", "simple": { "limit": 2, "period": 60 } }

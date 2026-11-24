@@ -88,7 +88,7 @@ export const playbook: Play[] = [
     id: "js",
     skill: "Rendering",
     title: "JavaScript: still heavier than the original",
-    body: "Removing framer-motion and per-page component scripts cut what each page loads, but the React runtime remains: about 160 KB against the Astro build's 12 KB on the model page. Next: more Server Components, fewer client boundaries.",
+    body: "Removing framer-motion and per-page component scripts cut what each page loads, but the React runtime remains: about 160 KB against the original site's 12 KB on the model page. Next: more Server Components, fewer client boundaries.",
     moves: "JavaScript · Total blocking time",
     status: "partial",
     stage: "javascript",
@@ -112,7 +112,7 @@ export const playbook: Play[] = [
 ];
 
 export const skillMap: { ask: string; where: string }[] = [
-  { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized Astro site rebuilt end to end in Next.js 16 — then optimized in six deployed, raceable stages." },
+  { ask: "Refactoring / rebuilding entire websites", where: "An unoptimized original site rebuilt end to end in Next.js 16 — then optimized in six deployed, raceable stages." },
   { ask: "Next.js optimization: rendering performance, page load behavior", where: "Images, LCP priority, HTML weight, JavaScript and prefetch — each a commit, each measured, each raceable live." },
   { ask: "Production Next.js deploys on Cloudflare", where: "Every stage is a Cloudflare Pages deployment; the race itself runs on Workers and Browser Run." },
   { ask: "Edge cache: layers, tagging, invalidation", where: "Content-hashed immutable assets are in; HTML edge caching with Cache-Tag purges is the next step, below." },
