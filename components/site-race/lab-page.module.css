@@ -52,7 +52,8 @@
 .stepNote svg { flex: none; margin-top: 2px; }
 
 /* ── What was optimized: one card per change ── */
-.changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+/* Six changes: two rows of three on desktop, two columns on tablets, one on phones. */
+.changes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
 .change { display: flex; flex-direction: column; gap: 10px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fbfaf6; transition: border-color .2s ease; }
 .change:hover { border-color: #b9b0ee; }
 .change h3 { margin: 4px 0 0; font-size: 1.15rem; line-height: 1.2; letter-spacing: -.02em; }
@@ -99,6 +100,7 @@
 /* Tablet: the story stacks, the visit becomes a vertical timeline. */
 @media (max-width: 900px) {
   .story { grid-template-columns: 1fr; }
+  .changes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .steps { grid-template-columns: 1fr; gap: 0; }
   .step { grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding-bottom: 22px; }
   .step:last-child { padding-bottom: 0; }
@@ -106,9 +108,9 @@
   .stepBody { padding-top: 7px; }
 }
 
-/* Phone: the caveats go to one column. */
+/* Phone: the changes and the caveats go to one column. */
 @media (max-width: 720px) {
-  .caveats ul { grid-template-columns: 1fr; }
+  .changes, .caveats ul { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
