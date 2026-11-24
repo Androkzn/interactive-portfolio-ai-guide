@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "site-race-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Cloudflare Browser Run: one headless Chrome per lane, launched per race.
+  "browser": { "binding": "BROWSER" },
+  "ratelimits": [
+    // Astro vs Next.js: 3 races per minute per IP.
+    { "name": "RACE_LIMITER", "namespace_id": "4201", "simple": { "limit": 3, "period": 60 } },
+    // A visitor's own site against the champion: 2 per minute per IP.
+    { "name": "CHALLENGE_LIMITER", "namespace_id": "4202", "simple": { "limit": 2, "period": 60 } }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:3000,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev"
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

@@ -6,6 +6,7 @@ import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryF
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
+import { PerformanceLabTeaser } from "@/components/site-race/performance-lab-teaser";
 import { contactUrl, emailUrl, githubUrl, phoneUrl, recommendationsUrl } from "@/lib/site-links";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
@@ -1714,6 +1715,7 @@ export default function Home() {
     </section>
     {/* Temporarily hidden: AI with guardrails / Fun & magic sections. */}
     {/* <Architecture /> */}
+    <PerformanceLabTeaser />
     <EngineeringWorkSection />
     <section className="case-study linkedin-reviews-section" id="recommendations" aria-labelledby="recommendations-heading"><div className="case-study-heading"><div className="section-eyebrow"><BrandLogo brand="linkedin" />What colleagues say</div><h2 id="recommendations-heading">People I’ve<br /><em>worked with.</em></h2><p>Recommendations from teammates and collaborators.</p></div><LinkedInReviewsCarousel /></section>
     <FinalCallToAction />
