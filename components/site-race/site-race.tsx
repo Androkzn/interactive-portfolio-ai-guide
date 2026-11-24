@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
+import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
@@ -183,14 +183,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     }
   };
   const startDuel = () => void start("astro", stageById(stage).url);
-  const watchRecording = () => {
-    setNotice(null);
-    setScrub(null);
-    setReplaying(false);
-    dropReportParam();
-    animateReveal.current = true;
-    void runReplay(recordingFor(page, profile));
-  };
 
   // The journey below can ask for a race of a particular stage.
   const lastSignal = useRef(startSignal);
@@ -256,23 +248,16 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
               <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Prove it in a live race" : "Race again"}
             </button>
           )}
-          <button type="button" className={styles.ghostButton} onClick={watchRecording} disabled={racing}>
-            <RotateCcw size={15} aria-hidden="true" /> Watch a recorded race
-          </button>
+          {/* The one choice before the start, next to it: switching swaps the devices in the arena at once. */}
+          <div className={styles.segmented} role="radiogroup" aria-label="Device to race on">
+            <button type="button" role="radio" aria-checked={profile === "mobile"} className={profile === "mobile" ? styles.segOn : ""} onClick={() => onProfile("mobile")} disabled={racing}><Smartphone size={16} aria-hidden="true" /> Mobile <small>slow 4G</small></button>
+            <button type="button" role="radio" aria-checked={profile === "desktop"} className={profile === "desktop" ? styles.segOn : ""} onClick={() => onProfile("desktop")} disabled={racing}><Monitor size={16} aria-hidden="true" /> Desktop</button>
+          </div>
       </div>
 
       <details className={styles.settings}>
-        <summary>Race settings <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
-        <div className={styles.setup}>
-        <fieldset className={styles.setupGroup} disabled={racing}>
-          <legend>Device</legend>
-          <div className={styles.segmented} role="radiogroup" aria-label="Device profile">
-            <button type="button" role="radio" aria-checked={profile === "mobile"} className={profile === "mobile" ? styles.segOn : ""} onClick={() => onProfile("mobile")}><Smartphone size={15} aria-hidden="true" /> Mobile · slow 4G</button>
-            <button type="button" role="radio" aria-checked={profile === "desktop"} className={profile === "desktop" ? styles.segOn : ""} onClick={() => onProfile("desktop")}><Monitor size={15} aria-hidden="true" /> Desktop</button>
-          </div>
-        </fieldset>
-        </div>
-        <p className={styles.stageNote}><b>How it stays fair.</b> {FAIRNESS_NOTE}</p>
+        <summary>How the race stays fair <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label}</span></summary>
+        <p className={styles.fairNote}>{FAIRNESS_NOTE}</p>
       </details>
 
       <div className={styles.lights} aria-hidden="true" data-state={lightsState}>

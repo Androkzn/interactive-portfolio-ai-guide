@@ -39,33 +39,32 @@
 .vs { display: inline-block; padding: 0 .12em; color: var(--race-muted); font-size: .42em; letter-spacing: 0; vertical-align: middle; font-family: var(--font-code); }
 .lede { max-width: 60ch; margin: 18px 0 0; color: #cfd1c8; }
 
-.controls { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(190px, .55fr); gap: 10px; margin-top: 24px; }
+.controls { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 10px; margin-top: 24px; }
 .segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border: 1px solid var(--race-line); border-radius: 14px; background: #0f100e; }
 .segmented button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 40px; padding: 6px 10px; color: var(--race-muted); border-radius: 10px; background: transparent; font-size: var(--text-caption); font-weight: 700; }
 .segmented .segOn { color: #111; background: #e9e7ff; }
+.segmented button { white-space: nowrap; }
+.segmented small { font-size: inherit; font-weight: 600; opacity: .7; }
+.segmented button:not(.segOn):not(:disabled):hover { color: var(--race-ink); background: #ffffff0f; }
+.segmented button:disabled:not(.segOn) { opacity: .45; cursor: not-allowed; }
+/* Next to the start button: as tall as it, one tap per choice. */
+.controls .segmented button { min-height: 46px; padding: 6px 18px; }
 .startButton { display: inline-flex; justify-content: center; align-items: center; gap: 9px; min-height: 54px; padding: 12px 22px; color: #111; border-radius: 14px; background: linear-gradient(135deg, #d4ff76, #a8f07a); font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; box-shadow: 0 10px 30px #d4ff7630, inset 0 1px #ffffff90; }
 .startButton:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 36px #d4ff7645, inset 0 1px #ffffff90; }
-.ghostButton { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; color: var(--race-ink); border: 1px solid var(--race-line); border-radius: 12px; background: #1c1d1b; font-size: var(--text-caption); font-weight: 700; }
-.ghostButton:hover:not(:disabled) { border-color: #6c6893; }
 
-/* Secondary choices stay out of the way until the visitor wants to customize the proof. */
+/* The fine print on fairness stays folded until the visitor wants it. */
 .settings { margin-top: 12px; border: 1px solid var(--race-line); border-radius: 14px; background: #121311; }
 .settings summary { display: flex; justify-content: space-between; gap: 16px; padding: 13px 15px; color: var(--race-ink); cursor: pointer; font-size: var(--text-caption); font-weight: 800; list-style: none; }
 .settings summary::-webkit-details-marker { display: none; }
 .settings summary::after { content: "+"; color: #cfc8ff; font: 800 18px/1 var(--font-code); }
 .settings[open] summary::after { content: "−"; }
 .settings summary span { margin-left: auto; color: var(--race-muted); font: 600 var(--text-meta)/1.3 var(--font-code); }
-.setup { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin: 0 14px; padding: 16px 0; border-top: 1px solid var(--race-line); }
-.setupGroup { min-width: 0; margin: 0; padding: 0; border: 0; }
-.setupGroup legend { margin-bottom: 6px; padding: 0; color: var(--race-muted); font: 700 var(--text-micro)/1.2 var(--font-code); letter-spacing: .08em; text-transform: uppercase; }
-.setupGroup .segmented { display: flex; flex-wrap: wrap; }
-.setupGroup .segmented button { flex: 1 1 auto; }
+.fairNote { margin: 0 14px; padding: 14px 0; color: var(--race-muted); font-size: var(--text-meta); border-top: 1px solid var(--race-line); }
 .hot { margin-left: 6px; padding: 1px 6px; color: #111; border-radius: 999px; background: #d4ff76; font-size: .62rem; font-style: normal; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
 .segOn .hot { background: #111; color: #d4ff76; }
 .stageSelect select { min-height: 44px; max-width: min(100%, 440px); padding: 8px 36px 8px 12px; color: var(--race-ink); border: 1px solid var(--race-line); border-radius: 12px; background: #0f100e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a7aa9f' stroke-width='1.6' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center; font: 700 var(--text-caption)/1.2 var(--font-ui); appearance: none; cursor: pointer; }
 .stageSelect select:focus-visible { outline: 3px solid #cfc8ff; outline-offset: 2px; }
 .stageNote { margin: 0 14px 14px; color: var(--race-muted); font-size: var(--text-meta); }
-.stageNote b { color: var(--race-ink); }
 
 /* Start lights */
 .lights { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 1.6vw, 16px); margin: clamp(26px, 3vw, 38px) 0 6px; }
@@ -211,10 +210,9 @@
   .phase { bottom: 8px; padding: 4px 8px; font-size: .55rem; }
   .marks { grid-template-columns: 1fr 1fr; gap: 4px; }
   .counters { flex-direction: column; gap: 2px; }
-  .setup { gap: 10px; }
   .controls { grid-template-columns: 1fr; }
+  .controls .segmented button { padding-inline: 10px; }
   .settings summary span { display: none; }
-  .setupGroup { width: 100%; }
   .stageSelect select { width: 100%; max-width: none; }
   .finishBadge, .behindBadge { top: 8px; padding: 4px 8px; font-size: .62rem; }
   .trackLane { grid-template-columns: 64px 1fr; gap: 6px; }
@@ -232,3 +230,6 @@
 
 .journeyLine { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0; padding-top: 8px; border-top: 1px solid var(--race-line, #ffffff1f); color: var(--race-muted); font-size: var(--text-meta); }
 .journeyLine b { color: var(--race-ink); font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+
+/* The narrowest phones: the status line under the lights already says "slow 4G". */
+@media (max-width: 360px) { .controls .segmented small { display: none; } }
