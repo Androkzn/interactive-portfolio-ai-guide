@@ -170,6 +170,8 @@ export type LaneMetrics = {
   document: DocumentMetrics;
   /** Second page: a click on a link both builds share, after the first load (absent in older races). */
   navigation?: NavigationMetrics | null;
+  /** Every tap of the journey in order (home → catalogue → model page); `navigation` is the last. */
+  navigationSteps?: NavigationMetrics[];
   /** Journey races: the visitor tapped at this page time (ms), so load/TTI not reached by then are lower bounds. */
   tappedAt?: number;
   /** The same URL loaded again in the same browser with the HTTP cache on (absent in older races). */

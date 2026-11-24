@@ -11,32 +11,39 @@ type Emit = (event: RaceEvent) => Promise<void>;
 export const REPEAT_CAP_MS = 10_000;
 export const NAV_CAP_MS = 20_000;
 /** After scrolling the link into view, both lanes wait this long before the finger or pointer arrives. */
-export const LINK_SETTLE_MS = 1_000;
+export const LINK_SETTLE_MS = 500;
 /** A finger rests on the glass about 100 ms between touchstart and touchend. */
 export const TOUCH_DWELL_MS = 100;
 /** A desktop pointer typically rests 200–500 ms on a link before the click. */
 export const HOVER_DWELL_MS = 300;
 
-export type NavTarget = { selectors: string[]; to: string; h1: string };
+/** `img`: the main image is the hero render whose file name carries this model name. */
+export type NavTarget = { selectors: string[]; to: string; h1: string; img?: string };
 
-/**
- * The link clicked from each race page. Each one is a visible link in the same place on both
- * builds (checked against both live sites' HTML). The home page has no visible link to a model
- * page (only the quick-search data), so from home the visitor takes the hero's call to action.
- */
-export const NAV_TARGETS: Record<string, NavTarget> = {
-  "/": { selectors: ['.landing-action a[href$="/pumps/"]'], to: "/pumps/", h1: "Concrete pumps" },
-  "/pumps/": { selectors: ['a.model-card-button[href$="/boom-pumps/hr40-5rz/"]', 'a[href$="/boom-pumps/hr40-5rz/"]'], to: "/boom-pumps/hr40-5rz/", h1: "HR40-5RZ" },
-  "/boom-pumps/hr40-5rz/": { selectors: ['a.model-strip-card[href$="/boom-pumps/hr21-4zr/"]', 'a[href$="/boom-pumps/hr21-4zr/"]'], to: "/boom-pumps/hr21-4zr/", h1: "HR21-4ZR" },
+const link = (to: string) => [`main a[href="${to}"]`];
+
+/** The visitor's path from each race page: one tap per step, each to a visible link inside <main> on both builds. */
+export const JOURNEYS: Record<string, NavTarget[]> = {
+  // The home page links to no model page on either build, so the visitor goes through the catalogue.
+  "/": [
+    { selectors: link("/pumps/"), to: "/pumps/", h1: "Concrete pumps" },
+    { selectors: link("/boom-pumps/hr40-5rz/"), to: "/boom-pumps/hr40-5rz/", h1: "HR40-5RZ", img: "HR40-5RZ" },
+  ],
+  "/pumps/": [{ selectors: link("/boom-pumps/hr40-5rz/"), to: "/boom-pumps/hr40-5rz/", h1: "HR40-5RZ", img: "HR40-5RZ" }],
+  "/boom-pumps/hr40-5rz/": [{ selectors: link("/boom-pumps/hr21-4zr/"), to: "/boom-pumps/hr21-4zr/", h1: "HR21-4ZR", img: "HR21-4ZR" }],
 };
 
-export function navTargetFor(url: string): NavTarget | null {
+export function journeyFor(url: string): NavTarget[] {
   try {
-    const path = new URL(url).pathname.replace(/\/?$/, "/");
-    return NAV_TARGETS[path] ?? null;
+    return JOURNEYS[new URL(url).pathname.replace(/\/?$/, "/")] ?? [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+/** The first tap of the journey from this page, or null when there is none. */
+export function navTargetFor(url: string): NavTarget | null {
+  return journeyFor(url)[0] ?? null;
 }
 
 /** ms between two epoch timestamps, or null; never negative. */
@@ -144,7 +151,6 @@ const LINK_POINT = `((selector) => {
  * document (soft navigation) and in any new one (hard navigation).
  */
 const WATCHER = `((cfg) => {
-  if (window.__navWatch) return;
   const now = () => performance.timeOrigin + performance.now();
   const s = window.__navWatch = { commitAt: null, h1At: null, imgAt: null, img: null };
   const norm = (t) => (t || "").replace(/\\s+/g, " ").trim().toLowerCase();
@@ -158,8 +164,10 @@ const WATCHER = `((cfg) => {
       if (h && norm(h.textContent).includes(norm(cfg.h1))) { h1Seen = true; requestAnimationFrame(() => requestAnimationFrame(() => { s.h1At = now(); })); }
     }
     if (h1Seen && !imgPending) {
+      // The page's hero render (named after the model) when there is one, else the largest image in view.
       let best = null, size = 0;
-      for (const img of document.images) { const a = area(img); if (a > size) { size = a; best = img; } }
+      if (cfg.img) for (const img of document.querySelectorAll("main .scenic-banner-art img")) { if ((img.currentSrc || img.src).includes(cfg.img)) { best = img; size = Math.max(4000, area(img)); break; } }
+      if (!best) for (const img of document.images) { const a = area(img); if (a > size) { size = a; best = img; } }
       if (best && size >= 4000 && best.complete && best.naturalWidth > 0) {
         imgPending = true;
         const src = best.currentSrc || best.src;
@@ -173,7 +181,8 @@ const WATCHER = `((cfg) => {
 })`;
 
 const ARM_CLICK = `(() => {
-  window.__navOldDoc = true;
+  window.__navOldDoc = true; window.__navClick = null; window.__navWatch = null;
+  try { sessionStorage.removeItem("__navClick"); } catch {}
   addEventListener("click", (e) => { const t = performance.timeOrigin + e.timeStamp; window.__navClick = t; try { sessionStorage.setItem("__navClick", String(t)); } catch {} }, { capture: true, once: true });
   addEventListener("touchstart", (e) => { window.__navIntent = performance.timeOrigin + e.timeStamp; }, { capture: true, once: true });
 })()`;
@@ -195,19 +204,16 @@ export function skippedNavigation(from: string, target: NavTarget | null, profil
 }
 
 /** Clicks the page's target link like a visitor would and times what follows. */
-export async function openSecondPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, net: NetWindow): Promise<NavigationMetrics> {
-  const from = new URL(url).pathname;
-  const target = navTargetFor(url);
-  if (!target) return skippedNavigation(from, null, profile, "No shared link to follow from this page.");
+export async function openSecondPage(page: Page, cdp: CDPSession, from: string, target: NavTarget, profile: RaceProfile, net: NetWindow): Promise<NavigationMetrics> {
   const found = (await page.evaluate(`${FIND_LINK}(${JSON.stringify(target.selectors)})`).catch(() => null)) as { selector: string; text: string } | null;
   if (!found) return skippedNavigation(from, target, profile, "The link was not on the page.");
   await wait(LINK_SETTLE_MS);
   const point = (await page.evaluate(`${LINK_POINT}(${JSON.stringify(found.selector)})`).catch(() => null)) as { x: number; y: number } | null;
   if (!point) return skippedNavigation(from, target, profile, "The link was not on the page.");
-  const cfg = JSON.stringify({ to: target.to, h1: target.h1 });
-  await page.evaluateOnNewDocument(`${WATCHER}(${cfg})`);
-  await page.evaluate(`${WATCHER}(${cfg})`);
+  const cfg = JSON.stringify({ to: target.to, h1: target.h1, img: target.img ?? null });
   await page.evaluate(ARM_CLICK);
+  const script = await page.evaluateOnNewDocument(`${WATCHER}(${cfg})`);
+  await page.evaluate(`${WATCHER}(${cfg})`);
   const mobile = profile === "mobile";
   if (!mobile) await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 1, y: 1 });
   net.start();
@@ -229,6 +235,7 @@ export async function openSecondPage(page: Page, cdp: CDPSession, url: string, p
     if (read?.watch?.imgAt) break;
   }
   net.stop();
+  await page.removeScriptToEvaluateOnNewDocument(script.identifier).catch(() => {});
   const w = read?.watch ?? null;
   const click = read?.click ?? null;
   const base: NavigationMetrics = {
@@ -260,29 +267,38 @@ export async function readyToTap(page: Page, url: string, lcpPendingScript: stri
 }
 
 /**
- * After the first page: the tap to the second page, then (if the lane is still inside the time
- * budget) the repeat visit of the first page with the HTTP cache on. Same steps for every lane.
- * A lane whose first load ran to the cap without the link showing is not given extra time: both
- * are scored as not reached ("> cap"), so one slow lane cannot stretch the race.
+ * After the first page: one tap per journey step (home → catalogue → model page), each once the
+ * previous page has shown its heading and main image; then, if the lane is still inside the time
+ * budget, the repeat visit of the first page with the HTTP cache on. Same steps for every lane.
+ * A lane that never got to tap is not given extra time: its steps are scored as not reached
+ * ("> cap"), so one slow lane cannot stretch the race.
  */
-export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { tapped: boolean; repeat: boolean }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics }> {
-  const from = new URL(url).pathname;
+export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { tapped: boolean; repeatUntil: number }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics; navigationSteps: NavigationMetrics[] }> {
   const none = { kb: 0, network: 0, cached: 0, revalidated: 0 };
   const noRepeat = (reason: string): RepeatMetrics => ({ skipped: reason, lcp: null, load: null, capped: true, capMs: REPEAT_CAP_MS, net: none, html: null });
+  const targets = journeyFor(url);
+  const froms = [new URL(url).pathname, ...targets.map((t) => t.to)];
+  const skipAll = (reason: string, done: NavigationMetrics[] = []) => [...done, ...targets.slice(done.length).map((t, i) => skippedNavigation(froms[done.length + i], t, profile, reason))];
+  const finish = (steps: NavigationMetrics[], repeat: RepeatMetrics) => ({ repeat, navigation: steps[steps.length - 1], navigationSteps: steps });
   if (!opts.tapped || signal.aborted) {
     const reason = "The first page never showed its LCP and the link inside the cap, so the visitor never tapped.";
-    return { repeat: noRepeat(reason), navigation: skippedNavigation(from, navTargetFor(url), profile, reason) };
+    return finish(skipAll(reason), noRepeat(reason));
   }
   const net = new NetWindow(cdp);
   await cdp.send("Page.startScreencast", { format: "jpeg", quality: 38, maxWidth: profile === "mobile" ? 300 : 560, maxHeight: profile === "mobile" ? 650 : 350, everyNthFrame: 1 }).catch(() => {});
   try {
     await emit({ type: "phase", lane, phase: "navigating" });
-    // The cache stays as the first load had it (off): the tap lands while the first page may still be downloading.
-    const navigation = await openSecondPage(page, cdp, url, profile, net).catch(() => skippedNavigation(from, navTargetFor(url), profile, "The navigation failed."));
-    if (!opts.repeat || signal.aborted) return { repeat: noRepeat("Skipped to keep the race inside its time budget."), navigation };
+    // The cache stays as the first load had it (off): a tap can land while the first page is still downloading.
+    const steps: NavigationMetrics[] = [];
+    for (const [i, target] of targets.entries()) {
+      if (signal.aborted) return finish(skipAll("Stopped.", steps), noRepeat("Stopped."));
+      const prev = steps[i - 1];
+      if (prev && (prev.skipped || prev.content === null)) return finish(skipAll("The previous page never showed up inside the cap.", steps), noRepeat("Skipped: the journey ran to its cap."));
+      steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
+    }
+    if (Date.now() > opts.repeatUntil || signal.aborted) return finish(steps, noRepeat("Skipped to keep the race inside its time budget."));
     await emit({ type: "phase", lane, phase: "revisiting" });
-    const repeat = await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed."));
-    return { repeat, navigation };
+    return finish(steps, await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed.")));
   } finally {
     net.dispose();
     await cdp.send("Page.stopScreencast").catch(() => {});

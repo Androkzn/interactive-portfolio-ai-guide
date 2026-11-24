@@ -491,15 +491,19 @@ function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: L
           <article key={id} className={`${styles.spotCard} ${toneClass(who.kind)}`}>
             <p className={styles.scoreWho}><i className={styles.key} aria-hidden="true" />{who.role} · {who.label}</p>
             <div className={styles.spotText}>
-              <p><b>The tap.</b> {nav?.skipped ? nav.skipped : nav ? <>Once home had painted its LCP{m.tappedAt !== undefined ? ` (tapped at ${ms(m.tappedAt)})` : ""}, the visitor {nav.input === "touch" ? `touched the link for ${nav.dwellMs} ms` : `rested the pointer ${nav.dwellMs} ms on the link`} and {nav.input === "touch" ? "lifted" : "clicked"}: <code>{nav.link}</code>. {nav.soft === null ? "" : nav.soft ? "The site swapped the page in with JavaScript (no new document)." : "The browser loaded a new document."}</> : "Not measured."}</p>
-              {nav && !nav.skipped && (
-                <ul className={styles.fileList}>
-                  <li><span>URL changed</span><b>{t(nav.commit, nav.capMs)}</b></li>
-                  <li><span>Heading on screen</span><b>{t(nav.content, nav.capMs)}</b></li>
-                  <li><span>Main image painted{nav.imagePath ? <> · <code>{nav.imagePath}</code></> : ""}</span><b>{t(nav.image, nav.capMs)}</b></li>
-                  <li><span>Downloaded from the first touch on</span><b>{kb(nav.net.kb)} · {nav.net.network} requests</b></li>
-                </ul>
-              )}
+              {(m.navigationSteps ?? (nav ? [nav] : [])).map((step, index) => (
+                <div key={step.to}>
+                  <p><b>Tap {index + 1}: {step.from} → {step.to}.</b> {step.skipped ? step.skipped : <>{index === 0 ? `Once home had painted its LCP${m.tappedAt !== undefined ? ` (at ${ms(m.tappedAt)})` : ""} and the link was visible` : "Once the previous page showed its heading and image"}, the visitor {step.input === "touch" ? `touched the link for ${step.dwellMs} ms and lifted` : `rested the pointer ${step.dwellMs} ms on the link and clicked`}. {step.soft === null ? "" : step.soft ? "The site swapped the page in with JavaScript (no new document)." : "The browser loaded a new document."}</>}</p>
+                  {!step.skipped && (
+                    <ul className={styles.fileList}>
+                      <li><span>URL changed</span><b>{t(step.commit, step.capMs)}</b></li>
+                      <li><span>Heading on screen</span><b>{t(step.content, step.capMs)}</b></li>
+                      <li><span>Main image painted{step.imagePath ? <> · <code>{step.imagePath}</code></> : ""}</span><b>{t(step.image, step.capMs)}</b></li>
+                      <li><span>Downloaded from the first touch on</span><b>{kb(step.net.kb)} · {step.net.network} requests</b></li>
+                    </ul>
+                  )}
+                </div>
+              ))}
               <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : rep ? "Home loaded again in the same browser with the HTTP cache on, right away. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
               {rep && !rep.skipped && (
                 <ul className={styles.fileList}>

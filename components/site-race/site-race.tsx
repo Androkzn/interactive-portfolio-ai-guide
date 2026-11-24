@@ -29,7 +29,7 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
   revisiting: "Repeat visit · home again, cache on",
-  navigating: "Tapped · opening the pump catalogue",
+  navigating: "Tapping through · catalogue → HR40-5RZ",
   done: "Done",
   failed: "Did not finish",
 };
@@ -294,7 +294,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       </div>
 
       <details className={styles.settings}>
-        <summary>Race settings <span>{page === "home" ? "Home → tap → pump catalogue" : RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
+        <summary>Race settings <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
         <div className={styles.setup}>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Device</legend>
@@ -576,17 +576,19 @@ function Confetti({ tone }: { tone: string }) {
   );
 }
 
-/** The two parts of the journey race, readable at a glance: the home load, then the tap. */
+const STEP_NAME: Record<string, string> = { "/pumps/": "Catalogue", "/boom-pumps/hr40-5rz/": "HR40-5RZ page", "/boom-pumps/hr21-4zr/": "HR21-4ZR page" };
+export const stepName = (to: string) => STEP_NAME[to] ?? to;
+
+/** The journey race at a glance: the home load, then each tap (heading on screen, then main image). */
 function JourneyLine({ metrics }: { metrics: NonNullable<LaneState["metrics"]> }) {
-  const nav = metrics.navigation!;
-  const capS = `${(nav.capMs / 1000).toFixed(0)} s`;
-  const after = (value: number | null) => (value === null ? `> ${capS}` : `+${(value / 1000).toFixed(2)} s`);
+  const steps = metrics.navigationSteps ?? (metrics.navigation ? [metrics.navigation] : []);
+  const after = (value: number | null, cap: number) => (value === null ? `> ${(cap / 1000).toFixed(0)} s` : `+${(value / 1000).toFixed(2)} s`);
   return (
     <p className={styles.journeyLine}>
       <span>Home: <b>{metrics.timing.lcp === null ? "no final LCP" : `LCP ${ms(metrics.timing.lcp)}`}</b></span>
-      {nav.skipped
-        ? <span>Second page: <b>never tapped</b></span>
-        : <span>Pump catalogue: <b>{after(nav.content)}</b> after tap{nav.image !== null && nav.image !== nav.content ? <>, image <b>{after(nav.image)}</b></> : nav.image === null ? <>, image <b>{`> ${capS}`}</b></> : null}</span>}
+      {steps.map((step) => (
+        <span key={step.to}>{stepName(step.to)}: {step.skipped ? <b>not reached</b> : <><b>{after(step.content, step.capMs)}</b> after tap · image <b>{after(step.image, step.capMs)}</b></>}</span>
+      ))}
     </p>
   );
 }

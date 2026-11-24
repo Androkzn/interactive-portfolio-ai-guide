@@ -28,8 +28,8 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
 const NAV_TIMEOUT_MS = 30_000;
 const SETTLE_MS = 1_200;
 export const LANE_CAP_MS = 30_000;
-/** The repeat visit runs only for a lane that reached the tap within this long, to keep the race short. */
-const REPEAT_BUDGET_MS = 22_000;
+/** The repeat visit starts only within this long of the first load's start, to keep the race short. */
+const REPEAT_BUDGET_MS = 32_000;
 /** Unthrottled warm-up load per lane, in a discarded browser context, before the timed load. */
 const WARM_TIMEOUT_MS = 10_000;
 const FRAME_INTERVAL_MS = 200;
@@ -349,7 +349,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     // The first page's own requests, frozen at the tap: what the second page fetches is counted apart.
     const firstPage = [...responses.values()].map((r) => ({ ...r }));
     const firstRequests = requestCount();
-    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { tapped, repeat: Date.now() - startedAt < REPEAT_BUDGET_MS }, signal) : null;
+    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { tapped, repeatUntil: startedAt + REPEAT_BUDGET_MS }, signal) : null;
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
