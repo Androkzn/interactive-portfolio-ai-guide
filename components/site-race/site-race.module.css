@@ -249,3 +249,6 @@
   .race *, .race *::before, .race *::after { animation: none !important; transition: none !important; }
   .round { opacity: 1; transform: none; }
 }
+
+.journeyLine { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0; padding-top: 8px; border-top: 1px solid var(--race-line, #ffffff1f); color: var(--race-muted); font-size: var(--text-meta); }
+.journeyLine b { color: var(--race-ink); font-family: var(--font-code); font-variant-numeric: tabular-nums; }

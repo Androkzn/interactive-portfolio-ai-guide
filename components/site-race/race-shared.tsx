@@ -62,7 +62,7 @@ export function finishTime(lane: LaneState): number | null {
   if (lane.marks.lcp !== undefined) return Math.max(lane.marks.lcp, lane.marks.fcp ?? 0);
   if (isCapped(lane)) return lane.metrics?.capMs ?? 30_000;
   if (lane.phase === "failed") return Math.max(lane.marks.fcp ?? 0, lane.frames.at(-1)?.t ?? 0) || null;
-  if (lane.phase === "inspecting" || lane.phase === "done" || lane.metrics) return lane.marks.fcp ?? null;
+  if (lane.phase === "inspecting" || lane.phase === "revisiting" || lane.phase === "navigating" || lane.phase === "done" || lane.metrics) return lane.marks.fcp ?? null;
   return null;
 }
 

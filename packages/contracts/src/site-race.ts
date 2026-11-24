@@ -168,9 +168,68 @@ export type LaneMetrics = {
   edge: EdgeMetrics;
   seo: SeoCheck[];
   document: DocumentMetrics;
+  /** Second page: a click on a link both builds share, after the first load (absent in older races). */
+  navigation?: NavigationMetrics | null;
+  /** Every tap of the journey in order (home → catalogue → model page); `navigation` is the last. */
+  navigationSteps?: NavigationMetrics[];
+  /** Journey races: the visitor tapped at this page time (ms), so load/TTI not reached by then are lower bounds. */
+  tappedAt?: number;
+  /** The same URL loaded again in the same browser with the HTTP cache on (absent in older races). */
+  repeat?: RepeatMetrics | null;
 };
 
-export type LanePhase = "queued" | "launching" | "loading" | "settling" | "inspecting" | "done" | "failed";
+/** Requests in a measured window (requests started inside it only). */
+export type WindowNetwork = {
+  /** Bytes over the wire, Network.loadingFinished encodedDataLength (headers included), KB. */
+  kb: number;
+  /** Requests that went to the network (304 revalidations included). */
+  network: number;
+  /** Requests answered by the browser's cache without touching the network. */
+  cached: number;
+  /** Network requests answered 304 Not Modified (a revalidation round trip). */
+  revalidated: number;
+};
+
+export type NavigationMetrics = {
+  /** Path clicked from and to. */
+  from: string;
+  to: string;
+  /** The link that was clicked, e.g. ".landing-action a" · "Explore concrete pumps". */
+  link: string;
+  input: "touch" | "mouse";
+  /** Pointer on the link before the click (touchstart → touchend, or hover), ms. */
+  dwellMs: number;
+  /** null: the lane never got to click (first load stopped at the cap, or no such link). */
+  skipped: string | null;
+  /** No new document: the site swapped the page in with JavaScript. */
+  soft: boolean | null;
+  /** ms from the click (input event timeStamp) to the URL changing. */
+  commit: number | null;
+  /** …to the new page's h1 painted. */
+  content: number | null;
+  /** …to its largest in-viewport image loaded, decoded and painted. */
+  image: number | null;
+  imagePath: string | null;
+  /** Stopped before the image painted: values missing are "> capMs". */
+  capped: boolean;
+  capMs: number;
+  /** From the first input (pointer arrives or touchstart) to the end: intent prefetches count. */
+  net: WindowNetwork;
+};
+
+export type RepeatMetrics = {
+  skipped: string | null;
+  /** Page timings of the reload, ms from its navigation start. */
+  lcp: number | null;
+  load: number | null;
+  capped: boolean;
+  capMs: number;
+  net: WindowNetwork;
+  /** The HTML document: status (200 or 304) and its bytes, KB. */
+  html: { status: number | null; kb: number; cached: boolean } | null;
+};
+
+export type LanePhase = "queued" | "launching" | "loading" | "settling" | "inspecting" | "revisiting" | "navigating" | "done" | "failed";
 export type MarkName = "ttfb" | "fcp" | "lcp" | "dcl" | "load";
 
 export type RaceLaneInfo = { url: string; label: string; stack: string; preset: RacePresetId | null; own?: boolean };
