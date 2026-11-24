@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
+import { ArrowUpRight, Check, Flag, Gauge, Link2, Monitor, Pause, Play, RotateCcw, Smartphone, Swords, Timer } from "lucide-react";
 import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, type Round, type Verdict } from "@/lib/site-race/scoring";
-import { latestStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
+import { latestStage, stageById, stageForUrl, stageMetrics, stages, type StageId } from "@/lib/site-race/journey";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
 import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
@@ -219,6 +219,10 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
   const selectedStage = stageById(stage);
+  const baselineBefore = stageMetrics("original", RACE_PAGES[page].path, profile);
+  const baselineAfter = stageMetrics(stage, RACE_PAGES[page].path, profile);
+  const improvement = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.round((1 - after / before) * 100) : null;
+  const lcpImprovement = improvement(baselineBefore?.lcp, baselineAfter?.lcp);
   const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
   const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
   const lightsLabel = {
@@ -235,30 +239,48 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       <div className={styles.head}>
         <div>
           <p className={styles.kicker}><Gauge size={14} aria-hidden="true" /> Live performance lab · real Chrome on Cloudflare&apos;s edge</p>
+          <p className={styles.nextBrand}><span>N</span> Built and optimized with <b>Next.js 16</b></p>
           <h2 id="site-race-title" className={styles.title}>
-            <span className={styles.toneAstro}>Before</span> <span className={styles.vs}>vs</span> <span className={styles.toneNext}>After</span>
+            The result,<br /><span className={styles.toneNext}>before the race.</span>
           </h2>
           <p className={styles.lede}>
-            Before: the original site as it was first shipped — nobody ever tuned it. After: the same site rebuilt in Next.js 16 and
-            optimized one commit at a time. Press start and two Chrome browsers launch on Cloudflare at the same moment,
-            load both over the same throttled connection, and stream what they see back to you.
+            Same page and content. The original is the baseline; the Next.js rebuild is the measured result. Run the live race to watch
+            two identical Chrome sessions prove the difference under the same conditions.
           </p>
         </div>
-        <div className={styles.controls}>
+        <div className={styles.heroResult}>
+          <p>Measured · {RACE_PAGES[page].label} · {profile === "mobile" ? "mobile slow 4G" : "desktop"}</p>
+          <div className={styles.heroLcp}>
+            <span><small>Original site</small><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b></span>
+            <ArrowUpRight size={24} aria-hidden="true" />
+            <span><small>Next.js optimized</small><b>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</b></span>
+          </div>
+          <strong>{lcpImprovement == null ? "Measured improvement" : `${lcpImprovement}% lower LCP`}</strong>
+        </div>
+      </div>
+
+      <div className={styles.resultMetrics} aria-label="Measured performance result">
+        <article><span>LCP</span><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b><i>→</i><strong>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</strong><small>Main content visible</small></article>
+        <article><span>Page weight</span><b>{baselineBefore ? `${(baselineBefore.pageKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.pageKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Total cold-load transfer</small></article>
+        <article><span>Image bytes</span><b>{baselineBefore ? `${(baselineBefore.imgKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.imgKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Responsive AVIF/WebP</small></article>
+      </div>
+
+      <div className={styles.controls}>
           {racing ? (
             <button type="button" className={styles.startButton} onClick={stop}>Stop race</button>
           ) : (
             <button type="button" className={styles.startButton} onClick={startDuel}>
-              <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Start the race" : "Race again"}
+              <Play size={18} aria-hidden="true" /> {state.status === "idle" ? "Prove it in a live race" : "Race again"}
             </button>
           )}
           <button type="button" className={styles.ghostButton} onClick={watchRecording} disabled={racing}>
             <RotateCcw size={15} aria-hidden="true" /> Watch a recorded race
           </button>
-        </div>
       </div>
 
-      <div className={styles.setup}>
+      <details className={styles.settings}>
+        <summary>Race settings <span>{RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
+        <div className={styles.setup}>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Page</legend>
           <div className={styles.segmented} role="radiogroup" aria-label="Page to race">
@@ -287,8 +309,9 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
             <button type="button" role="radio" aria-checked={profile === "desktop"} className={profile === "desktop" ? styles.segOn : ""} onClick={() => onProfile("desktop")}><Monitor size={15} aria-hidden="true" /> Desktop</button>
           </div>
         </fieldset>
-      </div>
-      {selectedStage.showsIn && <p className={styles.stageNote}>{selectedStage.short} pays off on {selectedStage.showsIn}. The race still includes every earlier optimization.</p>}
+        </div>
+        {selectedStage.showsIn && <p className={styles.stageNote}>{selectedStage.short} pays off on {selectedStage.showsIn}. The race still includes every earlier optimization.</p>}
+      </details>
 
       <div className={styles.lights} aria-hidden="true" data-state={lightsState}>
         {[1, 2, 3, 4, 5].map((n) => <span key={n} className={lights >= n && lights < 6 && racing ? styles.lightOn : ""} />)}
