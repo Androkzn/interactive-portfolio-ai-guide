@@ -16,14 +16,28 @@ export function PerformanceLabTeaser() {
   const cells = resultsData.cells as Record<string, { races: number; beforeCapped: boolean; before: Record<string, number | null>; after: Record<string, number | null> }>;
   const product = cells["model/mobile"];
   const homeCell = cells["home/mobile"];
-  const before = { lcp: homeCell.before.lcp ?? 0, pageKb: homeCell.before.totalKb ?? 0 };
-  const after = { lcp: homeCell.after.lcp ?? 0, pageKb: homeCell.after.totalKb ?? 0 };
+  // The weight card shows the product page, like the scoreboard above it.
+  const before = { lcp: homeCell.before.lcp ?? 0, pageKb: product.before.totalKb ?? 0 };
+  const after = { lcp: homeCell.after.lcp ?? 0, pageKb: product.after.totalKb ?? 0 };
+  const ratio = (a: number | null | undefined, b: number | null | undefined) => {
+    if (!a || !b) return null;
+    const r = a / b;
+    return r >= 9.5 ? `${Math.round(r)}×` : `${r.toFixed(1)}×`;
+  };
+  const productLcpX = ratio(product.before.lcp, product.after.lcp);
+  const homeLcpX = ratio(homeCell.before.lcp, homeCell.after.lcp);
+  const productWeightX = ratio(product.before.totalKb, product.after.totalKb);
   const productAfter = product.after.lcp ?? 0;
   const lcpGain = reduction(before?.lcp, after?.lcp);
   const weightGain = reduction(before?.pageKb, after?.pageKb);
 
   return (
-    <section className={styles.section} id="performance-lab" aria-labelledby="performance-lab-title">
+    <section className={styles.section} id="performance-lab" aria-labelledby="my-work-heading">
+      <div className={`workspace-section-heading ${styles.sectionHeading}`}>
+        <div className="section-eyebrow"><Gauge size={14} aria-hidden="true" />My work</div>
+        <h2 id="my-work-heading">Make a slow site <em>fast.</em></h2>
+        <p className="workspace-heading-note">A real business website rebuilt in Next.js 16 and optimized, then raced live against the original.</p>
+      </div>
       <div className={styles.card}>
         <div className={styles.copy}>
           <div className={styles.kicker}><Gauge size={15} />Live performance lab <span>Next.js 16</span></div>
@@ -31,8 +45,9 @@ export function PerformanceLabTeaser() {
           <h2 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h2>
           <p>Same pages. Same content. On a phone, a product page whose photo did not appear within 30 seconds now shows it in {seconds(productAfter)}.</p>
           <div className={styles.proof} aria-label="Measured mobile improvements">
-            <span><TimerReset size={16} /><b>{lcpGain == null ? "Faster" : `${lcpGain}%`}</b><small>faster home page</small></span>
-            <span><ImageIcon size={16} /><b>{weightGain == null ? "Lighter" : `${weightGain}%`}</b><small>less page weight</small></span>
+            <span><TimerReset size={16} /><b>{productLcpX ? `${product.beforeCapped ? "> " : ""}${productLcpX}` : "Faster"}</b><small>faster product page</small></span>
+            <span><TimerReset size={16} /><b>{homeLcpX ?? "Faster"}</b><small>faster home page</small></span>
+            <span><ImageIcon size={16} /><b>{productWeightX ?? "Lighter"}</b><small>less data</small></span>
           </div>
           <Link className={styles.cta} href="/lab/site-race/">See the result · race it live <ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>
@@ -56,7 +71,7 @@ export function PerformanceLabTeaser() {
               <div className={styles.legend}><span><i className={styles.orange} />Original</span><span><i className={styles.purple} />Next.js</span></div>
             </div>
             <div className={styles.weightCard}>
-              <div className={styles.chartTitle}><span>Page weight</span><b>{weightGain == null ? "Reduced" : `−${weightGain}%`}</b></div>
+              <div className={styles.chartTitle}><span>Product page weight</span><b>{weightGain == null ? "Reduced" : `−${weightGain}%`}</b></div>
               <div className={styles.weightRow}><span>Original</span><div><i className={styles.weightBefore} /></div><b>{megabytes(before?.pageKb)}</b></div>
               <div className={styles.weightRow}><span>Next.js</span><div><i className={styles.weightAfter} /></div><b>{megabytes(after?.pageKb)}</b></div>
               <div className={styles.optimizations}><span>Images sized</span><span>Photo first</span><span>Less JS</span><span>Next page early</span></div>

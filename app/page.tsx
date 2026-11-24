@@ -1710,7 +1710,7 @@ export default function Home() {
       </div>
     </section>
     <PerformanceLabTeaser />
-    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My projects</div><h2 id="lab-heading">Explore my <em>work.</em></h2><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div></div>
+    <section className="workspace-section" id="workspace" aria-labelledby="lab-heading"><div className="workspace-section-heading"><div><div className="section-eyebrow"><Layers3 size={14} />My personal projects</div><h2 id="lab-heading">Explore my <em>projects.</em></h2><p className="workspace-heading-note">Products built for real users and teams—from the first workflow to a reliable production handoff.</p></div></div>
       <nav className="project-rail" aria-label="Choose a live project">{projects.map(item => <button key={item.id} aria-pressed={activeId === item.id} onClick={() => chooseProject(item.id)}><ProjectLogo id={item.id} /><span className="project-copy"><strong>{item.name}</strong><small>{item.summary}</small></span></button>)}</nav>
       <div className="workspace"><section className="workbench" aria-label="Live application preview"><ConnectedSourcePreview project={project} device={device} onDeviceChange={setDevice} onNavigate={setAppPath} onPreviewState={handlePreviewState} /></section><GuidePanel project={project} appPath={appPath} onCoreFlow={focusLivePreview} previewState={previewState} /></div>
     </section>
