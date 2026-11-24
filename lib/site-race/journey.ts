@@ -7,7 +7,7 @@
 
 import journeyData from "./journey-data.json";
 
-export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch";
+export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "edge";
 
 export type Stage = {
   id: StageId;
@@ -133,6 +133,24 @@ export const stages: Stage[] = [
       "router.prefetch() after a 65 ms hover, on touchstart (≈100 ms before the click) or keyboard focus",
       "Each URL once; same origin and locale only; no viewport prefetching on metered connections",
       "Measured on its own: click-to-rendered-<h1> on slow 4G, with and without a 300 ms hover first",
+    ],
+  },
+  {
+    id: "edge",
+    short: "Edge",
+    title: "Next.js server on Cloudflare Workers",
+    build: "next",
+    // Workers have no immutable per-deployment URL here (preview URLs are off), so this stage
+    // follows the Worker's latest deployment of branch edge/opennext-workers.
+    url: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev",
+    commit: "f90f4b7",
+    report: { base: "https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev", build: "f90f4b7" },
+    summary: "The same pages, now served by a Next.js server at the edge (OpenNext): still prerendered and cached, but content updates, A/B tests and the contact form no longer need a rebuild or a static workaround.",
+    changes: [
+      "Prerendered pages answered from the edge cache before the Next.js server loads; content corrections invalidate only the pages that show them (cache tags + revalidateTag)",
+      "A/B test assigned in middleware and served as a prerendered variant: no anti-flicker, no render delay",
+      "Tag lookups cached per data centre for an hour: low-traffic server time 329 → 19 ms",
+      "Contact form as a Server Action that works without JavaScript",
     ],
   },
 ];
