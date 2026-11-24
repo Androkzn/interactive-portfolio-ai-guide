@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LaneMetrics, RaceEvent } from "@/packages/contracts/src/site-race";
-import { compare, formatValue, lcpOrCap, loadOrCap, scoreRace } from "./scoring";
+import { RACE_CAPS } from "../../packages/contracts/src/site-race";
+import { capOf, compare, formatValue, lcpOrCap, loadOrCap, scoreRace } from "./scoring";
 import { playbook } from "./playbook";
 
 const load = (page: string) => readFileSync(new URL(`../../public/lab/site-race/recorded-mobile-${page}.ndjson`, import.meta.url), "utf8")
@@ -58,6 +59,14 @@ describe("capped lanes", () => {
     const lcp = verdict.rounds[0].rows.find((row) => row.id === "lcp")!;
     expect(lcp.winner).toBe("b");
     expect(formatValue(lcp, "a")).toBe("> 30.0 s");
+  });
+  it("shows the cap the lane ran under: 10 s now, 30 s for races that do not record one", () => {
+    const now: LaneMetrics = { ...result("a"), capped: true, capMs: RACE_CAPS.firstPageMs, timing: { ...result("a").timing, lcp: null, load: null } };
+    const verdict = scoreRace(now, result("b"));
+    expect(formatValue(verdict.rounds[0].rows.find((row) => row.id === "lcp")!, "a")).toBe("> 10.0 s");
+    expect(formatValue(verdict.rounds[0].rows.find((row) => row.id === "load")!, "a")).toBe("> 10.0 s");
+    const { capMs: _cap, ...old } = now;
+    expect(capOf(old)).toBe(30_000);
   });
   it("keeps a final LCP even when the lane was still downloading below the fold", () => {
     const home = load("home");

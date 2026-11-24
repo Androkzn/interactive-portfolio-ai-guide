@@ -42,9 +42,9 @@ describe("journey rounds", () => {
     const a = lane(base("a"), { navigation: nav({ content: 3000, image: 9000, net: net(1500) }), repeat: rep({ lcp: 1000, net: net(40, 12) }) });
     const b = lane(base("b"), { navigation: nav({}), repeat: rep({}) });
     const rounds = journeyRounds(a, b);
-    expect(rounds.map((r) => r.id)).toEqual(["navigation", "repeat"]);
-    expect(rounds[0].rows.map((r) => r.winner)).toEqual(["b", "b", "b"]);
-    expect(rounds[1].winner).toBe("b");
+    expect(rounds.map((r) => r.id)).toEqual(["repeat", "navigation"]); // the order the visit runs them
+    expect(rounds[1].rows.map((r) => r.winner)).toEqual(["b", "b", "b"]);
+    expect(rounds[0].winner).toBe("b");
     expect(scoreRace(a, b).rounds).toHaveLength(7);
   });
 
@@ -73,5 +73,48 @@ describe("journey rounds", () => {
   it("counts an unfinished load as later than the tap", () => {
     const m = lane(base("a"), { capped: false, tappedAt: 7000, timing: { ...base("a").timing, load: null } });
     expect(loadOrCap(m)).toEqual({ value: 7000, censored: true });
+  });
+});
+
+describe("a visit still running", () => {
+  const first = (m: LaneMetrics): LaneMetrics => { const { repeat: _r, navigation: _n, navigationSteps: _s, ...rest } = m; return rest; };
+
+  it("shows the visit's rounds as waiting, not as draws, and counts only decided rounds", () => {
+    const a = first(base("a")), b = first(base("b"));
+    const verdict = scoreRace(a, b, { a: true, b: true });
+    expect(verdict.rounds.map((r) => r.id)).toEqual(["speed", "smoothness", "weight", "edge", "seo", "repeat", "navigation"]);
+    const visit = verdict.rounds.filter((r) => r.part === "visit");
+    expect(visit.every((r) => r.pending && r.points.a === 0 && r.points.b === 0)).toBe(true);
+    expect(visit.flatMap((r) => r.rows).every((row) => row.winner === null && formatValue(row, "a") === "…")).toBe(true);
+    expect(verdict.pending).toBe(2);
+    const settled = scoreRace(a, b);
+    expect(verdict.roundsWon).toEqual(settled.roundsWon);
+    expect(verdict.winner).toBe(settled.winner);
+  });
+
+  it("fills in one lane's values while the other is still on its way", () => {
+    const a = lane(first(base("a")), { repeat: rep({ lcp: 1000 }) });
+    const b = first(base("b"));
+    const repeat = journeyRounds(a, b, { a: true, b: true }).find((r) => r.id === "repeat")!;
+    expect(repeat.pending).toBe(true);
+    expect(repeat.rows[0].a).toBe(1000);
+    expect(repeat.rows[0].pending).toEqual({ a: false, b: true });
+    expect(formatValue(repeat.rows[0], "b")).toBe("…");
+  });
+
+  it("scores the repeat visit as soon as both lanes have it, while the taps still wait", () => {
+    const a = lane(first(base("a")), { repeat: rep({ lcp: 1000, net: net(40, 12) }) });
+    const b = lane(first(base("b")), { repeat: rep({}) });
+    const rounds = journeyRounds(a, b, { a: true, b: true });
+    expect(rounds.find((r) => r.id === "repeat")!.pending).toBeUndefined();
+    expect(rounds.find((r) => r.id === "repeat")!.winner).toBe("b");
+    expect(rounds.find((r) => r.id === "navigation")!.pending).toBe(true);
+  });
+
+  it("scores a lane's last tap as missing once its visit is over without one", () => {
+    const a = lane(base("a"), { navigation: nav({}) });
+    const b = first(base("b"));
+    expect(journeyRounds(a, b, { b: true }).find((r) => r.id === "navigation")!.pending).toBe(true);
+    expect(journeyRounds(a, b, {}).find((r) => r.id === "navigation")!.pending).toBeUndefined();
   });
 });
