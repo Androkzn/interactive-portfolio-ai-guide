@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Check, Flag, Gauge, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
+import { ArrowDown, Check, Crown, Flag, Gauge, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
 import type { LaneId, MarkName, RaceCaps, RaceLink, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, pendingLanes, useRace, verdictFinal, verdictOf, type LaneState, type RaceState } from "@/lib/site-race/use-race";
@@ -130,15 +130,11 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     }
     return null;
   })();
-  // The pill's line: who leads (or won) and by how many rounds, then where to look.
-  const pillText = (() => {
-    if (!verdict) return "";
-    const { a, b } = verdict.roundsWon;
-    const lead: LaneId | null = final ? (verdict.winner === "tie" ? null : verdict.winner) : a === b ? null : a > b ? "a" : "b";
-    const score = lead ? `${verdict.roundsWon[lead]}–${verdict.roundsWon[lead === "a" ? "b" : "a"]}` : `${a}–${b}`;
-    if (!lead) return final ? `A draw, ${score} · See the scorecard` : `Level ${score} so far · See the scorecard`;
-    return `${identity(lead).label} ${final ? "wins" : "leads"} ${score} · See the scorecard`;
-  })();
+  // How loud the line is: the finish moments are the news of the race, the rest is fine print.
+  const statusKind = notice || state.status === "failed" ? "note"
+    : state.status === "finished" && verdict && state.source === "live" ? "complete"
+    : racing && LANES.some((id) => state.lanes[id].complete) ? "waiting"
+    : "note";
   const progress = useVisualProgress(state);
 
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -165,20 +161,13 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultsOpen, reduced]);
 
-  // The verdict lands below the lanes, out of sight on most screens. Scrolling there by itself would
-  // pull the visitor away from the lanes while the visit is still running, so a pill offers it instead;
-  // once the scoreboard has been on screen the pill is gone for this race.
+  // When the race is over, a centred card announces the winner and offers the results below the
+  // lanes (out of sight on most screens). Nothing scrolls by itself; Escape or "Keep watching" closes it.
   useEffect(() => {
     if (!resultsOpen || !offerScores || boardSeen) return;
-    const board = document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard");
-    if (!board) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) setBoardSeen(true);
-      // Seen means scrolled to: its top in the upper 40% of the screen. Peeking in at the bottom of a
-      // tall window is not seen, so the pill stays until the visitor goes there, presses it or hides it.
-    }, { rootMargin: "0px 0px -60% 0px" });
-    observer.observe(board);
-    return () => observer.disconnect();
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setBoardSeen(true); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [resultsOpen, offerScores, boardSeen]);
   const showScores = () => {
     // The Scorecard (0–100 rings) heads the results; the rounds follow it.
@@ -355,8 +344,10 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         </div>
       )}
 
-      <p className={styles.status} role="status" aria-live="polite">
-        {notice ?? (state.status === "failed" ? state.error : raceStatus)}
+      <p className={styles.status} role="status" aria-live="polite" data-kind={statusKind}>
+        {statusKind === "complete" && raceStatus ? <span className={styles.statusBadge}><Crown size={18} aria-hidden="true" /> {raceStatus}</span>
+          : statusKind === "waiting" && raceStatus ? <span className={styles.statusBadge}><i className={styles.statusPulse} aria-hidden="true" /><Flag size={16} aria-hidden="true" /> {raceStatus}</span>
+          : notice ?? (state.status === "failed" ? state.error : raceStatus)}
       </p>
 
       <div className={styles.arena}>
@@ -403,14 +394,31 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           <button type="submit" className={styles.startButton} disabled={racing || !challenge.trim()}><Flag size={16} aria-hidden="true" /> Challenge</button>
         </div>
       </form>
-      {offerScores && resultsOpen && verdict && !boardSeen && (
-        <div className={styles.scorePill} role="status">
-          <button type="button" className={styles.scorePillGo} onClick={showScores}>
-            {pillText} <ArrowDown size={15} aria-hidden="true" />
-          </button>
-          <button type="button" className={styles.scorePillClose} onClick={() => setBoardSeen(true)} aria-label="Hide the scorecard shortcut"><X size={14} aria-hidden="true" /></button>
-        </div>
-      )}
+      {offerScores && resultsOpen && verdict && !boardSeen && (() => {
+        const w = verdict.winner === "tie" ? null : verdict.winner;
+        const l: LaneId | null = w === "a" ? "b" : w === "b" ? "a" : null;
+        return (
+          <div className={styles.winnerBackdrop} onClick={(event) => { if (event.target === event.currentTarget) setBoardSeen(true); }}>
+            <div className={styles.winnerCard} role="dialog" aria-modal="false" aria-labelledby="race-winner-title">
+              <button type="button" className={styles.winnerClose} onClick={() => setBoardSeen(true)} aria-label="Close"><X size={18} aria-hidden="true" /></button>
+              <span className={styles.winnerCrown} aria-hidden="true"><Crown size={34} strokeWidth={2.2} /></span>
+              <p className={styles.winnerEyebrow}>Race complete</p>
+              <h3 id="race-winner-title" className={styles.winnerTitle}>
+                {w ? <><span className={toneClass(identity(w).kind)}>{identity(w).label}</span> wins</> : "A draw"}
+              </h3>
+              <p className={styles.winnerScore}>
+                {w && l
+                  ? <><b>{verdict.roundsWon[w]}–{verdict.roundsWon[l]}</b> on rounds against {identity(l).label}</>
+                  : <><b>{verdict.roundsWon.a}–{verdict.roundsWon.b}</b> on rounds</>}
+              </p>
+              <button type="button" className={styles.winnerGo} onClick={showScores} autoFocus>
+                See the results <ArrowDown size={18} aria-hidden="true" />
+              </button>
+              <button type="button" className={styles.winnerStay} onClick={() => setBoardSeen(true)}>Keep watching the lanes</button>
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 }
