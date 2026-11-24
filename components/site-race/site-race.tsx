@@ -225,7 +225,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
-  const selectedStage = stageById(stage);
   // Medians of repeated races for this page and device (scripts/site-race/build-results.mjs),
   // the same numbers as the result block above the race: not a single sample, not a stage report.
   const measured = (resultsData.cells as Record<string, { before: Metrics; after: Metrics } | undefined>)[`${page}/${profile}`];
@@ -294,7 +293,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       </div>
 
       <details className={styles.settings}>
-        <summary>Race settings <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
+        <summary>Race settings <span>{page === "home" ? "Home → catalogue → HR40-5RZ" : RACE_PAGES[page].label} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
         <div className={styles.setup}>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Device</legend>
@@ -356,7 +355,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         <div>
           <p className={styles.kicker}><Swords size={14} aria-hidden="true" /> Challenger round</p>
           <h3>Think your site is faster?</h3>
-          <p>Enter any public website. It races the latest optimized build (<b>{featuredStage.short}</b> build, {RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
+          <p>Enter any public website. It races the optimized Next.js site ({RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
         </div>
         <div className={styles.challengeRow}>
           <input value={challenge} onChange={(event) => setChallenge(event.target.value)} placeholder="your-site.com" inputMode="url" autoComplete="url" aria-label="Website to race" maxLength={300} disabled={racing} />
@@ -396,7 +395,7 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
         <div>
           <span className={styles.role}>{role}</span>
           <h3>{label}</h3>
-          <span className={styles.stack}>{stack}</span>
+          {stack && <span className={styles.stack}>{stack}</span>}
         </div>
         <div className={styles.clock}>
           <output className={styles.stopwatch} aria-label={`${label} time`}>{censoredClock ? "> " : ""}{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
