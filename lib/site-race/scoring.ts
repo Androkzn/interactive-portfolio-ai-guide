@@ -213,7 +213,9 @@ export function journeyRounds(a: LaneMetrics, b: LaneMetrics): Round[] {
   // Scored only when both lanes ran it: a lane skipped for time must not hand the other a free round.
   if (a.repeat && b.repeat && !a.repeat.skipped && !b.repeat.skipped) {
     const ra = a.repeat, rb = b.repeat;
-    const la = stepOrCap(ra?.lcp ?? null, ra), lb = stepOrCap(rb?.lcp ?? null, rb);
+    // The cap only when the reload never finished; a finished reload without an LCP entry is unmeasured (no points).
+    const repeatLcp = (r: typeof ra) => (r.capped && r.load === null ? { value: r.capMs, censored: true } : { value: r.lcp, censored: false });
+    const la = repeatLcp(ra), lb = repeatLcp(rb);
     const done = (r: typeof ra) => (r && !r.skipped ? r : null);
     out.push(round("repeat", "Repeat visit", "What a returning visitor pays: the first page again, HTTP cache on", [
       row("repeat-lcp", "Repeat LCP", "The main content on screen again, from the cache where the site allows it", la.value, lb.value, ms, "lower", NOISE["repeat-lcp"], both(la.censored, lb.censored)),

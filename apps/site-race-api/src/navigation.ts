@@ -134,9 +134,15 @@ export async function repeatVisit(page: Page, cdp: CDPSession, url: string, net:
   net.start();
   let capped = false;
   await page.goto(url, { waitUntil: "load", timeout: REPEAT_CAP_MS }).catch(() => { capped = true; });
-  // LCP is reported after the frame that paints it; give the observer a moment after load.
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  const snap = (await page.evaluate(RELOAD_SNAPSHOT).catch(() => ({ lcp: null, load: null }))) as { lcp: number | null; load: number | null };
+  // LCP is reported after the frame that paints it, sometimes well after load on a fast reload:
+  // poll for it (up to 2 s) rather than reading once. Still missing then means "not measured",
+  // which scores nothing; only a reload that never finished counts as the cap.
+  let snap = { lcp: null as number | null, load: null as number | null };
+  for (let i = 0; i < 10; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    snap = ((await page.evaluate(RELOAD_SNAPSHOT).catch(() => null)) as typeof snap | null) ?? snap;
+    if (snap.lcp !== null) break;
+  }
   net.stop();
   return { skipped: null, lcp: snap.lcp, load: snap.load, capped: capped || snap.load === null, capMs: REPEAT_CAP_MS, net: net.summary(), html: net.document() };
 }

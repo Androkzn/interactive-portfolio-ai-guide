@@ -16,6 +16,23 @@ const rep = (over: Partial<RepeatMetrics>): RepeatMetrics => ({ skipped: null, l
 const lane = (m: LaneMetrics, extra: Partial<LaneMetrics>): LaneMetrics => ({ ...m, ...extra });
 
 describe("journey rounds", () => {
+  it("does not score a repeat visit that finished but reported no LCP (a missed reading, not the cap)", () => {
+    const a = lane(base("a"), { navigation: nav({}), repeat: rep({ lcp: null, load: 300 }) });
+    const b = lane(base("b"), { navigation: nav({}), repeat: rep({ lcp: 300 }) });
+    const lcpRow = journeyRounds(a, b).find((r) => r.id === "repeat")!.rows[0];
+    expect(lcpRow.a).toBeNull();
+    expect(lcpRow.winner).toBeNull();
+  });
+
+  it("scores a repeat visit that never finished loading at its cap, as a lower bound", () => {
+    const a = lane(base("a"), { navigation: nav({}), repeat: rep({ lcp: null, load: null, capped: true }) });
+    const b = lane(base("b"), { navigation: nav({}), repeat: rep({ lcp: 300 }) });
+    const lcpRow = journeyRounds(a, b).find((r) => r.id === "repeat")!.rows[0];
+    expect(lcpRow.a).toBe(10_000);
+    expect(lcpRow.censored?.a).toBe(true);
+    expect(lcpRow.winner).toBe("b");
+  });
+
   it("old races without the journey keep their five rounds", () => {
     expect(journeyRounds(base("a"), base("b"))).toEqual([]);
     expect(scoreRace(base("a"), base("b")).rounds).toHaveLength(5);

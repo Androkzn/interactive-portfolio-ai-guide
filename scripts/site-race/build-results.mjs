@@ -48,7 +48,8 @@ for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort(
     const acc = cell[side];
     for (const [name, fn] of Object.entries(first)) (acc[name] ??= []).push(fn(m));
     if (m.repeat && !m.repeat.skipped) {
-      (acc.repeatLcp ??= []).push([m.repeat.lcp ?? m.repeat.capMs, m.repeat.lcp === null]);
+      // The cap only when the reload never finished; a finished reload without an LCP entry is left out.
+      (acc.repeatLcp ??= []).push(m.repeat.capped && m.repeat.load === null ? [m.repeat.capMs, true] : m.repeat.lcp === null ? null : [m.repeat.lcp, false]);
       (acc.repeatKb ??= []).push([m.repeat.net.kb, false]);
       (acc.repeatRequests ??= []).push([m.repeat.net.network, false]);
     }
