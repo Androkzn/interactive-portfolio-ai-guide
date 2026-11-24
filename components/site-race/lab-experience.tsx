@@ -12,7 +12,7 @@ import { SiteRace } from "./site-race";
  * The model page is the default: it is where the rebuild changed the most.
  */
 export function LabExperience() {
-  const [page, setPage] = useState<RacePageId>("model");
+  const [page, setPage] = useState<RacePageId>("home");
   // The newest stage with report numbers, so the journey's charts have a highlighted column.
   const [stage, setStage] = useState<StageId>(() => latestMeasuredStage().id);
   const [profile, setProfile] = useState<RaceProfile>("mobile");
