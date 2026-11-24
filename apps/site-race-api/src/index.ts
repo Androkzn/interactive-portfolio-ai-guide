@@ -1,6 +1,7 @@
 import { OWN_HOST_PATTERN, RACE_PAGES, RACE_PRESETS, SITE_RACE_PROTOCOL } from "../../../packages/contracts/src/site-race";
 import type { LaneId, LaneMetrics, RaceEvent, RaceLaneInfo, RacePageId, RacePresetId, RaceProfile, RaceReportSummary } from "../../../packages/contracts/src/site-race";
-import { LANE_CAP_MS, PROFILES, runLane } from "./lane";
+import { LANE_CAP_MS, linkOf, PROFILES, runLane } from "./lane";
+import { NAV_CAP_MS, REPEAT_CAP_MS } from "./navigation";
 import { newReportId, RaceLog, REPORT_ID, REPORT_PREFIX, summarize } from "./report";
 import { normalizeRaceUrl } from "./url-guard";
 
@@ -128,16 +129,19 @@ export default {
 
     const race = async () => {
       try {
-        const start: Extract<RaceEvent, { type: "start" }> = { type: "start", protocol: SITE_RACE_PROTOCOL, raceId: crypto.randomUUID(), profile, profileLabel: PROFILES[profile].label, page, capMs: LANE_CAP_MS, lanes: { a: a.lane, b: b.lane } };
+        const start: Extract<RaceEvent, { type: "start" }> = {
+          type: "start", protocol: SITE_RACE_PROTOCOL, raceId: crypto.randomUUID(), profile, profileLabel: PROFILES[profile].label, page,
+          capMs: LANE_CAP_MS, caps: { firstPageMs: LANE_CAP_MS, repeatMs: REPEAT_CAP_MS, tapMs: NAV_CAP_MS }, link: linkOf(profile), lanes: { a: a.lane, b: b.lane },
+        };
         await emit(start);
         const heartbeat = setInterval(() => { if (!closed) void writer.write(encoder.encode(`: keep-alive\n\n`)).catch(() => {}); }, 10_000);
         const lanes: LaneId[] = ["a", "b"];
         // The visitor's journey (repeat visit, taps through the site) exists only between this project's
         // builds: a challenger's site has none of these pages, and a skipped step must not score.
         const journey = !!a.lane.own && !!b.lane.own;
+        // Each lane streams its own results (first page, each step, the whole visit) as it gets them.
         const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal, journey)));
         clearInterval(heartbeat);
-        for (const [index, metrics] of results.entries()) if (metrics) await emit({ type: "result", lane: lanes[index], metrics });
         const elapsedMs = Date.now() - started;
         const [metricsA, metricsB] = results;
         const reportId = !challenger && metricsA && metricsB ? await saveReport(env, log, start, { a: metricsA, b: metricsB }, elapsedMs) : null;

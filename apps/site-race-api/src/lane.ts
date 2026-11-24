@@ -1,10 +1,10 @@
 import puppeteer from "@cloudflare/puppeteer";
 import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
-import { MEASURE_VERSION } from "../../../packages/contracts/src/site-race";
+import { MEASURE_VERSION, RACE_CAPS } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes as bytesOf, type Wire } from "./bytes";
-import { afterFirstPage, journeyFor, navTargetFor } from "./navigation";
+import { afterFirstPage, journeyFor, navTargetFor, NetWindow, visitSnapshot, type VisitSoFar } from "./navigation";
 import { computeTti, totalBlockingTime, type Req, type Task } from "./tti";
-import type { HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceProfile, ResourceBucket, ResourceType, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
+import type { FullPageWeight, HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceLink, RaceProfile, ResourceBucket, ResourceType, ResultStage, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
 type Emit = (event: RaceEvent) => Promise<void>;
 
@@ -25,9 +25,22 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
   },
 };
 
-const NAV_TIMEOUT_MS = 30_000;
+/** The throttled link a profile loads over, for download-time estimates; null when unthrottled. */
+export function linkOf(profile: RaceProfile): RaceLink | null {
+  const network = PROFILES[profile].network;
+  return network ? { downMbps: Math.round((network.downloadThroughput * 8) / 1e5) / 10, rttMs: network.latency } : null;
+}
+
+/**
+ * A visitor's patience for the first page (RACE_CAPS): a page not done by 10 s is stopped there and
+ * scores "> 10 s". 10 s is Nielsen's limit for keeping a user's attention (NN/g); on phones, 53% of
+ * visits are likely to be abandoned past 3 s (Google, 2016). A lane that reaches TTI sooner stops on
+ * its own rule. This is what makes the verdict arrive while the visitor is still watching.
+ */
+export const LANE_CAP_MS = RACE_CAPS.firstPageMs;
+/** Safety net for the first page's navigation, never shorter than the cap: a slow page is capped (a result), not failed. */
+const NAV_TIMEOUT_MS = LANE_CAP_MS + 20_000;
 const SETTLE_MS = 1_200;
-export const LANE_CAP_MS = 30_000;
 /** Unthrottled warm-up load per lane, in a discarded browser context, before the timed load. */
 const WARM_TIMEOUT_MS = 10_000;
 const FRAME_INTERVAL_MS = 200;
@@ -142,8 +155,14 @@ const isImmutable = (cc: string | undefined) => !!cc && (/immutable/.test(cc) ||
  * the CDN edge in front of it is warm. Same procedure for every lane. The timed load
  * that follows still starts cold on the browser side: its own context, HTTP cache
  * disabled, service workers bypassed, no connection reused (contexts do not share sockets).
+ *
+ * The same load also weighs the first page in full (the bytes its load event waits for), for a
+ * lane the cap stops before it gets there: no extra load, no extra time. It fetches what the timed
+ * load fetches: same URL, user agent and viewport, cache off, service workers bypassed. Only the
+ * speed differs, and with it at most the timers that fire before the load event, so on a throttled
+ * lane the real figure can only be higher: the weight is a lower bound, as the page says.
  */
-async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[RaceProfile], journey: boolean): Promise<void> {
+async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[RaceProfile], journey: boolean): Promise<FullPageWeight | null> {
   const context = await browser.createBrowserContext();
   try {
     const page = await context.newPage();
@@ -152,7 +171,14 @@ async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[
     const cdp = await page.createCDPSession();
     await cdp.send("Network.enable");
     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
-    await page.goto(url, { waitUntil: "load", timeout: WARM_TIMEOUT_MS }).catch(() => {});
+    await cdp.send("Network.setBypassServiceWorker", { bypass: true }).catch(() => {});
+    const net = new NetWindow(cdp);
+    net.start();
+    const loaded = await page.goto(url, { waitUntil: "load", timeout: WARM_TIMEOUT_MS }).then(() => true, () => false);
+    net.stop();
+    const counted = net.summary();
+    net.dispose();
+    const fullPage: FullPageWeight | null = counted.network > 0 ? { kb: counted.kb, requests: counted.network + counted.cached, loaded } : null;
     // The journey's pages too, reached the way the timed lane reaches them (a click on the same
     // link), so the edge also holds the second pages and any client-navigation payloads.
     if (journey) {
@@ -163,6 +189,7 @@ async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[
         await page.waitForNetworkIdle({ idleTime: 400, timeout: 6_000 }).catch(() => {});
       }
     }
+    return fullPage;
   } finally {
     await context.close().catch(() => {});
   }
@@ -171,6 +198,8 @@ async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[
 /**
  * One lane. With `journeyEnabled` (both lanes are this project's builds) the visitor's visit goes on
  * after the first page has been measured completely: a repeat visit, then taps through the site.
+ * The lane sends its own results: the first page as soon as it is measured, then again after each
+ * step of the visit, then the whole visit (site-race/2), so the verdict never waits for the visit.
  */
 export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal, journeyEnabled = false): Promise<LaneMetrics | null> {
   const profile = PROFILES[profileId];
@@ -229,7 +258,9 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     await emit({ type: "phase", lane, phase: "launching" });
     browser = await puppeteer.launch(env.BROWSER, { keep_alive: 60_000 });
     const journey = journeyEnabled && navTargetFor(url) !== null;
-    await warmUp(browser, url, profile, journey);
+    const fullPage = await warmUp(browser, url, profile, journey);
+    // Before the clock starts, so a lane that the cap stops can say at once what it would have had to download.
+    await emit({ type: "warmup", lane, fullPage });
     if (signal.aborted) return null;
     const context = await browser.createBrowserContext();
     const page: Page = await context.newPage();
@@ -343,8 +374,9 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     const stoppedAt = Date.now() - navWall;
 
     if (capped) {
-      const detail = last?.load == null ? `Still downloading at the ${LANE_CAP_MS / 1000} s cap` : `Main thread or network still busy at the ${LANE_CAP_MS / 1000} s cap`;
-      await emit({ type: "phase", lane, phase: "settling", detail });
+      const loading = last?.load == null;
+      const detail = loading ? `Still downloading at the ${LANE_CAP_MS / 1000} s cap` : `Main thread or network still busy at the ${LANE_CAP_MS / 1000} s cap`;
+      await emit({ type: "phase", lane, phase: "settling", detail, cap: loading ? "loading" : "busy" });
       // Only a capped lane needs the grace period: a lane that stopped on its own rule is quiet already.
       await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
     }
@@ -370,26 +402,40 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     // The first page's own requests, frozen where its measurement ended: what the visit fetches next is counted apart.
     const firstPage = [...responses.values()].map((r) => ({ ...r }));
     const firstRequests = requestCount();
-    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { network: profile.network }, signal) : null;
-    if (looks) await flushTrailing();
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
     };
+    // Taken here, where the first page stopped: once the visit starts, these finish and new ones begin.
     const inFlight = [
       // Responding but not finished…
       ...[...responses.entries()].filter(([id, r]) => !r.finished && !failed.has(id)).map(([id, r]) => ({ url: r.url, type: r.type, start: startOf(id), bytes: r.bytes })),
       // …and requested but still waiting for a response (queued behind the bandwidth).
       ...[...requested.entries()].filter(([id]) => !responses.has(id) && !failed.has(id)).map(([id, q]) => ({ url: q.url, type: q.type, start: startOf(id), bytes: 0 })),
     ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
-    const metrics = await assemble(url, finalUrl, snap, inspect, firstPage, capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: firstRequests });
-    metrics.firstPageEndMs = observedMs;
-    if (looks) Object.assign(metrics, looks);
+    // The Worker's own checks (the HTML as served, warm edge fetches, robots.txt, sitemap) take a
+    // moment and need nothing more from the browser, so the visit starts without waiting for them.
+    const measured = assemble(url, finalUrl, snap, inspect, firstPage, capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: firstRequests })
+      .then((m): LaneMetrics => ({ ...m, firstPageEndMs: observedMs, fullPage }));
+    measured.catch(() => {});
+    // Every result holds all the lane knows so far; they go out in order and never hold the visit up.
+    const taps = journey ? journeyFor(url).length : 0;
+    let sent: Promise<void> = Promise.resolve();
+    const send = (visit: VisitSoFar | null, partial?: ResultStage) => {
+      sent = sent.then(async () => emit({ type: "result", lane, metrics: visitSnapshot(await measured, visit, taps), ...(partial ? { partial } : {}) })).catch(() => {});
+    };
+    if (journey) send(null, "first-page");
+    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { network: profile.network, onStep: (visit) => send(visit, "visit") }, signal) : null;
+    if (looks) await flushTrailing();
+    const metrics: LaneMetrics = looks ? { ...(await measured), ...looks } : await measured;
+    await sent;
+    await emit({ type: "result", lane, metrics });
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
   } catch (error) {
+    // The navigation's own timeout is longer than the cap, so a timeout here is the browser's, not the page's.
     const message = error instanceof Error && /timeout/i.test(error.message)
-      ? `The page did not finish loading within ${NAV_TIMEOUT_MS / 1000} s.`
+      ? "The browser timed out on this page."
       : "The browser could not load this page.";
     await emit({ type: "phase", lane, phase: "failed", detail: message }).catch(() => {});
     await emit({ type: "error", lane, message }).catch(() => {});

@@ -5,13 +5,16 @@
 // so a step measures itself and not the leftovers of the page before. Same steps, same throttling
 // and the same input for every lane; nothing here knows which build it is driving.
 import type { CDPSession, Page } from "@cloudflare/puppeteer";
-import type { LaneId, NavigationMetrics, RaceEvent, RaceProfile, RepeatMetrics, WindowNetwork } from "../../../packages/contracts/src/site-race";
+import { RACE_CAPS } from "../../../packages/contracts/src/site-race";
+import type { LaneId, LaneMetrics, NavigationMetrics, RaceEvent, RaceProfile, RepeatMetrics, WindowNetwork } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes, type Wire } from "./bytes";
 
 type Emit = (event: RaceEvent) => Promise<void>;
 
-export const REPEAT_CAP_MS = 10_000;
-export const NAV_CAP_MS = 20_000;
+// A visitor's patience per step (RACE_CAPS): 10 s, Nielsen's limit for keeping a user's attention.
+// A returning visitor or a tap gets no more patience than a first visit.
+export const REPEAT_CAP_MS = RACE_CAPS.repeatMs;
+export const NAV_CAP_MS = RACE_CAPS.tapMs;
 /** After scrolling the link into view, both lanes wait this long before the finger or pointer arrives. */
 export const LINK_SETTLE_MS = 500;
 /** A finger rests on the glass about 100 ms between touchstart and touchend. */
@@ -285,14 +288,29 @@ export async function openSecondPage(page: Page, cdp: CDPSession, from: string, 
   return base;
 }
 
+/** The visit measured so far: the repeat visit, then the taps made up to now. */
+export type VisitSoFar = { repeat: RepeatMetrics; navigationSteps: NavigationMetrics[] };
+
+/**
+ * The lane's numbers while its visit goes on: the first page plus the steps measured so far.
+ * `navigation` (the tap the Next page round scores) is set only once every tap is in, so a
+ * partial result never scores an earlier tap in its place.
+ */
+export function visitSnapshot(first: LaneMetrics, visit: VisitSoFar | null, taps: number): LaneMetrics {
+  if (!visit) return first;
+  const steps = visit.navigationSteps;
+  return { ...first, repeat: visit.repeat, navigationSteps: steps, ...(taps > 0 && steps.length >= taps ? { navigation: steps[steps.length - 1] } : {}) };
+}
+
 /**
  * After the first page has been measured completely: the repeat visit (same URL, HTTP cache on),
  * then one tap per journey step (home → catalogue → model page), each once the previous page has
  * finished and shown its heading. The HTTP cache stays on for the whole visit, as in a real
  * browser. Same steps for every lane; a step that never showed its page ends the journey there,
- * scored as not reached ("> cap").
+ * scored as not reached ("> cap"). `onStep` hears each step as soon as it is measured, so the
+ * page can fill its rows in while the visit goes on; it must not hold the visit up.
  */
-export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { network: Throttle }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics; navigationSteps: NavigationMetrics[] }> {
+export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { network: Throttle; onStep?: (visit: VisitSoFar) => void }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics; navigationSteps: NavigationMetrics[] }> {
   const none = { kb: 0, network: 0, cached: 0, revalidated: 0 };
   const noRepeat = (reason: string): RepeatMetrics => ({ skipped: reason, lcp: null, load: null, capped: true, capMs: REPEAT_CAP_MS, net: none, html: null });
   const targets = journeyFor(url);
@@ -300,6 +318,8 @@ export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, p
   const skipAll = (reason: string, done: NavigationMetrics[] = []) => [...done, ...targets.slice(done.length).map((t, i) => skippedNavigation(froms[done.length + i], t, profile, reason))];
   const finish = (steps: NavigationMetrics[], repeat: RepeatMetrics) => ({ repeat, navigation: steps[steps.length - 1], navigationSteps: steps });
   const net = new NetWindow(cdp);
+  let repeat: RepeatMetrics | null = null;
+  const steps: NavigationMetrics[] = [];
   await cdp.send("Page.startScreencast", { format: "jpeg", quality: 38, maxWidth: profile === "mobile" ? 300 : 560, maxHeight: profile === "mobile" ? 650 : 350, everyNthFrame: 1 }).catch(() => {});
   try {
     // The first load ran with the cache bypassed (a cold first view; responses were still stored).
@@ -308,18 +328,22 @@ export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, p
     if (signal.aborted) return finish(skipAll("Stopped."), noRepeat("Stopped."));
     await emit({ type: "phase", lane, phase: "revisiting" });
     await settle(page, cdp, opts.network);
-    const repeat = await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed."));
+    repeat = await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed."));
+    opts.onStep?.({ repeat, navigationSteps: [] });
     await emit({ type: "phase", lane, phase: "navigating" });
-    const steps: NavigationMetrics[] = [];
     for (const [i, target] of targets.entries()) {
       if (signal.aborted) return finish(skipAll("Stopped.", steps), repeat);
       const prev = steps[i - 1];
       if (prev && (prev.skipped || prev.content === null)) return finish(skipAll("The previous page never showed up inside the cap.", steps), repeat);
       await settle(page, cdp, opts.network);
       steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net, opts.network).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
+      opts.onStep?.({ repeat, navigationSteps: [...steps] });
     }
     if (!signal.aborted) await wait(FINAL_FRAMES_MS);
     return finish(steps, repeat);
+  } catch {
+    // The browser went away mid-visit: the first page already stands, the steps not reached say why.
+    return finish(skipAll("The visit broke off.", steps), repeat ?? noRepeat("The visit broke off."));
   } finally {
     net.dispose();
     await cdp.send("Page.stopScreencast").catch(() => {});
