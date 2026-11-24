@@ -6,9 +6,18 @@ import { skillMap } from "@/lib/site-race/playbook";
 import { contactUrl, emailUrl } from "@/lib/site-links";
 import styles from "@/components/site-race/lab-page.module.css";
 
+const changes: { what: string; how: string; shows: string }[] = [
+  { what: "Images sized for the screen", how: "Every photo and product render re-encoded as AVIF and WebP in several widths, so a phone gets a phone-sized file. A 1.2 MB render becomes about 40 KB.", shows: "data downloaded, main content on screen, page fully loaded." },
+  { what: "Main photo first", how: "The hero is preloaded at high priority; scenes and images below the fold wait until the visitor scrolls near them, so nothing competes with it on a slow link.", shows: "main content on screen (LCP)." },
+  { what: "Less work at start", how: "The home page's sections render on the server, their animation code loads only near the viewport, and the slider spreads its work out.", shows: "blocking time and the scorecard." },
+  { what: "The next page before the tap lands", how: "When a finger touches a link, the model page's data and its photo start loading, so the tap opens a page that is mostly there.", shows: "the model page after the tap." },
+  { what: "Files cached for a year", how: "Scripts, styles, fonts and images carry a hash of their content in the name, so the CDN and the browser keep them without asking again.", shows: "the edge cache round." },
+  { what: "Pages built ahead of time", how: "Every page is pre-rendered HTML on Cloudflare's edge, readable without JavaScript.", shows: "time to first byte and the search round." },
+];
+
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An original website rebuilt and optimized in Next.js 16: measured before and after, then raced live in real Chrome on Cloudflare's edge. Race your own site against the optimized build too.";
+  "An original website rebuilt and optimized in Next.js 16, then raced live against the original in real Chrome on Cloudflare's edge: home page, tap, model page, in one race.";
 
 export const metadata: Metadata = {
   title,
@@ -40,20 +49,27 @@ export default function Page() {
 
         <section className={styles.section} aria-labelledby="lab-why">
           <p className={styles.eyebrow}><FlaskConical size={14} aria-hidden="true" /> Why this exists</p>
-          <h2 id="lab-why">Take a slow website. Make it fast. Prove it live.</h2>
+          <h2 id="lab-why">Take a slow website. Make it fast. Prove it in one race.</h2>
           <div className={styles.columns}>
             <p>
-              The <b>before</b> is the original site as it was first shipped — never tuned, heavy images and all. The <b>after</b> is the same
-              site, with the same content and routes, rebuilt in Next.js 16 and optimized: images resized and compressed, the main photo
-              loaded first, less work for the browser at start. The numbers at the top are medians of repeated races; the live race lets
-              you check them yourself.
+              The <b>before</b> is the original site as it was first shipped: never tuned, multi-megabyte images and all. The <b>after</b> is
+              the same site, with the same content and routes, rebuilt in Next.js 16 and optimized. Nothing was removed to make it fast.
             </p>
             <p>
-              The race itself is live: nothing in it is replayed from storage, except the recorded race, which is labelled as one. When you press start, a Worker launches two Chrome sessions on
-              Cloudflare Browser Run, applies the same mobile throttling the projects&apos; own performance reports use, and streams the
-              screencast, the paint milestones, the network log and the response headers straight to your screen.
+              One press of the button races both sites through the same visit: open the home page cold, tap a pump model, see its page.
+              Two real Chrome sessions on Cloudflare do it at the same moment and stream what they see, their paint milestones and every
+              request straight to your screen. The numbers at the top are medians of repeated races; the live race lets you check them.
             </p>
           </div>
+        </section>
+
+        <section className={styles.section} aria-labelledby="lab-changes">
+          <h2 id="lab-changes">What was optimized, and where you see it in the race.</h2>
+          <ul className={styles.skillMap}>
+            {changes.map((item) => (
+              <li key={item.what}><b>{item.what}</b><span>{item.how} <i>Shows in: {item.shows}</i></span></li>
+            ))}
+          </ul>
         </section>
 
         <section className={styles.section} aria-labelledby="lab-skills">
@@ -69,19 +85,19 @@ export default function Page() {
           <h2 id="lab-method">How the race is measured — and what it does not prove.</h2>
           <div className={styles.columns}>
             <ul className={styles.list}>
-              <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel, browser cache disabled.</li>
-              <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown — the profile in both projects&apos; perf-report scripts.</li>
+              <li><b>The visit.</b> Each lane opens the home page cold. As soon as its main photo is on screen and the link is visible, a finger taps a pump model, as a visitor would, without waiting for the rest of the page. The race then measures how long the model page takes to show its name and its photo.</li>
+              <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel, browser cache disabled for the first page.</li>
+              <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown. Desktop is 1440 px, unthrottled.</li>
               <li><b>Timings.</b> Read from the page&apos;s own PerformanceObserver: paint, largest-contentful-paint, layout-shift and longtask entries.</li>
-              <li><b>Finish line.</b> The load event once the page is interactive (Lighthouse&apos;s TTI rule), with both sites&apos; CDN caches warmed identically before the start. A lane still downloading at 30 s stops there: its LCP is reported as “&gt; 30 s”, and the requests still in flight are drawn hatched on the waterfall.</li>
+              <li><b>Finish line.</b> The home page is done at its load event once it is interactive (Lighthouse&apos;s TTI rule). Both sites&apos; CDN caches are warmed identically before the start. A lane still downloading at the cap stops there and is reported as “&gt; cap”; requests still in flight are drawn hatched on the waterfall.</li>
               <li><b>Scoring.</b> A gap within the run-to-run noise measured for that metric is a draw. A round goes to whoever wins more of its metrics.</li>
-              <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the race&apos;s own numbers. Speed Index is computed from the screencast the way speedline does it — colour histograms against the first and last frame — so it is an estimate, not a Lighthouse report.</li>
+              <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the home page&apos;s numbers. Speed Index comes from the screencast the way speedline computes it, so it is an estimate, not a Lighthouse report.</li>
             </ul>
             <ul className={styles.list}>
-              <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip. That is why the numbers at the top are medians of several races per page and device.</li>
-              <li><b>Lab, not field.</b> No real-user (CrUX) data: this is how the page behaves under one controlled profile, not across visitors.</li>
-              <li><b>Pages.</b> The home page and a model page are raced. The pump catalogue is left out on purpose: both builds show the same hero photo first, and the card images below it are in no first-load metric, so a race there would show little (only the page weight: 3.0 MB against 0.4 MB). Old links to catalogue races still open.</li>
-              <li><b>One cold page.</b> The race loads a single URL with an empty cache. Opening a second page, prefetching and repeat visits are not measured.</li>
-              <li><b>Live sites.</b> Both sides are the live sites, loaded fresh on every race: redeploy either one and the next race shows it. The numbers at the top are stored medians of repeated races and are refreshed by re-running the measurement.</li>
+              <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip. The numbers at the top are medians of several races.</li>
+              <li><b>Lab, not field.</b> No real-user (CrUX) data: this is one controlled profile, not every visitor.</li>
+              <li><b>Where the original is strong.</b> It runs less JavaScript, so its blocking time can be lower: React has a start-up cost. The race shows that too.</li>
+              <li><b>Live sites.</b> Both sides are the live sites, loaded fresh on every race: redeploy either one and the next race shows it.</li>
               <li><b>Review hosts.</b> Both builds run on preview hosts (pages.dev) marked noindex on purpose, so the Indexable check fails for both of them.</li>
               <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>
             </ul>

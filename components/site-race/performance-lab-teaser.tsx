@@ -25,7 +25,7 @@ export function PerformanceLabTeaser() {
           <div className={styles.kicker}><Gauge size={15} />Live performance lab <span>Next.js 16</span></div>
           <div className={styles.nextIdentity}><span className={styles.nextLogo}><NextMark /></span><span><small>Performance rebuild</small><strong>Built and optimized with Next.js</strong></span></div>
           <h2 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h2>
-          <p>Same pages. Same content. A measurable rebuild focused on images, loading priority, HTML weight and JavaScript.</p>
+          <p>Same pages. Same content. One live race through a real visit: open the home page, tap a pump model, see its page.</p>
           <div className={styles.proof} aria-label="Measured mobile improvements">
             <span><TimerReset size={16} /><b>{lcpGain == null ? "Faster" : `${lcpGain}%`}</b><small>lower median LCP</small></span>
             <span><ImageIcon size={16} /><b>{weightGain == null ? "Lighter" : `${weightGain}%`}</b><small>less page weight</small></span>
@@ -59,7 +59,7 @@ export function PerformanceLabTeaser() {
             </div>
           </div>
           <div className={styles.timeline} aria-hidden="true">
-            {["Original", "Images", "JavaScript", "LCP", "HTML", "Next.js"].map((step, index) => <span key={step} className={index === 5 ? styles.timelineDone : ""}><i />{step}</span>)}
+            {["Open home", "Tap a model", "Model page"].map((step, index) => <span key={step} className={index === 2 ? styles.timelineDone : ""}><i />{step}</span>)}
           </div>
         </div>
       </div>
