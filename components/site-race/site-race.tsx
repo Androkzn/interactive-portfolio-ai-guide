@@ -25,11 +25,11 @@ const MARKS: { name: MarkName; label: string }[] = [
 const PHASE_LABEL: Record<LaneState["phase"], string> = {
   queued: "On the grid",
   launching: "Starting Chrome on Cloudflare…",
-  loading: "Loading",
+  loading: "Home · loading",
   settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
-  revisiting: "Repeat visit · same page again, cache on",
-  navigating: "Opening a second page",
+  revisiting: "Repeat visit · home again, cache on",
+  navigating: "Tapped · opening the pump catalogue",
   done: "Done",
   failed: "Did not finish",
 };
@@ -294,18 +294,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       </div>
 
       <details className={styles.settings}>
-        <summary>Race settings <span>{RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
+        <summary>Race settings <span>{page === "home" ? "Home → tap → pump catalogue" : RACE_PAGES[page].label} · {selectedStage.short} · {profile === "mobile" ? "Mobile slow 4G" : "Desktop"}</span></summary>
         <div className={styles.setup}>
-        <fieldset className={styles.setupGroup} disabled={racing}>
-          <legend>Page</legend>
-          <div className={styles.segmented} role="radiogroup" aria-label="Page to race">
-            {(Object.keys(RACE_PAGES) as RacePageId[]).filter((id) => id !== "catalogue" || page === "catalogue").map((id) => (
-              <button key={id} type="button" role="radio" aria-checked={page === id} className={page === id ? styles.segOn : ""} onClick={() => onPage(id)} title={RACE_PAGES[id].detail}>
-                {RACE_PAGES[id].label}{id === "model" && <i className={styles.hot}>biggest change</i>}
-              </button>
-            ))}
-          </div>
-        </fieldset>
         <fieldset className={styles.setupGroup} disabled={racing}>
           <legend>Device</legend>
           <div className={styles.segmented} role="radiogroup" aria-label="Device profile">
@@ -435,6 +425,7 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
         })}
       </ul>
       <p className={styles.counters}><span><b>{lane.net.requests}</b> requests</span><span><b>{kb(lane.net.kb)}</b> downloaded</span></p>
+      {lane.metrics?.navigation && <JourneyLine metrics={lane.metrics} />}
       {lane.error && <p className={styles.laneError}>{lane.error}</p>}
     </article>
   );
@@ -582,5 +573,20 @@ function Confetti({ tone }: { tone: string }) {
         <i key={i} data-hue={p.hue} style={{ left: `${p.left}%`, animationDelay: `${p.delay}s`, ["--drift" as string]: `${p.drift}px`, ["--spin" as string]: `${p.spin}deg` }} />
       ))}
     </div>
+  );
+}
+
+/** The two parts of the journey race, readable at a glance: the home load, then the tap. */
+function JourneyLine({ metrics }: { metrics: NonNullable<LaneState["metrics"]> }) {
+  const nav = metrics.navigation!;
+  const capS = `${(nav.capMs / 1000).toFixed(0)} s`;
+  const after = (value: number | null) => (value === null ? `> ${capS}` : `+${(value / 1000).toFixed(2)} s`);
+  return (
+    <p className={styles.journeyLine}>
+      <span>Home: <b>{metrics.timing.lcp === null ? "no final LCP" : `LCP ${ms(metrics.timing.lcp)}`}</b></span>
+      {nav.skipped
+        ? <span>Second page: <b>never tapped</b></span>
+        : <span>Pump catalogue: <b>{after(nav.content)}</b> after tap{nav.image !== null && nav.image !== nav.content ? <>, image <b>{after(nav.image)}</b></> : nav.image === null ? <>, image <b>{`> ${capS}`}</b></> : null}</span>}
+    </p>
   );
 }

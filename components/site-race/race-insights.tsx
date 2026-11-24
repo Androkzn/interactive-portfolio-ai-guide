@@ -235,7 +235,7 @@ function ProgressChart({ progress, state, identity }: { progress: Record<LaneId,
   );
 }
 
-type Tab = "lcp" | "images" | "waterfall";
+type Tab = "lcp" | "images" | "waterfall" | "journey";
 
 export function UnderTheHood({ state, identity }: { state: RaceState; identity: (id: LaneId) => LaneIdentity }) {
   const [tab, setTab] = useState<Tab>("lcp");
@@ -243,6 +243,7 @@ export function UnderTheHood({ state, identity }: { state: RaceState; identity: 
     { id: "lcp", label: "LCP element" },
     { id: "images", label: "Image bytes" },
     { id: "waterfall", label: "Waterfall" },
+    ...(state.lanes.a.metrics?.navigation !== undefined || state.lanes.b.metrics?.navigation !== undefined ? [{ id: "journey" as Tab, label: "Tap & repeat visit" }] : []),
   ];
   const a = state.lanes.a.metrics;
   const b = state.lanes.b.metrics;
@@ -263,6 +264,7 @@ export function UnderTheHood({ state, identity }: { state: RaceState; identity: 
         {tab === "lcp" && <LcpSpotlight state={state} identity={identity} />}
         {tab === "images" && <ImageBytes state={state} identity={identity} />}
         {tab === "waterfall" && <Waterfall state={state} identity={identity} />}
+        {tab === "journey" && <JourneyDetail state={state} identity={identity} />}
       </div>
     </section>
   );
@@ -471,6 +473,47 @@ function Waterfall({ state, identity }: { state: RaceState; identity: (id: LaneI
         );
       })}
       <div className={styles.waterScale} aria-hidden="true">{ticks.map((t) => <span key={t} style={{ left: `calc(var(--label-w) + (100% - var(--label-w)) * ${t / maxT})` }}>{t / 1000} s</span>)}</div>
+    </div>
+  );
+}
+
+/** What happened after the first page: the tap to the second page, and the repeat visit with the cache on. */
+function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: LaneId) => LaneIdentity }) {
+  const t = (value: number | null | undefined, cap: number) => (value == null ? `> ${ms(cap)}` : ms(value));
+  return (
+    <div className={styles.spotGrid}>
+      {LANES.map((id) => {
+        const m = state.lanes[id].metrics!;
+        const who = identity(id);
+        const nav = m.navigation;
+        const rep = m.repeat;
+        return (
+          <article key={id} className={`${styles.spotCard} ${toneClass(who.kind)}`}>
+            <p className={styles.scoreWho}><i className={styles.key} aria-hidden="true" />{who.role} · {who.label}</p>
+            <div className={styles.spotText}>
+              <p><b>The tap.</b> {nav?.skipped ? nav.skipped : nav ? <>Once home had painted its LCP{m.tappedAt !== undefined ? ` (tapped at ${ms(m.tappedAt)})` : ""}, the visitor {nav.input === "touch" ? `touched the link for ${nav.dwellMs} ms` : `rested the pointer ${nav.dwellMs} ms on the link`} and {nav.input === "touch" ? "lifted" : "clicked"}: <code>{nav.link}</code>. {nav.soft === null ? "" : nav.soft ? "The site swapped the page in with JavaScript (no new document)." : "The browser loaded a new document."}</> : "Not measured."}</p>
+              {nav && !nav.skipped && (
+                <ul className={styles.fileList}>
+                  <li><span>URL changed</span><b>{t(nav.commit, nav.capMs)}</b></li>
+                  <li><span>Heading on screen</span><b>{t(nav.content, nav.capMs)}</b></li>
+                  <li><span>Main image painted{nav.imagePath ? <> · <code>{nav.imagePath}</code></> : ""}</span><b>{t(nav.image, nav.capMs)}</b></li>
+                  <li><span>Downloaded from the first touch on</span><b>{kb(nav.net.kb)} · {nav.net.network} requests</b></li>
+                </ul>
+              )}
+              <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : rep ? "Home loaded again in the same browser with the HTTP cache on, right away. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
+              {rep && !rep.skipped && (
+                <ul className={styles.fileList}>
+                  <li><span>LCP</span><b>{t(rep.lcp, rep.capMs)}</b></li>
+                  <li><span>Fully loaded</span><b>{t(rep.load, rep.capMs)}</b></li>
+                  <li><span>Over the network</span><b>{kb(rep.net.kb)} · {rep.net.network} requests{rep.net.revalidated ? ` (${rep.net.revalidated} × 304)` : ""}</b></li>
+                  <li><span>From cache</span><b>{rep.net.cached} requests</b></li>
+                  {rep.html && <li><span>HTML</span><b>{rep.html.cached ? "from cache" : `${rep.html.status ?? "?"} · ${kb(rep.html.kb)}`}</b></li>}
+                </ul>
+              )}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
