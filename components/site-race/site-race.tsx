@@ -17,13 +17,15 @@ const MARKS: { name: MarkName; label: string }[] = [
   { name: "ttfb", label: "TTFB" },
   { name: "fcp", label: "FCP" },
   { name: "lcp", label: "LCP" },
-  { name: "dcl", label: "DCL" },
+  // DOMContentLoaded is not shown: async scripts (Next.js) do not delay it while module
+  // scripts (Astro) do, so it would compare two different things. The load event does not have that bias.
+  { name: "load", label: "Loaded" },
 ];
 const PHASE_LABEL: Record<LaneState["phase"], string> = {
   queued: "On the grid",
   launching: "Starting Chrome on Cloudflare…",
   loading: "Loading",
-  settling: "Waiting for the page to settle",
+  settling: "Loaded · waiting for 5 s of quiet (TTI)",
   inspecting: "Inspecting HTML, headers and SEO",
   done: "Done",
   failed: "Did not finish",
@@ -32,6 +34,7 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
   mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
   desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
+const FAIRNESS_NOTE = "Before the clock starts, both sites are loaded once at full speed in a discarded session, so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). Each lane is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most.";
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
@@ -300,7 +303,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
           : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : `${PROFILE_NOTE[profile]} A lane still downloading after 30 s is stopped there.`)}
+          : `${PROFILE_NOTE[profile]} ${FAIRNESS_NOTE}`)}
       </p>
       {state.status === "finished" && state.reportId && state.source === "live" && (
         <p className={styles.savedNote}>
@@ -370,7 +373,10 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   // Live, a lane learns its own LCP only when it settles, so it reads "still loading";
   // in the photo finish both finish lines are known, so the gap is a real "behind".
   const trailing = !finishedNow && !failed && theirs !== null && t !== null && t > theirs && (scrub === null || scrub >= theirs) ? t - theirs : null;
-  const clockNote = shownT === null ? null : finishedNow ? (hasLcp ? "to LCP" : capped ? "at the cap" : "to first paint") : "elapsed";
+  // The stopwatch stops at LCP, the Speed round's headline metric. A lane stopped at the cap
+  // without a final LCP shows the cap as a lower bound, exactly as the scoreboard does.
+  const censoredClock = finishedNow && !hasLcp && capped;
+  const clockNote = shownT === null ? null : finishedNow ? (hasLcp ? "to LCP" : capped ? "no final LCP" : "to first paint") : "elapsed";
   return (
     <article className={`${styles.lane} ${toneClass(identity.kind)} ${winner ? styles.laneWinner : ""}`} aria-label={`${label} lane`}>
       <header className={styles.laneHead}>
@@ -380,7 +386,7 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
           <span className={styles.stack}>{stack}</span>
         </div>
         <div className={styles.clock}>
-          <output className={styles.stopwatch} aria-label={`${label} time`}>{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
+          <output className={styles.stopwatch} aria-label={`${label} time`}>{censoredClock ? "> " : ""}{shownT === null ? "0.00" : (Math.max(0, shownT) / 1000).toFixed(2)}<small>s</small></output>
           {clockNote && <span className={styles.clockNote}>{clockNote}</span>}
         </div>
       </header>
@@ -465,16 +471,18 @@ function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict
           {!reduced && winner && <Confetti tone={tone(winner)} />}
           {winner && loser ? (
             <h3>
-              <span className={tone(winner)}>{name(winner)}</span> wins {byRounds
-                ? `${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]}`
-                : `${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
+              <span className={tone(winner)}>{name(winner)}</span> {byRounds
+                ? `wins ${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]} on rounds`
+                : `edges it ${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
             </h3>
           ) : (
             <h3>Dead heat.</h3>
           )}
           <p>
-            {!byRounds && winner ? `Rounds split ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
-            {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}. Gaps within single-run noise count as a draw.
+            {!byRounds && winner ? `Rounds tied ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
+            {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}.
+            This is one race, one sample: a gap smaller than two runs of the same site differ by (measured, per metric) counts as a draw,
+            and a value capped at 30 s is a lower bound that cannot win.
           </p>
         </div>
       )}
@@ -507,6 +515,7 @@ function RoundCard({ round, index, visible, name, tone }: { round: Round; index:
                     <td key={id} className={`${tone(id)} ${row.winner === id ? styles.cellWin : ""}`}>
                       <span className={styles.bar}><i style={{ width: visible && value !== null ? `${Math.max(4, (value / max) * 100)}%` : 0 }} /></span>
                       <b>{formatValue(row, id)}{row.winner === id && <span className={styles.star} aria-label="better"> ★</span>}</b>
+                      {row.note?.[id] && <small className={styles.cellNote}>{row.note[id]}</small>}
                     </td>
                   );
                 })}

@@ -164,6 +164,7 @@
 .bar { display: block; height: 8px; border-radius: 999px; background: #2b2d29; overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: inherit; background: color-mix(in srgb, var(--mark) 40%, #4a4c46); transition: width 1s cubic-bezier(.2, .9, .3, 1); }
 .cellWin b { color: var(--race-ink); }
+.cellNote { display: block; font-size: 0.72rem; opacity: 0.7; font-weight: 400; }
 .cellWin .bar i { background: var(--mark); box-shadow: 0 0 12px var(--mark); }
 
 .verdict { position: relative; margin-top: 22px; padding: clamp(20px, 3vw, 34px); border: 1px solid #4b4772; border-radius: 20px; background: linear-gradient(135deg, #24233a, #1b1c1a); text-align: center; overflow: hidden; animation: verdict-in .7s cubic-bezier(.2, 1.4, .4, 1); }

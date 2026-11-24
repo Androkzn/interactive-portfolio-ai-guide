@@ -6,7 +6,7 @@ import type { LaneId, LaneMetrics, RaceProfile, WaterfallEntry } from "@/package
 import type { LaneState, RaceState } from "@/lib/site-race/use-race";
 import { band, performanceScore, type ScoreBand, type ScoreMetric } from "@/lib/site-race/lighthouse-score";
 import { progressFromFrames, speedIndex, visuallyComplete, type ProgressPoint } from "@/lib/site-race/visual-progress";
-import { kb, lcpOrCap, ms } from "@/lib/site-race/scoring";
+import { kb, lcpOrCap, ms, tbtCensored } from "@/lib/site-race/scoring";
 import { toneClass, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./race-insights.module.css";
 
@@ -102,7 +102,7 @@ function ScoreRing({ metrics, profile, si, who, pending }: { metrics: LaneMetric
         {result.parts.map((part) => (
           <li key={part.metric}>
             <span>{METRIC_LABEL[part.metric]}</span>
-            <b>{part.value === null ? "–" : part.metric === "cls" ? part.value.toFixed(3) : `${part.metric === "lcp" && lcp.censored ? "> " : ""}${ms(part.value)}`}</b>
+            <b>{part.value === null ? "–" : part.metric === "cls" ? part.value.toFixed(3) : `${part.metric === "lcp" && lcp.censored ? "> " : part.metric === "tbt" && tbtCensored(metrics) ? "≥ " : ""}${ms(part.value)}`}</b>
             <span className={styles.partBar} data-band={part.score === null ? "none" : band(Math.round(part.score * 100))}><i style={{ width: `${Math.round((part.score ?? 0) * 100)}%` }} /></span>
             <small>{part.score === null ? "" : Math.round(part.score * 100)}</small>
           </li>
