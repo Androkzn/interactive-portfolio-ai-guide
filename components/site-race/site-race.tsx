@@ -36,6 +36,13 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
+/** Once the arena moves on from a race opened by link, a reload should not bring that race back. */
+function dropReportParam() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("report")) return;
+  url.searchParams.delete("report");
+  window.history.replaceState(null, "", url);
+}
 
 export type SiteRaceProps = {
   page: RacePageId;
@@ -134,6 +141,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setScrub(null);
     setReplaying(false);
     setNotice(null);
+    dropReportParam();
     show(idleRace(profile));
   }, [page, stage, profile, show]);
 
@@ -157,6 +165,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setNotice(null);
     setScrub(null);
     setReplaying(false);
+    dropReportParam();
     animateReveal.current = true;
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
@@ -173,6 +182,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setNotice(null);
     setScrub(null);
     setReplaying(false);
+    dropReportParam();
     animateReveal.current = true;
     void runReplay(recordingFor(page, profile));
   };
