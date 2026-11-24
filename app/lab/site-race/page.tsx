@@ -4,12 +4,12 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Archive, ArrowLeft, ArrowUp, ArrowUpRight, Braces, ChevronDown, Cpu, Dices, Equal, EyeOff,
-  FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Monitor, Rocket,
+  FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Mail, Monitor, Phone, Rocket,
   RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Users, Wifi, Zap,
 } from "lucide-react";
 import { LabExperience } from "@/components/site-race/lab-experience";
 import resultsData from "@/lib/site-race/results-data.json";
-import { contactUrl, emailUrl } from "@/lib/site-links";
+import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
 import styles from "@/components/site-race/lab-page.module.css";
 
 // Medians of repeated races (scripts/site-race/build-results.mjs): the same numbers as the result block at the top.
@@ -151,9 +151,11 @@ export default function Page() {
           </span>
           <span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span>
         </Link>
-        <nav className="case-page-contact" aria-label="Contact links">
-          <a href={contactUrl} target="_blank" rel="noreferrer">LinkedIn <ArrowUpRight size={13} aria-hidden="true" /></a>
-          <a href={emailUrl}>Email <ArrowUpRight size={13} aria-hidden="true" /></a>
+        <nav className="header-contact" aria-label="Contact links">
+          <a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><img className="brand-logo brand-logo-linkedin" src="/images/brand/linkedin.svg" alt="" aria-hidden="true" /><span>LinkedIn</span></a>
+          <a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a>
+          <a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a>
+          <a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><img className="brand-logo brand-logo-github" src="/images/brand/github.svg" alt="" aria-hidden="true" /><span>GitHub</span></a>
         </nav>
       </header>
 

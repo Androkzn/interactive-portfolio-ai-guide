@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Gauge, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
@@ -1704,6 +1704,7 @@ export default function Home() {
       </div>
       <div className="hero-stats">
         <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
+        <a href="#performance-lab"><span className="stat-symbol" aria-hidden="true"><Gauge size={24} /></span><span><strong>Make slow sites fast</strong><small>I rebuild and optimize slow websites. Watch one race its original, live.</small></span></a>
         <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
         <nav className="hero-app-logos" aria-label="Open a project directly">{projects.map(item => <button key={item.id} className="hero-app-logo" title={item.name} aria-label={`Open ${item.name}`} onClick={() => explore(item.id)}><ProjectLogo id={item.id} /></button>)}</nav>
         <a href="#engineering-work"><span className="stat-symbol" aria-hidden="true"><FileCheck2 size={24} /></span><span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span></a>
