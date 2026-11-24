@@ -132,7 +132,10 @@ export default {
         await emit(start);
         const heartbeat = setInterval(() => { if (!closed) void writer.write(encoder.encode(`: keep-alive\n\n`)).catch(() => {}); }, 10_000);
         const lanes: LaneId[] = ["a", "b"];
-        const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal)));
+        // The visitor's journey (repeat visit, taps through the site) exists only between this project's
+        // builds: a challenger's site has none of these pages, and a skipped step must not score.
+        const journey = !!a.lane.own && !!b.lane.own;
+        const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal, journey)));
         clearInterval(heartbeat);
         for (const [index, metrics] of results.entries()) if (metrics) await emit({ type: "result", lane: lanes[index], metrics });
         const elapsedMs = Date.now() - started;

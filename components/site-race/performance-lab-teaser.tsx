@@ -2,89 +2,10 @@ import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Gauge, Image as ImageIcon, TimerReset, Zap } from "lucide-react";
 import resultsData from "@/lib/site-race/results-data.json";
 import styles from "./performance-lab-teaser.module.css";
+import { F1Car, Hatchback } from "./race-cars";
 
 function NextMark() {
   return <svg viewBox="0 0 48 48" role="img" aria-label="Next.js logo"><circle cx="24" cy="24" r="23" fill="#fff" /><path d="M14 14v20M15 14l20 28M28 14h6v20" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
-/*
- * Race-lane art: both cars and the flag are original inline SVG drawn for this site
- * (no third-party assets, no logos, liveries or badges), so no licence applies beyond the repo's own.
- * Shading is done with gradients only; motion uses CSS transform/opacity (see the .module.css).
- */
-function RaceCar() {
-  return (
-    <svg viewBox="0 0 220 64" className={styles.carSvg}>
-      <defs>
-        <linearGradient id="f1Body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d6ceff" /><stop offset=".35" stopColor="#9085e9" /><stop offset=".75" stopColor="#5546b8" /><stop offset="1" stopColor="#2b2266" /></linearGradient>
-        <linearGradient id="f1Carbon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a3d44" /><stop offset="1" stopColor="#0c0d10" /></linearGradient>
-        <radialGradient id="tyre" cx=".45" cy=".4" r=".6"><stop offset=".6" stopColor="#2a2b2e" /><stop offset=".9" stopColor="#111" /><stop offset="1" stopColor="#050505" /></radialGradient>
-        <radialGradient id="rim" cx=".4" cy=".35" r=".7"><stop offset="0" stopColor="#f4f4f6" /><stop offset=".55" stopColor="#8d8f97" /><stop offset="1" stopColor="#3b3d44" /></radialGradient>
-        <radialGradient id="carShadow" cx=".5" cy=".5" r=".5"><stop offset="0" stopColor="#000" stopOpacity=".75" /><stop offset="1" stopColor="#000" stopOpacity="0" /></radialGradient>
-      </defs>
-      <ellipse cx="110" cy="60" rx="104" ry="5" fill="url(#carShadow)" />
-      <g className={styles.carBody}>
-        {/* rear wing */}
-        <path d="M10 10h26l-2 6H12z" fill="url(#f1Carbon)" /><path d="M12 9h24" stroke="#b9aeff" strokeWidth="1.4" />
-        <path d="M14 16h5l9 24h-6z" fill="#17181c" />
-        {/* floor + sidepod */}
-        <path d="M24 46h168l10 4H30z" fill="#0d0e11" />
-        <path d="M30 44c4-14 22-20 44-21l40-1c12 0 18 4 26 9l38 8c10 2 18 3 24 6v4H34z" fill="url(#f1Body)" />
-        <path d="M58 36c20-3 60-4 96 1" stroke="#ffffff" strokeOpacity=".55" strokeWidth="1.3" fill="none" />
-        <path d="M120 41l66 3" stroke="#d4ff76" strokeWidth="2" strokeLinecap="round" />
-        {/* engine cover / airbox */}
-        <path d="M48 26c6-9 18-12 30-12 8 0 12 3 14 8l-4 8H52z" fill="url(#f1Body)" />
-        <path d="M80 14c3 0 6 2 7 6" stroke="#fff" strokeOpacity=".6" strokeWidth="1.2" fill="none" />
-        {/* cockpit, helmet, halo */}
-        <path d="M92 24h32l6 8H90z" fill="#08090b" />
-        <circle cx="104" cy="22" r="7" fill="#efeff2" /><path d="M99 21h11v3H99z" fill="#2b2266" /><path d="M100 19c2-3 6-3 8-1" stroke="#fff" strokeWidth="1" fill="none" />
-        <path d="M90 26c8-9 26-10 38-1" stroke="#1a1b20" strokeWidth="3" fill="none" strokeLinecap="round" />
-        {/* nose + front wing */}
-        <path d="M170 46l38 2v4h-40z" fill="url(#f1Carbon)" /><path d="M196 42h16l2 10h-18z" fill="#17181c" /><path d="M198 42h14" stroke="#b9aeff" strokeWidth="1.2" />
-        {/* suspension arms */}
-        <path d="M40 40l14-2M160 40l-12-2M176 44l-14-6" stroke="#2c2e34" strokeWidth="1.6" />
-      </g>
-      <Wheel cx={42} cy={44} r={16} />
-      <Wheel cx={168} cy={45} r={15} />
-    </svg>
-  );
-}
-
-function CityCar() {
-  return (
-    <svg viewBox="0 0 120 72" className={styles.carSvg}>
-      <defs>
-        <linearGradient id="hatchBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffc09a" /><stop offset=".3" stopColor="#ff8a4c" /><stop offset=".8" stopColor="#d95926" /><stop offset="1" stopColor="#8a3412" /></linearGradient>
-        <linearGradient id="hatchGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#c6dcea" /><stop offset=".5" stopColor="#4b6272" /><stop offset="1" stopColor="#1d2a33" /></linearGradient>
-      </defs>
-      <ellipse cx="60" cy="67" rx="56" ry="4.5" fill="url(#carShadow)" />
-      <g className={styles.carBody}>
-        <path d="M8 52V38c0-6 3-9 8-11l14-3 10-14c3-3 6-4 10-4h28c6 0 9 3 12 7l12 14c8 1 14 4 15 10l1 15z" fill="url(#hatchBody)" />
-        <path d="M37 24l9-12c2-2 4-3 7-3h10v15zM67 9h10c4 0 6 2 8 4l9 11H67z" fill="url(#hatchGlass)" />
-        <path d="M65 9v40" stroke="#8a3412" strokeWidth="1.4" />
-        <path d="M14 30c30-4 70-4 96 0" stroke="#fff" strokeOpacity=".5" strokeWidth="1.3" fill="none" />
-        <path d="M71 31h7" stroke="#5c2208" strokeWidth="2" strokeLinecap="round" />
-        <rect x="104" y="33" width="9" height="6" rx="2" fill="#fff6d8" /><rect x="7" y="32" width="5" height="7" rx="1.5" fill="#c22a15" />
-        <path d="M6 50h108v4H6z" fill="#2a1c16" />
-      </g>
-      <Wheel cx={28} cy={55} r={11} small />
-      <Wheel cx={92} cy={55} r={11} small />
-    </svg>
-  );
-}
-
-function Wheel({ cx, cy, r, small }: { cx: number; cy: number; r: number; small?: boolean }) {
-  const spokes = small ? 4 : 5;
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={r} fill="url(#tyre)" />
-      <g className={small ? styles.wheelSlow : styles.wheelFast}>
-        <circle cx={cx} cy={cy} r={r * .62} fill="url(#rim)" />
-        {Array.from({ length: spokes }, (_, i) => <path key={i} d={`M${cx} ${cy}L${cx} ${cy - r * .58}`} stroke="#2a2c31" strokeWidth={r * .14} strokeLinecap="round" transform={`rotate(${(360 / spokes) * i} ${cx} ${cy})`} />)}
-        <circle cx={cx} cy={cy} r={r * .16} fill="#d4ff76" />
-      </g>
-    </g>
-  );
 }
 
 function CheckeredFlag() {
@@ -174,14 +95,17 @@ export function PerformanceLabTeaser() {
             <div className={styles.flag}><CheckeredFlag /></div>
             <span className={styles.finishChip}>Finish · {seconds(productAfter)}</span>
             <div className={`${styles.lane} ${styles.laneNext}`}>
-              <div className={`${styles.runner} ${styles.runnerNext}`}><div className={styles.speedLines}><i /><i /><i /></div><div className={styles.carNext}><RaceCar /></div></div>
+              <div className={`${styles.runner} ${styles.runnerNext}`}><div className={styles.speedLines}><i /><i /><i /></div><div className={styles.carNext}><F1Car /></div></div>
             </div>
             <div className={`${styles.lane} ${styles.laneOriginal}`}>
-              <div className={`${styles.runner} ${styles.runnerOriginal}`}><div className={styles.carOriginal}><CityCar /></div></div>
+              <div className={`${styles.runner} ${styles.runnerOriginal}`}><div className={styles.carOriginal}><Hatchback /></div></div>
             </div>
           </div>
           <div className={styles.timeline} aria-hidden="true">
-            {["Home page", "Product page", "Race it live"].map((step, index) => <span key={step} className={index === 2 ? styles.timelineDone : ""}><i />{step}</span>)}
+            <div className={styles.rail}><i className={styles.railFill} /><i className={styles.railHead} /></div>
+            {["Home page", "Product page", "Race it live"].map((step, index) => (
+              <span key={step} className={`${styles.checkpoint} ${styles[`checkpoint${index}`]}`}><i />{step}</span>
+            ))}
           </div>
         </div>
       </div>

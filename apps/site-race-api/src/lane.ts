@@ -2,7 +2,7 @@ import puppeteer from "@cloudflare/puppeteer";
 import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
 import { MEASURE_VERSION } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes as bytesOf, type Wire } from "./bytes";
-import { afterFirstPage, navTargetFor, readyToTap } from "./navigation";
+import { afterFirstPage, journeyFor, navTargetFor } from "./navigation";
 import { computeTti, totalBlockingTime, type Req, type Task } from "./tti";
 import type { HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceProfile, ResourceBucket, ResourceType, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
@@ -28,8 +28,6 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
 const NAV_TIMEOUT_MS = 30_000;
 const SETTLE_MS = 1_200;
 export const LANE_CAP_MS = 30_000;
-/** The repeat visit starts only within this long of the first load's start, to keep the race short. */
-const REPEAT_BUDGET_MS = 32_000;
 /** Unthrottled warm-up load per lane, in a discarded browser context, before the timed load. */
 const WARM_TIMEOUT_MS = 10_000;
 const FRAME_INTERVAL_MS = 200;
@@ -145,7 +143,7 @@ const isImmutable = (cc: string | undefined) => !!cc && (/immutable/.test(cc) ||
  * that follows still starts cold on the browser side: its own context, HTTP cache
  * disabled, service workers bypassed, no connection reused (contexts do not share sockets).
  */
-async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[RaceProfile]): Promise<void> {
+async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[RaceProfile], journey: boolean): Promise<void> {
   const context = await browser.createBrowserContext();
   try {
     const page = await context.newPage();
@@ -155,17 +153,34 @@ async function warmUp(browser: Browser, url: string, profile: (typeof PROFILES)[
     await cdp.send("Network.enable");
     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
     await page.goto(url, { waitUntil: "load", timeout: WARM_TIMEOUT_MS }).catch(() => {});
+    // The journey's pages too, reached the way the timed lane reaches them (a click on the same
+    // link), so the edge also holds the second pages and any client-navigation payloads.
+    if (journey) {
+      for (const target of journeyFor(url)) {
+        const clicked = await page.evaluate(`(() => { const a = document.querySelector(${JSON.stringify(target.selectors[0])}); if (!a) return false; a.click(); return true; })()`).catch(() => false);
+        if (!clicked) break;
+        await page.waitForFunction(`location.pathname === ${JSON.stringify(target.to)}`, { timeout: 5_000 }).catch(() => {});
+        await page.waitForNetworkIdle({ idleTime: 400, timeout: 6_000 }).catch(() => {});
+      }
+    }
   } finally {
     await context.close().catch(() => {});
   }
 }
 
-export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal): Promise<LaneMetrics | null> {
+/**
+ * One lane. With `journeyEnabled` (both lanes are this project's builds) the visitor's visit goes on
+ * after the first page has been measured completely: a repeat visit, then taps through the site.
+ */
+export async function runLane(env: Env, lane: LaneId, url: string, profileId: RaceProfile, emit: Emit, signal: AbortSignal, journeyEnabled = false): Promise<LaneMetrics | null> {
   const profile = PROFILES[profileId];
   let browser: Browser | null = null;
   const responses = new Map<string, Resp>();
   const wires = new Map<string, Wire>();
   let lastFrameAt = 0;
+  // The newest frame that the 200 ms thinning dropped: flushed when the first page ends, so its
+  // final visual state is always recorded (it is the "visually complete" target for Speed Index).
+  let trailing: { abs: number; jpeg: string } | null = null;
   let timeOrigin: number | null = null;
   const pendingFrames: { abs: number; jpeg: string }[] = [];
   const marks = new Map<MarkName, number>();
@@ -206,7 +221,8 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
   try {
     await emit({ type: "phase", lane, phase: "launching" });
     browser = await puppeteer.launch(env.BROWSER, { keep_alive: 60_000 });
-    await warmUp(browser, url, profile);
+    const journey = journeyEnabled && navTargetFor(url) !== null;
+    await warmUp(browser, url, profile, journey);
     if (signal.aborted) return null;
     const context = await browser.createBrowserContext();
     const page: Page = await context.newPage();
@@ -261,7 +277,8 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     cdp.on("Page.screencastFrame", (frame) => {
       void cdp.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {});
       const abs = (frame.metadata.timestamp ?? Date.now() / 1000) * 1000;
-      if (abs - lastFrameAt < FRAME_INTERVAL_MS) return;
+      if (abs - lastFrameAt < FRAME_INTERVAL_MS) { trailing = { abs, jpeg: frame.data }; return; }
+      trailing = null;
       lastFrameAt = abs;
       if (timeOrigin === null) pendingFrames.push({ abs, jpeg: frame.data });
       else void emit({ type: "frame", lane, t: Math.round(abs - timeOrigin), jpeg: frame.data }).catch(() => {});
@@ -292,9 +309,6 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     // that is a result too.
     let tti: number | null = null;
     let settlingShown = false;
-    // The journey: on a page with a shared link, the visitor taps it once the LCP has painted.
-    const journey = navTargetFor(url) !== null;
-    let tapped = false;
     let last: Snapshot | null = null;
     while (!signal.aborted) {
       await Promise.race([navigation, new Promise((resolve) => setTimeout(resolve, 250))]);
@@ -307,7 +321,6 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
         await emitMark("fcp", snap.fcp);
         await emitMark("dcl", snap.dcl);
         await emitMark("load", snap.load);
-        if (journey && committed && snap.lcp !== null && await readyToTap(page, url, LCP_PENDING)) { tapped = true; break; }
         if (committed && snap.load !== null) {
           // After load every image in the DOM has loaded: the LCP is final unless a bigger one
           // is still coming into the viewport. Show it now rather than when the lane stops.
@@ -338,6 +351,11 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     if (lcpFinal) await emitMark("lcp", snap.lcp, true);
     await emitMark("load", snap.load);
     await cdp.send("Page.stopScreencast").catch(() => {});
+    if (trailing && timeOrigin !== null) {
+      const last = trailing as { abs: number; jpeg: string };
+      trailing = null;
+      await emit({ type: "frame", lane, t: Math.round(last.abs - timeOrigin), jpeg: last.jpeg }).catch(() => {});
+    }
     const observedMs = Math.round(snap.now);
     // TBT window: [FCP, TTI]; a capped lane without TTI is counted to where it was stopped (lower bound).
     const tbt = totalBlockingTime(snap.longTasks, snap.fcp, tti ?? observedMs);
@@ -346,10 +364,10 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     const inspect = (await page.evaluate(INSPECT)) as Inspect;
     const finalUrl = page.url();
     for (const [id, r] of responses) r.bytes = bytesNow(id, r);
-    // The first page's own requests, frozen at the tap: what the second page fetches is counted apart.
+    // The first page's own requests, frozen where its measurement ended: what the visit fetches next is counted apart.
     const firstPage = [...responses.values()].map((r) => ({ ...r }));
     const firstRequests = requestCount();
-    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { tapped, repeatUntil: startedAt + REPEAT_BUDGET_MS }, signal) : null;
+    const looks = journey ? await afterFirstPage(page, cdp, url, profileId, lane, emit, { network: profile.network }, signal) : null;
     const startOf = (id: string) => {
       const sent = requested.get(id);
       return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
@@ -362,7 +380,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
     const metrics = await assemble(url, finalUrl, snap, inspect, firstPage, capped, inFlight, lcpFinal, { tti, tbt, observedMs, requests: firstRequests });
     metrics.firstPageEndMs = observedMs;
-    if (looks) Object.assign(metrics, { ...looks, ...(tapped ? { tappedAt: observedMs } : {}) });
+    if (looks) Object.assign(metrics, looks);
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
   } catch (error) {

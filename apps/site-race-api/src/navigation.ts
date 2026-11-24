@@ -1,7 +1,9 @@
-// What a visitor does after the first page: comes back to it (repeat visit, HTTP cache on)
-// and opens a second page (a click on a link both builds share). Runs in the lane's own
-// browser after the cold load is measured, with the same throttling and the same input
-// for every lane. Nothing here knows which build it is driving.
+// What a visitor does after the first page, in the order WebPageTest uses for a first view and a
+// repeat view, then a scripted journey: the first page is measured completely (lane.ts); the same
+// page is loaded again with the HTTP cache on (repeat visit); then the visitor taps through to a
+// second and a third page. Before every step the previous page is allowed to finish (see settle),
+// so a step measures itself and not the leftovers of the page before. Same steps, same throttling
+// and the same input for every lane; nothing here knows which build it is driving.
 import type { CDPSession, Page } from "@cloudflare/puppeteer";
 import type { LaneId, NavigationMetrics, RaceEvent, RaceProfile, RepeatMetrics, WindowNetwork } from "../../../packages/contracts/src/site-race";
 import { newWire, onData, onFinished, onResponse, wireBytes, type Wire } from "./bytes";
@@ -16,6 +18,23 @@ export const LINK_SETTLE_MS = 500;
 export const TOUCH_DWELL_MS = 100;
 /** A desktop pointer typically rests 200–500 ms on a link before the click. */
 export const HOVER_DWELL_MS = 300;
+/** Longest wait for the previous page to finish before a step; then the step starts anyway. */
+export const SETTLE_CAP_MS = 10_000;
+
+type Throttle = { latency: number; downloadThroughput: number; uploadThroughput: number } | null;
+
+/**
+ * Lets the previous page finish downloading before the next step, then restores the lane's
+ * profile. On a throttled profile the link is opened up meanwhile, so a page still pulling
+ * megabytes does not stretch the race by minutes; the step that follows runs under the full
+ * profile again. Identical for every lane.
+ */
+export async function settle(page: Page, cdp: CDPSession, throttle: Throttle): Promise<void> {
+  if (throttle) await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }).catch(() => {});
+  await page.waitForNetworkIdle({ idleTime: 500, concurrency: 0, timeout: SETTLE_CAP_MS }).catch(() => {});
+  if (throttle) await cdp.send("Network.emulateNetworkConditions", { offline: false, ...throttle }).catch(() => {});
+  await new Promise((resolve) => setTimeout(resolve, 250));
+}
 
 /** `img`: the main image is the hero render whose file name carries this model name. */
 export type NavTarget = { selectors: string[]; to: string; h1: string; img?: string };
@@ -205,6 +224,9 @@ export function skippedNavigation(from: string, target: NavTarget | null, profil
 
 /** Clicks the page's target link like a visitor would and times what follows. */
 export async function openSecondPage(page: Page, cdp: CDPSession, from: string, target: NavTarget, profile: RaceProfile, net: NetWindow): Promise<NavigationMetrics> {
+  // Counted from before the link comes into view, so anything the page fetches because the link
+  // became visible is part of this step's bytes (timings still start at the click).
+  net.start();
   const found = (await page.evaluate(`${FIND_LINK}(${JSON.stringify(target.selectors)})`).catch(() => null)) as { selector: string; text: string } | null;
   if (!found) return skippedNavigation(from, target, profile, "The link was not on the page.");
   await wait(LINK_SETTLE_MS);
@@ -216,7 +238,6 @@ export async function openSecondPage(page: Page, cdp: CDPSession, from: string, 
   await page.evaluate(`${WATCHER}(${cfg})`);
   const mobile = profile === "mobile";
   if (!mobile) await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 1, y: 1 });
-  net.start();
   if (mobile) {
     await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: point.x, y: point.y }] });
     await wait(TOUCH_DWELL_MS);
@@ -248,57 +269,40 @@ export async function openSecondPage(page: Page, cdp: CDPSession, from: string, 
   return base;
 }
 
-const LINK_VISIBLE = `((selectors) => selectors.some((selector) => [...document.querySelectorAll(selector)].some((el) => {
-  const b = el.getBoundingClientRect();
-  return b.width >= 4 && b.height >= 4 && b.bottom > 0 && b.top < innerHeight * 3;
-})))`;
-
 /**
- * The visitor's cue to tap: the first page has painted its final LCP (nothing bigger still
- * loading in the viewport) and the link is on screen or one swipe away. Not the load event:
- * a visitor clicks once they see the link, and on slow 4G the original never fires load in time.
+ * After the first page has been measured completely: the repeat visit (same URL, HTTP cache on),
+ * then one tap per journey step (home → catalogue → model page), each once the previous page has
+ * finished and shown its heading. The HTTP cache stays on for the whole visit, as in a real
+ * browser. Same steps for every lane; a step that never showed its page ends the journey there,
+ * scored as not reached ("> cap").
  */
-export async function readyToTap(page: Page, url: string, lcpPendingScript: string): Promise<boolean> {
-  const target = navTargetFor(url);
-  if (!target) return false;
-  const pending = (await page.evaluate(lcpPendingScript).catch(() => true)) as boolean;
-  if (pending) return false;
-  return (await page.evaluate(`${LINK_VISIBLE}(${JSON.stringify(target.selectors)})`).catch(() => false)) as boolean;
-}
-
-/**
- * After the first page: one tap per journey step (home → catalogue → model page), each once the
- * previous page has shown its heading and main image; then, if the lane is still inside the time
- * budget, the repeat visit of the first page with the HTTP cache on. Same steps for every lane.
- * A lane that never got to tap is not given extra time: its steps are scored as not reached
- * ("> cap"), so one slow lane cannot stretch the race.
- */
-export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { tapped: boolean; repeatUntil: number }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics; navigationSteps: NavigationMetrics[] }> {
+export async function afterFirstPage(page: Page, cdp: CDPSession, url: string, profile: RaceProfile, lane: LaneId, emit: Emit, opts: { network: Throttle }, signal: AbortSignal): Promise<{ repeat: RepeatMetrics; navigation: NavigationMetrics; navigationSteps: NavigationMetrics[] }> {
   const none = { kb: 0, network: 0, cached: 0, revalidated: 0 };
   const noRepeat = (reason: string): RepeatMetrics => ({ skipped: reason, lcp: null, load: null, capped: true, capMs: REPEAT_CAP_MS, net: none, html: null });
   const targets = journeyFor(url);
   const froms = [new URL(url).pathname, ...targets.map((t) => t.to)];
   const skipAll = (reason: string, done: NavigationMetrics[] = []) => [...done, ...targets.slice(done.length).map((t, i) => skippedNavigation(froms[done.length + i], t, profile, reason))];
   const finish = (steps: NavigationMetrics[], repeat: RepeatMetrics) => ({ repeat, navigation: steps[steps.length - 1], navigationSteps: steps });
-  if (!opts.tapped || signal.aborted) {
-    const reason = "The first page never showed its LCP and the link inside the cap, so the visitor never tapped.";
-    return finish(skipAll(reason), noRepeat(reason));
-  }
   const net = new NetWindow(cdp);
   await cdp.send("Page.startScreencast", { format: "jpeg", quality: 38, maxWidth: profile === "mobile" ? 300 : 560, maxHeight: profile === "mobile" ? 650 : 350, everyNthFrame: 1 }).catch(() => {});
   try {
+    // The first load ran with the cache bypassed (a cold first view; responses were still stored).
+    // From here on the browser behaves like a visitor's: it uses what it has.
+    await cdp.send("Network.setCacheDisabled", { cacheDisabled: false });
+    if (signal.aborted) return finish(skipAll("Stopped."), noRepeat("Stopped."));
+    await emit({ type: "phase", lane, phase: "revisiting" });
+    await settle(page, cdp, opts.network);
+    const repeat = await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed."));
     await emit({ type: "phase", lane, phase: "navigating" });
-    // The cache stays as the first load had it (off): a tap can land while the first page is still downloading.
     const steps: NavigationMetrics[] = [];
     for (const [i, target] of targets.entries()) {
-      if (signal.aborted) return finish(skipAll("Stopped.", steps), noRepeat("Stopped."));
+      if (signal.aborted) return finish(skipAll("Stopped.", steps), repeat);
       const prev = steps[i - 1];
-      if (prev && (prev.skipped || prev.content === null)) return finish(skipAll("The previous page never showed up inside the cap.", steps), noRepeat("Skipped: the journey ran to its cap."));
+      if (prev && (prev.skipped || prev.content === null)) return finish(skipAll("The previous page never showed up inside the cap.", steps), repeat);
+      await settle(page, cdp, opts.network);
       steps.push(await openSecondPage(page, cdp, froms[i], target, profile, net).catch(() => skippedNavigation(froms[i], target, profile, "The navigation failed.")));
     }
-    if (Date.now() > opts.repeatUntil || signal.aborted) return finish(steps, noRepeat("Skipped to keep the race inside its time budget."));
-    await emit({ type: "phase", lane, phase: "revisiting" });
-    return finish(steps, await repeatVisit(page, cdp, url, net).catch(() => noRepeat("The reload failed.")));
+    return finish(steps, repeat);
   } finally {
     net.dispose();
     await cdp.send("Page.stopScreencast").catch(() => {});

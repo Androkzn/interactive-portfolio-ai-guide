@@ -85,6 +85,9 @@ function ScoreRing({ metrics, profile, si, who, pending }: { metrics: LaneMetric
   const reduced = usePrefersReducedMotion();
   const lcp = lcpOrCap(metrics);
   const result = performanceScore({ fcp: metrics.timing.fcp, si, lcp: lcp.value, tbt: metrics.timing.tbt, cls: metrics.timing.cls }, profile);
+  // A lane stopped at the cap has lower bounds for LCP, TBT and Speed Index, so its score is an upper bound.
+  const siCensored = !!metrics.capped;
+  const upperBound = lcp.censored || tbtCensored(metrics) || siCensored;
   const shown = useCountUp(result.score, reduced);
   const r = 52;
   const circumference = 2 * Math.PI * r;
@@ -99,14 +102,14 @@ function ScoreRing({ metrics, profile, si, who, pending }: { metrics: LaneMetric
           <circle className={styles.ringFill} cx="64" cy="64" r={r} strokeDasharray={circumference}
             strokeDashoffset={result.score === null ? circumference : circumference * (1 - shown / 100)} />
         </svg>
-        <b>{result.score === null ? (pending ? "…" : "–") : shown}</b>
+        <b>{result.score === null ? (pending ? "…" : "–") : <>{upperBound && <small className={styles.atMost} title="At most: some inputs are lower bounds">≤</small>}{shown}</>}</b>
       </div>
       <p className={styles.band} data-band={level ?? "none"}><Icon size={15} aria-hidden="true" /> {level ? BAND_LABEL[level] : pending ? "Measuring Speed Index…" : "Not enough data"}</p>
       <ul className={styles.parts}>
         {result.parts.map((part) => (
           <li key={part.metric}>
             <span>{METRIC_LABEL[part.metric]}</span>
-            <b>{part.value === null ? "–" : part.metric === "cls" ? part.value.toFixed(3) : `${part.metric === "lcp" && lcp.censored ? "> " : part.metric === "tbt" && tbtCensored(metrics) ? "≥ " : ""}${ms(part.value)}`}</b>
+            <b>{part.value === null ? "–" : part.metric === "cls" ? part.value.toFixed(3) : `${part.metric === "lcp" && lcp.censored ? "> " : (part.metric === "tbt" && tbtCensored(metrics)) || (part.metric === "si" && siCensored) ? "≥ " : ""}${ms(part.value)}`}</b>
             <span className={styles.partBar} data-band={part.score === null ? "none" : band(Math.round(part.score * 100))}><i style={{ width: `${Math.round((part.score ?? 0) * 100)}%` }} /></span>
             <small>{part.score === null ? "" : Math.round(part.score * 100)}</small>
           </li>
@@ -497,7 +500,7 @@ function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: L
             <div className={styles.spotText}>
               {(m.navigationSteps ?? (nav ? [nav] : [])).map((step, index) => (
                 <div key={step.to}>
-                  <p><b>Tap {index + 1}: {step.from} → {step.to}.</b> {step.skipped ? step.skipped : <>{index === 0 ? `Once home had painted its LCP${m.tappedAt !== undefined ? ` (at ${ms(m.tappedAt)})` : ""} and the link was visible` : "Once the previous page showed its heading and image"}, the visitor {step.input === "touch" ? `touched the link for ${step.dwellMs} ms and lifted` : `rested the pointer ${step.dwellMs} ms on the link and clicked`}. {step.soft === null ? "" : step.soft ? "The site swapped the page in with JavaScript (no new document)." : "The browser loaded a new document."}</>}</p>
+                  <p><b>Tap {index + 1}: {step.from} → {step.to}.</b> {step.skipped ? step.skipped : <>{m.tappedAt !== undefined && index === 0 ? `Once home had painted its LCP (at ${ms(m.tappedAt)}) and the link was visible` : index === 0 ? "After the home page was measured, loaded again with the cache on, and had finished downloading" : "Once the previous page had shown its heading and finished downloading"}, the visitor {step.input === "touch" ? `touched the link for ${step.dwellMs} ms and lifted` : `rested the pointer ${step.dwellMs} ms on the link and clicked`}. {step.soft === null ? "" : step.soft ? "The site swapped the page in with JavaScript (no new document)." : "The browser loaded a new document."}</>}</p>
                   {!step.skipped && (
                     <ul className={styles.fileList}>
                       <li><span>URL changed</span><b>{t(step.commit, step.capMs)}</b></li>
@@ -508,7 +511,7 @@ function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: L
                   )}
                 </div>
               ))}
-              <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : rep ? "Home loaded again in the same browser with the HTTP cache on, right away. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
+              <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : rep ? "Home loaded again in the same browser with the HTTP cache on, once the first load had finished downloading. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
               {rep && !rep.skipped && (
                 <ul className={styles.fileList}>
                   <li><span>LCP</span><b>{t(rep.lcp, rep.capMs)}</b></li>

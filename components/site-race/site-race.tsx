@@ -6,7 +6,7 @@ import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contr
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
-import { formatValue, kb, ms, scoreRace, type Round, type Verdict } from "@/lib/site-race/scoring";
+import { formatValue, kb, ms, scoreRace, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { featuredStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
 import resultsData from "@/lib/site-race/results-data.json";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
@@ -37,7 +37,7 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
   mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
   desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
 };
-const FAIRNESS_NOTE = "Before the clock starts, both sites are loaded once at full speed in a discarded session, so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). Each lane is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most.";
+const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (home, catalogue, model page), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, a tap to the catalogue, a tap to a model page. Before each step the previous page may finish downloading, so every step measures itself.";
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
 type Metrics = { lcp: number | null; load: number | null; tbt: number | null; totalKb: number; imageKb: number };
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
@@ -424,7 +424,12 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
           return <li key={name} className={passed ? styles.markOn : ""}><span>{markLabel}</span><b>{text}</b></li>;
         })}
       </ul>
-      <p className={styles.counters}><span><b>{lane.net.requests}</b> requests</span><span><b>{kb(lane.net.kb)}</b> downloaded</span></p>
+      {lane.metrics ? (
+        // After the first page: its own numbers (what the Weight round scores); the visit's later steps are listed below.
+        <p className={styles.counters}><span><b>{weightCensored(lane.metrics) ? "> " : ""}{lane.metrics.network.requests}</b> requests</span><span><b>{weightCensored(lane.metrics) ? "> " : ""}{kb(lane.metrics.network.totalKb)}</b> home page</span></p>
+      ) : (
+        <p className={styles.counters}><span><b>{lane.net.requests}</b> requests</span><span><b>{kb(lane.net.kb)}</b> downloaded</span></p>
+      )}
       {lane.metrics?.navigation && <JourneyLine metrics={lane.metrics} />}
       {lane.error && <p className={styles.laneError}>{lane.error}</p>}
     </article>

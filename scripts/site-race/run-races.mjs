@@ -5,7 +5,7 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const API = "https://site-race-api.a-tekhtelev.workers.dev/race";
+const API = process.env.RACE_API ?? "https://site-race-api.a-tekhtelev.workers.dev/race";
 const [outDir, ...plan] = process.argv.slice(2);
 await mkdir(outDir, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

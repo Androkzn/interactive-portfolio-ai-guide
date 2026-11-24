@@ -2,7 +2,8 @@
 // weights and log-normal scoring curves, applied to the numbers this race
 // measured. It is labelled as an estimate everywhere it is shown — the inputs
 // come from one throttled cloud browser, Speed Index from screencast frames, and
-// TBT is summed from FCP to the end of the lane instead of to TTI.
+// TBT over Lighthouse's window (FCP to TTI). A lane stopped at the cap has lower bounds for
+// LCP, TBT and Speed Index, so its score is shown as an upper bound ("≤").
 
 import type { RaceProfile } from "@/packages/contracts/src/site-race";
 
