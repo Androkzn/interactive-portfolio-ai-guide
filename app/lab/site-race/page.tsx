@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, CircleDashed, FlaskConical } from "lucide-react";
-import { SiteRace } from "@/components/site-race/site-race";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, CircleDashed, CircleDot, FlaskConical } from "lucide-react";
+import { LabExperience } from "@/components/site-race/lab-experience";
+import { stageById } from "@/lib/site-race/journey";
 import { playbook, skillMap } from "@/lib/site-race/playbook";
 import { contactUrl, emailUrl } from "@/lib/site-links";
 import styles from "@/components/site-race/lab-page.module.css";
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An unoptimized Astro website rebuilt in Next.js 16 to be fast, and both raced live in real Chrome on Cloudflare's edge: paint timings, JavaScript, edge cache headers and SEO, scored round by round. Race your own site against the optimized build.";
+  "An unoptimized Astro website rebuilt in Next.js 16 and optimized one deployed commit at a time — images, LCP priority, HTML weight, JavaScript, prefetch. Race any stage against the original live, in real Chrome on Cloudflare's edge, or race your own site against the latest build.";
 
 export const metadata: Metadata = {
   title,
@@ -36,7 +37,7 @@ export default function Page() {
       <main className={styles.main}>
         <Link className={styles.back} href="/#performance-lab"><ArrowLeft size={15} aria-hidden="true" /> Back to the portfolio</Link>
 
-        <SiteRace />
+        <LabExperience />
 
         <section className={styles.section} aria-labelledby="lab-why">
           <p className={styles.eyebrow}><FlaskConical size={14} aria-hidden="true" /> Why this exists</p>
@@ -45,13 +46,15 @@ export default function Page() {
             <p>
               HR Concrete Pumps is a real product catalogue: boom pumps, specifications, three languages and a lot of photography.
               The <b>before</b> is the site as it was first built in Astro — shipped as-is, never tuned, heavy images and all. The <b>after</b> is
-              the same site, same content and routes, rebuilt in Next.js 16 specifically for performance on Cloudflare. The point is the
-              transformation, not the framework: Astro can be fast too — this particular build simply never was optimized.
+              the same site, same content and routes, rebuilt in Next.js 16 and then optimized in small, deployed steps. The point is the
+              transformation, not the framework: the straight port was <i>slower</i> than the original, and Astro can be fast too — this
+              particular build simply never was optimized.
             </p>
             <p>
-              Nothing on this page is a stored number dressed up as live. When you press start, a Worker launches two Chrome sessions
-              on Cloudflare Browser Run, applies the same mobile throttling the projects&apos; own performance reports use, and streams
-              the screencast, the paint milestones, the network log and the response headers straight to your screen.
+              Nothing in the race is a stored number dressed up as live. When you press start, a Worker launches two Chrome sessions on
+              Cloudflare Browser Run, applies the same mobile throttling the projects&apos; own performance reports use, and streams the
+              screencast, the paint milestones, the network log and the response headers straight to your screen. The journey&apos;s
+              charts come from those reports; every stage in them is still deployed, so you can race it.
             </p>
           </div>
         </section>
@@ -66,23 +69,24 @@ export default function Page() {
         </section>
 
         <section className={styles.section} aria-labelledby="lab-playbook">
-          <h2 id="lab-playbook">The optimization playbook.</h2>
+          <h2 id="lab-playbook">The playbook — done, half-done, next.</h2>
           <p className={styles.intro}>
-            <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span> items are in the Next.js build today and visible in the race.{" "}
-            <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span> items are being worked on right now — each names the metric that should move, so the race shows the gap widening as they land.
+            <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span> ships in the latest stage and shows in the race.{" "}
+            <span className={styles.partial}><CircleDot size={14} aria-hidden="true" /> Partial</span> has started but still loses a metric to the original.{" "}
+            <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span> is not built yet — each names the metric that should move, so a future race can prove it.
           </p>
           <ol className={styles.plays}>
             {playbook.map((play) => (
-              <li key={play.id} className={play.status === "in-place" ? styles.playDone : styles.playNext}>
+              <li key={play.id} className={play.status === "next" ? styles.playNext : styles.playDone}>
                 <div className={styles.playMeta}>
                   <span className={styles.skill}>{play.skill}</span>
-                  {play.status === "in-place"
-                    ? <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span>
-                    : <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span>}
+                  {play.status === "in-place" && <span className={styles.inPlace}><CheckCircle2 size={14} aria-hidden="true" /> In place</span>}
+                  {play.status === "partial" && <span className={styles.partial}><CircleDot size={14} aria-hidden="true" /> Partial</span>}
+                  {play.status === "next" && <span className={styles.nextUp}><CircleDashed size={14} aria-hidden="true" /> Next</span>}
                 </div>
                 <h3>{play.title}</h3>
                 <p>{play.body}</p>
-                <p className={styles.moves}>Moves: <b>{play.moves}</b></p>
+                <p className={styles.moves}>Moves: <b>{play.moves}</b>{play.stage && <> · <a href="#journey">stage “{stageById(play.stage).short}”</a></>}</p>
               </li>
             ))}
           </ol>
@@ -95,13 +99,15 @@ export default function Page() {
               <li><b>Browsers.</b> Two fresh headless Chrome sessions on Cloudflare Browser Run, launched in parallel, browser cache disabled.</li>
               <li><b>Mobile profile.</b> 390 px viewport, 1.6 Mbps down, 150 ms latency, 4× CPU slowdown — the profile in both projects&apos; perf-report scripts.</li>
               <li><b>Timings.</b> Read from the page&apos;s own PerformanceObserver: paint, largest-contentful-paint, layout-shift and longtask entries.</li>
-              <li><b>Finish line.</b> The load event, or the moment the page has painted its LCP and the network has been quiet for 2.5 s, capped at 25 s.</li>
+              <li><b>Finish line.</b> The load event, or the moment the page has painted its LCP and no byte has arrived for 2.5 s. A lane still downloading at 30 s stops there: its LCP is reported as “&gt; 30 s”, and the requests still in flight are drawn hatched on the waterfall.</li>
               <li><b>Scoring.</b> A gap within 5% (or a small absolute floor per metric) is a draw. A round goes to whoever wins more of its metrics.</li>
+              <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the race&apos;s own numbers. Speed Index is computed from the screencast the way speedline does it — colour histograms against the first and last frame — so it is an estimate, not a Lighthouse report.</li>
+              <li><b>Journey numbers.</b> From each stage&apos;s run of the project&apos;s <code>perf:report</code> (Playwright + Chrome, cold cache, the same mobile profile), synced into this site by a script; one load per page and stage.</li>
             </ul>
             <ul className={styles.list}>
               <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip.</li>
               <li><b>Lab, not field.</b> No real-user (CrUX) data: this is how the page behaves under one controlled profile, not across visitors.</li>
-              <li><b>Home page only.</b> The race loads a single URL cold. Navigation, prefetching and repeat visits are not measured.</li>
+              <li><b>One cold page.</b> The race loads a single URL with an empty cache. Navigation, prefetching and repeat visits are not measured — which is why the Prefetch stage cannot win anything here.</li>
               <li><b>Live, not frozen.</b> The after build is still being optimized. The race always measures what is deployed today, so the gap you see is the current state, not a best-ever screenshot.</li>
               <li><b>Review hosts.</b> Both builds run on pages.dev preview hosts marked noindex on purpose, so the Indexable check fails for both.</li>
               <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>

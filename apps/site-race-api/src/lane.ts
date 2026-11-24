@@ -1,6 +1,6 @@
 import puppeteer from "@cloudflare/puppeteer";
 import type { Browser, CDPSession, Page } from "@cloudflare/puppeteer";
-import type { LaneId, LaneMetrics, MarkName, RaceEvent, RaceProfile, ResourceBucket, SeoCheck } from "../../../packages/contracts/src/site-race";
+import type { HeavyResource, LaneId, LaneMetrics, LcpDetail, MarkName, RaceEvent, RaceProfile, ResourceBucket, ResourceType, SeoCheck, WaterfallEntry } from "../../../packages/contracts/src/site-race";
 
 type Emit = (event: RaceEvent) => Promise<void>;
 
@@ -24,7 +24,7 @@ export const PROFILES: Record<RaceProfile, { label: string; viewport: { width: n
 const NAV_TIMEOUT_MS = 30_000;
 const SETTLE_MS = 1_200;
 const QUIET_MS = 2_500;
-const LANE_CAP_MS = 25_000;
+export const LANE_CAP_MS = 30_000;
 const FRAME_INTERVAL_MS = 200;
 
 // Runs in the page before any of its own scripts.
@@ -32,7 +32,7 @@ const OBSERVERS = `(() => {
   const r = window.__race = { fcp: null, lcp: null, lcpEl: null, cls: 0, longTasks: [] };
   const watch = (type, cb) => { try { new PerformanceObserver((list) => cb(list.getEntries())).observe({ type, buffered: true }); } catch {} };
   watch("paint", (es) => { for (const e of es) if (e.name === "first-contentful-paint") r.fcp = e.startTime; });
-  watch("largest-contentful-paint", (es) => { const e = es[es.length - 1]; if (!e) return; r.lcp = e.startTime;
+  watch("largest-contentful-paint", (es) => { const e = es[es.length - 1]; if (!e) return; r.lcp = e.startTime; r.lcpEntry = e;
     const el = e.element; r.lcpEl = el ? (el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + (e.url ? " · image" : " · text")) : null; });
   watch("layout-shift", (es) => { for (const e of es) if (!e.hadRecentInput) r.cls += e.value; });
   watch("longtask", (es) => { for (const e of es) r.longTasks.push([e.startTime, e.duration]); });
@@ -43,6 +43,18 @@ type Snapshot = { ttfb: number | null; fcp: number | null; lcp: number | null; d
 const SNAPSHOT = `(() => { const n = performance.getEntriesByType("navigation")[0]; const r = window.__race || {};
   const v = (x) => (typeof x === "number" && x > 0 ? Math.round(x) : null);
   return { ttfb: n ? v(n.responseStart) : null, fcp: v(r.fcp), lcp: v(r.lcp), dcl: n ? v(n.domContentLoadedEventEnd) : null, load: n ? v(n.loadEventEnd) : null, timeOrigin: performance.timeOrigin }; })()`;
+
+// True when an image inside the viewport, larger than the current LCP candidate,
+// is still loading: the LCP will move once it paints, so the current one is not final.
+const LCP_PENDING = `(() => {
+  const e = (window.__race || {}).lcpEntry; const size = e ? e.size : 0;
+  return [...document.images].some((img) => {
+    if (img.complete && img.naturalWidth > 0) return false;
+    const b = img.getBoundingClientRect();
+    const visible = Math.max(0, Math.min(b.right, innerWidth) - Math.max(b.left, 0)) * Math.max(0, Math.min(b.bottom, innerHeight) - Math.max(b.top, 0));
+    return visible > size;
+  });
+})()`;
 
 const INSPECT = `(() => {
   const r = window.__race || {}; const q = (s) => document.querySelector(s);
@@ -60,15 +72,43 @@ const INSPECT = `(() => {
     images: imgs.length, imagesWithAlt: imgs.filter((i) => i.hasAttribute("alt")).length,
     domNodes: document.getElementsByTagName("*").length,
     cls: Math.round((r.cls || 0) * 1000) / 1000, tbt: Math.round(tbt), lcpEl: r.lcpEl || null,
+    lcp: lcpDetail(), waterfall: waterfall(),
   };
+  function lcpDetail() {
+    const e = r.lcpEntry; if (!e) return null;
+    const el = e.element && e.element.isConnected ? e.element : null;
+    const rect = el ? el.getBoundingClientRect() : null;
+    const img = el && el.tagName === "IMG" ? el : null;
+    const cls = el && typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\\s+/)[0] : "";
+    const file = (e.url || "").split("?")[0].split("/").pop() || "";
+    const preloaded = !!e.url && [...document.querySelectorAll('link[rel="preload"][as="image"]')].some((l) => l.href === e.url || (!!file && ((l.getAttribute("imagesrcset") || "") + " " + (l.getAttribute("href") || "")).includes(file)));
+    return {
+      element: el ? el.tagName.toLowerCase() + cls : null, url: e.url || null,
+      rect: rect ? { x: rect.left, y: rect.top, width: rect.width, height: rect.height } : null,
+      viewport: { width: innerWidth, height: innerHeight },
+      fetchPriority: img ? img.getAttribute("fetchpriority") : null, loading: img ? img.getAttribute("loading") : null,
+      responsive: !!img && (!!img.getAttribute("srcset") || (!!img.parentElement && img.parentElement.tagName === "PICTURE")),
+      preloaded,
+      natural: img && img.naturalWidth ? { width: img.naturalWidth, height: img.naturalHeight } : null,
+      displayed: rect ? { width: Math.round(rect.width), height: Math.round(rect.height) } : null,
+    };
+  }
+  function waterfall() {
+    const nav = performance.getEntriesByType("navigation")[0];
+    const list = performance.getEntriesByType("resource").map((x) => ({ url: x.name, start: x.startTime, end: x.responseEnd, initiator: x.initiatorType, blocking: x.renderBlockingStatus === "blocking", size: x.transferSize || 0 }));
+    if (nav) list.unshift({ url: nav.name, start: 0, end: nav.responseEnd, initiator: "navigation", blocking: false, size: nav.transferSize || 0 });
+    return list.filter((x) => /^https?:/.test(x.url)).sort((a, b) => a.start - b.start).slice(0, 80);
+  }
 })()`;
 
 type Inspect = {
   title: string; description: string; robots: string; canonical: string; lang: string; viewport: string; h1: number; hreflang: number;
   ogTitle: string; ogImage: string; jsonLd: string[]; images: number; imagesWithAlt: number; domNodes: number; cls: number; tbt: number; lcpEl: string | null;
+  lcp: (Omit<LcpDetail, "path" | "kb" | "format"> & { url: string | null }) | null;
+  waterfall: { url: string; start: number; end: number; initiator: string; blocking: boolean; size: number }[];
 };
 
-type Resp = { url: string; type: string; mime: string; status: number; headers: Record<string, string>; protocol: string | null; bytes: number };
+type Resp = { url: string; type: string; mime: string; status: number; headers: Record<string, string>; protocol: string | null; bytes: number; finished: boolean };
 
 const kb = (bytes: number) => Math.round((bytes / 1024) * 10) / 10;
 const lower = (headers: Record<string, string>) => Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), String(v)]));
@@ -96,6 +136,26 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
   let netTimer: ReturnType<typeof setInterval> | null = null;
 
   let capped = false;
+  // Bytes on the wire per request as they arrive. loadingFinished only reports a
+  // request's size once it completes, so a 2 MB image still streaming would
+  // otherwise look like a quiet network.
+  const received = new Map<string, number>();
+  // Start of every request on the browser's monotonic clock (seconds), to place
+  // still-downloading requests on the waterfall: Resource Timing only lists finished ones.
+  const requested = new Map<string, { url: string; ts: number; type: string }>();
+  let navTs: number | null = null;
+  const failed = new Set<string>();
+  let lastActivity = Date.now();
+  const touch = () => { lastActivity = Date.now(); };
+  const wireBytes = () => {
+    let total = 0;
+    for (const [id, bytes] of received) {
+      const r = responses.get(id);
+      total += r?.finished ? r.bytes : bytes;
+    }
+    for (const [id, r] of responses) if (!received.has(id)) total += r.bytes;
+    return total;
+  };
   const adoptOrigin = async (origin: number) => {
     timeOrigin = origin;
     await emit({ type: "origin", lane, timeOrigin: origin });
@@ -121,14 +181,28 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     if (profile.network) await cdp.send("Network.emulateNetworkConditions", { offline: false, ...profile.network });
     if (profile.cpu > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: profile.cpu });
 
+    cdp.on("Network.requestWillBeSent", (e) => {
+      touch();
+      requested.set(e.requestId, { url: e.request.url, ts: e.timestamp, type: e.type ?? "Other" });
+      if (navTs === null && e.type === "Document") navTs = e.timestamp;
+    });
     cdp.on("Network.responseReceived", (e) => {
+      touch();
       const r = e.response;
-      responses.set(e.requestId, { url: r.url, type: e.type ?? "Other", mime: r.mimeType, status: r.status, headers: lower(r.headers as Record<string, string>), protocol: r.protocol ?? null, bytes: 0 });
+      responses.set(e.requestId, { url: r.url, type: e.type ?? "Other", mime: r.mimeType, status: r.status, headers: lower(r.headers as Record<string, string>), protocol: r.protocol ?? null, bytes: 0, finished: false });
+    });
+    cdp.on("Network.dataReceived", (e) => {
+      touch();
+      received.set(e.requestId, (received.get(e.requestId) ?? 0) + (e.encodedDataLength || e.dataLength || 0));
+      const r = responses.get(e.requestId);
+      if (r && !r.finished) r.bytes = received.get(e.requestId) ?? 0;
     });
     cdp.on("Network.loadingFinished", (e) => {
+      touch();
       const r = responses.get(e.requestId);
-      if (r) r.bytes = e.encodedDataLength;
+      if (r) { r.bytes = Math.max(e.encodedDataLength, r.bytes); r.finished = true; }
     });
+    cdp.on("Network.loadingFailed", (e) => { touch(); failed.add(e.requestId); });
 
     cdp.on("Page.screencastFrame", (frame) => {
       void cdp.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {});
@@ -147,9 +221,7 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     });
 
     netTimer = setInterval(() => {
-      let bytes = 0;
-      for (const r of responses.values()) bytes += r.bytes;
-      void emit({ type: "net", lane, requests: responses.size, kb: kb(bytes) }).catch(() => {});
+      void emit({ type: "net", lane, requests: responses.size, kb: kb(wireBytes()) }).catch(() => {});
     }, 400);
 
     await emit({ type: "phase", lane, phase: "loading" });
@@ -157,12 +229,12 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
     let navError: unknown = null;
     let committed = false;
     const navigation = page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS }).then(() => { committed = true; }, (error) => { navError = error; });
+    const navWall = Date.now();
 
     // Poll the page's own timeline so milestones light up as they happen. The lane ends at
-    // the load event, or once the page has painted its LCP and gone quiet, or at the cap:
-    // a 6 MB page on slow 4G may never fire load inside a demo, and that is a result too.
-    let lastBytes = -1;
-    let quietSince = Date.now();
+    // the load event, or once the page has painted its LCP and no byte has arrived for
+    // QUIET_MS, or at the cap: a 6 MB page on slow 4G may never fire load inside a demo,
+    // and that is a result too.
     while (!signal.aborted) {
       await Promise.race([navigation, new Promise((resolve) => setTimeout(resolve, 250))]);
       if (navError) throw navError;
@@ -173,30 +245,40 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
         await emitMark("fcp", snap.fcp);
         await emitMark("dcl", snap.dcl);
         if (snap.load !== null) break;
-        let bytes = 0;
-        for (const r of responses.values()) bytes += r.bytes;
-        if (bytes !== lastBytes) { lastBytes = bytes; quietSince = Date.now(); }
-        if (committed && snap.lcp !== null && Date.now() - quietSince > QUIET_MS) break;
+        if (committed && snap.lcp !== null && Date.now() - lastActivity > QUIET_MS) break;
       }
       if (Date.now() - startedAt > LANE_CAP_MS) { capped = true; break; }
     }
     if (signal.aborted) return null;
+    const stoppedAt = Date.now() - navWall;
 
-    await emit({ type: "phase", lane, phase: "settling" });
+    await emit({ type: "phase", lane, phase: "settling", ...(capped ? { detail: `Still downloading at the ${LANE_CAP_MS / 1000} s cap` } : {}) });
     await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
     const snap = (await page.evaluate(SNAPSHOT)) as Snapshot;
+    // A capped lane's LCP still counts if nothing bigger is loading in the viewport.
+    const lcpFinal = !capped || !((await page.evaluate(LCP_PENDING).catch(() => true)) as boolean);
     if (timeOrigin === null) await adoptOrigin(snap.timeOrigin);
     await emitMark("ttfb", snap.ttfb);
     await emitMark("fcp", snap.fcp);
     await emitMark("dcl", snap.dcl);
-    await emitMark("lcp", snap.lcp);
+    if (lcpFinal) await emitMark("lcp", snap.lcp);
     await emitMark("load", snap.load);
     await cdp.send("Page.stopScreencast").catch(() => {});
 
     await emit({ type: "phase", lane, phase: "inspecting" });
     const inspect = (await page.evaluate(INSPECT)) as Inspect;
     const finalUrl = page.url();
-    const metrics = await assemble(url, finalUrl, snap, inspect, [...responses.values()], capped);
+    const startOf = (id: string) => {
+      const sent = requested.get(id);
+      return sent && navTs !== null ? Math.max(0, Math.round((sent.ts - navTs) * 1000)) : 0;
+    };
+    const inFlight = [
+      // Responding but not finished…
+      ...[...responses.entries()].filter(([id, r]) => !r.finished && !failed.has(id)).map(([id, r]) => ({ url: r.url, type: r.type, start: startOf(id), bytes: r.bytes })),
+      // …and requested but still waiting for a response (queued behind the bandwidth).
+      ...[...requested.entries()].filter(([id]) => !responses.has(id) && !failed.has(id)).map(([id, q]) => ({ url: q.url, type: q.type, start: startOf(id), bytes: 0 })),
+    ].map((item) => ({ ...item, end: Math.max(item.start, stoppedAt) }));
+    const metrics = await assemble(url, finalUrl, snap, inspect, [...responses.values()], capped, inFlight, lcpFinal);
     await emit({ type: "phase", lane, phase: "done" });
     return metrics;
   } catch (error) {
@@ -212,7 +294,9 @@ export async function runLane(env: Env, lane: LaneId, url: string, profileId: Ra
   }
 }
 
-async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: Inspect, all: Resp[], capped: boolean): Promise<LaneMetrics> {
+type InFlight = { url: string; type: string; start: number; end: number; bytes: number };
+
+async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: Inspect, all: Resp[], capped: boolean, inFlight: InFlight[] = [], lcpFinal = true): Promise<LaneMetrics> {
   const origin = new URL(finalUrl).origin;
   const site = new URL(finalUrl).hostname.split(".").slice(-2).join(".");
   const doc = all.find((r) => r.type === "Document" && (r.url === finalUrl || r.url === url)) ?? all.find((r) => r.type === "Document");
@@ -266,12 +350,50 @@ async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: 
     { id: "robots-sitemap", label: "robots.txt + sitemap", pass: robotsTxt && sitemapXml, detail: `robots.txt ${robotsTxt ? "✓" : "✗"} · sitemap.xml ${sitemapXml ? "✓" : "✗"}` },
   ];
 
+  const byUrl = new Map<string, Resp>();
+  for (const r of all) {
+    const known = byUrl.get(r.url);
+    if (!known || r.bytes > known.bytes) byUrl.set(r.url, r);
+  }
+  const images = imageBreakdown(all, origin);
+  const lcpDetail: LcpDetail | null = inspect.lcp ? (() => {
+    const { url: lcpUrl, ...rest } = inspect.lcp;
+    const resp = lcpUrl ? byUrl.get(lcpUrl) : undefined;
+    return { ...rest, path: lcpUrl ? shortPath(lcpUrl, origin) : "", kb: resp ? kb(resp.bytes) : null, format: resp ? formatOf(resp.mime) : lcpUrl ? formatOf(extMime(lcpUrl)) : null };
+  })() : null;
+  const waterfall: WaterfallEntry[] = inspect.waterfall.map((entry) => {
+    const resp = byUrl.get(entry.url);
+    return {
+      path: shortPath(entry.url, origin),
+      type: resp ? bucketOf(resp.type) : initiatorType(entry.initiator, entry.url),
+      start: Math.round(entry.start),
+      end: Math.round(Math.max(entry.end, entry.start)),
+      kb: kb(resp?.bytes || entry.size),
+      blocking: entry.blocking,
+      thirdParty: !new URL(entry.url).hostname.endsWith(site),
+    };
+  });
+  const listed = new Set(inspect.waterfall.map((entry) => entry.url));
+  for (const pending of inFlight) {
+    if (listed.has(pending.url) || !/^https?:/.test(pending.url)) continue;
+    waterfall.push({
+      path: shortPath(pending.url, origin), type: bucketOf(pending.type), start: pending.start, end: pending.end,
+      kb: kb(pending.bytes), blocking: false, thirdParty: !new URL(pending.url).hostname.endsWith(site), inFlight: true,
+    });
+  }
+  waterfall.sort((x, y) => x.start - y.start);
+
   return {
     capped,
+    capMs: LANE_CAP_MS,
+    lcpDetail,
+    images,
+    waterfall,
     url,
     finalUrl,
     status: doc?.status ?? null,
-    timing: { ttfb: snap.ttfb, fcp: snap.fcp, lcp: snap.lcp, domContentLoaded: snap.dcl, load: snap.load, tbt: inspect.tbt, cls: inspect.cls },
+    // A capped lane still loading a bigger in-viewport image has no final LCP yet.
+    timing: { ttfb: snap.ttfb, fcp: snap.fcp, lcp: lcpFinal ? snap.lcp : null, domContentLoaded: snap.dcl, load: snap.load, tbt: inspect.tbt, cls: inspect.cls },
     network: { requests: all.length, totalKb: kb(total), byType, protocol: doc?.protocol ?? null, thirdPartyHosts: [...thirdParty].slice(0, 12) },
     edge: {
       documentCache: doc ? cacheStatus(doc.headers) : null,
@@ -287,6 +409,58 @@ async function assemble(url: string, finalUrl: string, snap: Snapshot, inspect: 
 }
 
 function b(): ResourceBucket { return { count: 0, kb: 0 }; }
+
+/** "image/svg+xml" → "svg", "image/jpeg" → "jpeg". */
+export function formatOf(mime: string | undefined): string | null {
+  if (!mime || !mime.startsWith("image/")) return null;
+  const sub = mime.slice(6).split(";")[0].trim();
+  if (sub.startsWith("svg")) return "svg";
+  if (sub === "jpg" || sub === "pjpeg") return "jpeg";
+  if (sub === "x-icon" || sub === "vnd.microsoft.icon") return "ico";
+  return sub;
+}
+
+function extMime(url: string): string {
+  const ext = /\.([a-z0-9]+)(?:$|[?#])/i.exec(url)?.[1]?.toLowerCase() ?? "";
+  return ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", avif: "image/avif", svg: "image/svg+xml", gif: "image/gif" } as Record<string, string>)[ext] ?? "";
+}
+
+function initiatorType(initiator: string, url: string): ResourceType {
+  if (initiator === "navigation") return "document";
+  if (initiator === "script") return "script";
+  if (initiator === "css" && /\.woff2?|\.ttf|\.otf/i.test(url)) return "font";
+  if (initiator === "img" || initiator === "image" || extMime(url)) return "image";
+  if (initiator === "link" && /\.css(?:$|\?)/i.test(url)) return "stylesheet";
+  return "other";
+}
+
+/** Same-origin URLs become their path; others keep the host. Long paths keep their tail. */
+export function shortPath(url: string, origin: string): string {
+  try {
+    const u = new URL(url);
+    const text = u.origin === origin ? u.pathname : `${u.hostname}${u.pathname}`;
+    return text.length > 64 ? `…${text.slice(-63)}` : text;
+  } catch {
+    return url.slice(0, 64);
+  }
+}
+
+function imageBreakdown(all: Resp[], origin: string): { byFormat: Record<string, ResourceBucket>; heaviest: HeavyResource[] } {
+  const byFormat: Record<string, ResourceBucket> = {};
+  for (const r of all) {
+    const format = formatOf(r.mime) ?? (r.type === "Image" ? "other" : null);
+    if (!format) continue;
+    const bucket = (byFormat[format] ??= b());
+    bucket.count += 1;
+    bucket.kb = Math.round((bucket.kb + r.bytes / 1024) * 10) / 10;
+  }
+  const heaviest = [...all]
+    .filter((r) => /^https?:/.test(r.url) && r.bytes > 0)
+    .sort((x, y) => y.bytes - x.bytes)
+    .slice(0, 6)
+    .map((r) => ({ path: shortPath(r.url, origin), type: bucketOf(r.type), kb: kb(r.bytes), format: formatOf(r.mime) }));
+  return { byFormat, heaviest };
+}
 
 const FETCH_INIT: RequestInit = { headers: { "user-agent": "Mozilla/5.0 SiteRace/1 (+https://andreitekhtelev.dev)", accept: "text/html,*/*" }, redirect: "follow" };
 

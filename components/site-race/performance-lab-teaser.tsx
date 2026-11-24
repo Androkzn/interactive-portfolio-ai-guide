@@ -14,9 +14,9 @@ export function PerformanceLabTeaser() {
           <div className="section-eyebrow"><Gauge size={14} />Live performance lab</div>
           <h2 id="performance-lab-title">From <span className={styles.astro}>slow</span> to <span className={styles.next}>fast</span>. <em>Live.</em></h2>
           <p>
-            A real website as it was first shipped in Astro, never optimized — and the same site rebuilt in Next.js 16 to be fast.
-            Press start and two Chrome browsers on Cloudflare&apos;s edge race before against after: paint timings, JavaScript,
-            edge-cache headers and SEO, scored round by round. Then race your own site against the optimized build.
+            A real website as it was first shipped in Astro, never optimized — rebuilt in Next.js 16, then made fast one deployed
+            commit at a time: images, LCP priority, HTML weight, JavaScript, prefetch. Two Chrome browsers on Cloudflare&apos;s edge race
+            the original against any stage, live — then race your own site against the latest build.
           </p>
           <Link className={styles.cta} href="/lab/site-race/">Start the race <ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>

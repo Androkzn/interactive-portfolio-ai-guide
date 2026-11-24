@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LaneMetrics, RaceEvent } from "@/packages/contracts/src/site-race";
-import { compare, scoreRace } from "./scoring";
+import { compare, formatValue, lcpOrCap, scoreRace } from "./scoring";
 import { playbook } from "./playbook";
 
-const recorded = readFileSync(new URL("../../public/lab/site-race/recorded-mobile.ndjson", import.meta.url), "utf8")
+const load = (page: string) => readFileSync(new URL(`../../public/lab/site-race/recorded-mobile-${page}.ndjson`, import.meta.url), "utf8")
   .split("\n").filter(Boolean).map((line) => JSON.parse(line).event as RaceEvent | { type: "recording" });
-const result = (lane: "a" | "b") => (recorded.find((e) => e.type === "result" && e.lane === lane) as Extract<RaceEvent, { type: "result" }>).metrics;
+const recorded = load("model");
+const pick = (events: ReturnType<typeof load>, lane: "a" | "b") => (events.find((e) => e.type === "result" && e.lane === lane) as Extract<RaceEvent, { type: "result" }>).metrics;
+const result = (lane: "a" | "b") => pick(recorded, lane);
 
 describe("compare", () => {
   it("treats gaps inside 5% or the absolute floor as a draw", () => {
@@ -43,6 +45,22 @@ describe("scoreRace", () => {
   it("does not crash on a lane with missing timings", () => {
     const partial: LaneMetrics = { ...result("a"), timing: { ttfb: null, fcp: null, lcp: null, domContentLoaded: null, load: null, tbt: null, cls: null } };
     expect(() => scoreRace(partial, result("b"))).not.toThrow();
+  });
+});
+
+describe("capped lanes", () => {
+  it("scores a lane that never reached LCP at the cap, shown as a lower bound", () => {
+    const capped: LaneMetrics = { ...result("b"), capped: true, capMs: 30_000, timing: { ...result("b").timing, lcp: null } };
+    expect(lcpOrCap(capped)).toEqual({ value: 30_000, censored: true });
+    const verdict = scoreRace(capped, result("b"));
+    const lcp = verdict.rounds[0].rows.find((row) => row.id === "lcp")!;
+    expect(lcp.winner).toBe("b");
+    expect(formatValue(lcp, "a")).toBe("> 30.0 s");
+  });
+  it("keeps a final LCP even when the lane was still downloading below the fold", () => {
+    const home = load("home");
+    const before = pick(home, "a");
+    if (before.capped && before.timing.lcp !== null) expect(lcpOrCap(before)).toEqual({ value: before.timing.lcp, censored: false });
   });
 });
 

@@ -12,6 +12,8 @@ export type MetricRow = {
   format: (value: number) => string;
   better: Better;
   winner: LaneId | "tie" | null;
+  /** The lane hit the time cap first: its value is a lower bound ("> 30 s"). */
+  censored?: Partial<Record<LaneId, boolean>>;
 };
 
 export type Round = {
@@ -30,7 +32,7 @@ export type Verdict = {
   winner: LaneId | "tie";
 };
 
-export const ms = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(2)} s` : `${Math.round(v)} ms`);
+export const ms = (v: number) => (v >= 10_000 ? `${(v / 1000).toFixed(1)} s` : v >= 1000 ? `${(v / 1000).toFixed(2)} s` : `${Math.round(v)} ms`);
 export const kb = (v: number) => (v >= 1024 ? `${(v / 1024).toFixed(2)} MB` : `${Math.round(v)} KB`);
 const count = (v: number) => `${Math.round(v)}`;
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -54,6 +56,19 @@ function row(id: string, label: string, hint: string, a: number | null, b: numbe
 }
 
 const share = (part: number, whole: number) => (whole > 0 ? part / whole : null);
+
+/** A capped lane never painted its final LCP: score it at the cap, shown as "> cap". */
+export function lcpOrCap(m: LaneMetrics): { value: number | null; censored: boolean } {
+  if (m.timing.lcp !== null) return { value: m.timing.lcp, censored: false };
+  if (m.capped) return { value: m.capMs ?? 30_000, censored: true };
+  return { value: null, censored: false };
+}
+
+export function formatValue(row: MetricRow, lane: LaneId): string {
+  const value = row[lane];
+  if (value === null) return "n/a";
+  return row.censored?.[lane] ? `> ${row.format(value)}` : row.format(value);
+}
 const passed = (m: LaneMetrics) => m.seo.filter((check) => check.pass).length;
 
 function round(id: Round["id"], title: string, subtitle: string, rows: MetricRow[]): Round {
@@ -64,11 +79,14 @@ function round(id: Round["id"], title: string, subtitle: string, rows: MetricRow
 }
 
 export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
+  const lcpA = lcpOrCap(a);
+  const lcpB = lcpOrCap(b);
+  const lcpRow = { ...row("lcp", "Largest contentful paint", "The main hero content is on screen · Core Web Vital", lcpA.value, lcpB.value, ms, "lower", 100), censored: { a: lcpA.censored, b: lcpB.censored } };
   const rounds: Round[] = [
     round("speed", "Speed", "How soon the visitor sees the page", [
       row("ttfb", "Time to first byte", "The edge answers with the first byte of HTML", a.timing.ttfb, b.timing.ttfb, ms, "lower", 30),
       row("fcp", "First contentful paint", "Anything at all appears on screen", a.timing.fcp, b.timing.fcp, ms, "lower", 50),
-      row("lcp", "Largest contentful paint", "The main hero content is on screen · Core Web Vital", a.timing.lcp, b.timing.lcp, ms, "lower", 100),
+      lcpRow,
       row("dcl", "HTML parsed", "DOMContentLoaded: the document and its blocking scripts are done", a.timing.domContentLoaded, b.timing.domContentLoaded, ms, "lower", 100),
     ]),
     round("smoothness", "Smoothness", "Does the page respond and hold still", [
@@ -77,6 +95,7 @@ export function scoreRace(a: LaneMetrics, b: LaneMetrics): Verdict {
     ]),
     round("weight", "Weight", "What the visitor had to download", [
       row("total", "Transferred", "All bytes over the wire, compressed", a.network.totalKb, b.network.totalKb, kb, "lower", 10),
+      row("images", "Images", "Photos, renders and icons, as delivered", a.network.byType.image.kb, b.network.byType.image.kb, kb, "lower", 10),
       row("js", "JavaScript", "Script bytes: parsed and executed on the phone's CPU", a.network.byType.script.kb, b.network.byType.script.kb, kb, "lower", 5),
       row("requests", "Requests", "Round trips the page needed", a.network.requests, b.network.requests, count, "lower", 1),
     ]),

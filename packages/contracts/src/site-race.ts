@@ -18,6 +18,21 @@ export const RACE_PRESETS = {
 } as const;
 export type RacePresetId = keyof typeof RACE_PRESETS;
 
+/** Pages both builds share. A race loads the same path on every own-host lane. */
+export const RACE_PAGES = {
+  home: { path: "/", label: "Home", detail: "Hero photo slider, scene animation" },
+  catalogue: { path: "/pumps/", label: "Pump catalogue", detail: "Model cards with product renders" },
+  model: { path: "/boom-pumps/hr40-5rz/", label: "Model page", detail: "HR40-5RZ: large product renders, specs" },
+} as const;
+export type RacePageId = keyof typeof RACE_PAGES;
+
+/**
+ * Hosts that belong to this project: either build's production alias, any of its
+ * immutable deployment URLs (<hash>.project.pages.dev) and branch aliases. Lanes
+ * on these hosts count as "ours" (not a visitor's challenger) and take the race page path.
+ */
+export const OWN_HOST_PATTERN = /^(?:[a-z0-9-]+\.)?(?:hrconcretepumps|hr-concrete-pumps-next)\.pages\.dev$/;
+
 export type TimingMetrics = {
   /** Navigation Timing responseStart, ms from navigation start. */
   ttfb: number | null;
@@ -72,12 +87,55 @@ export type DocumentMetrics = {
   lcpElement: string | null;
 };
 
+export type LcpDetail = {
+  /** e.g. "img.model-variant-image" */
+  element: string | null;
+  /** Path of the LCP image ("" for a text LCP). */
+  path: string | null;
+  /** Where the element sits in the viewport, CSS px — frames are scaled screenshots of the same viewport. */
+  rect: { x: number; y: number; width: number; height: number } | null;
+  viewport: { width: number; height: number };
+  kb: number | null;
+  format: string | null;
+  fetchPriority: string | null;
+  loading: string | null;
+  /** srcset or a <picture> parent: the browser can pick a size. */
+  responsive: boolean;
+  /** A <link rel=preload as=image> points at this image. */
+  preloaded: boolean;
+  natural: { width: number; height: number } | null;
+  displayed: { width: number; height: number } | null;
+};
+
+export type ResourceType = "document" | "script" | "stylesheet" | "image" | "font" | "other";
+
+export type HeavyResource = { path: string; type: ResourceType; kb: number; format: string | null };
+
+export type WaterfallEntry = {
+  path: string;
+  type: ResourceType;
+  /** ms from navigation start */
+  start: number;
+  end: number;
+  kb: number;
+  /** renderBlockingStatus === "blocking" */
+  blocking: boolean;
+  thirdParty: boolean;
+  /** Still downloading when the lane stopped: `end` is the stop time, `kb` what had arrived. */
+  inFlight?: boolean;
+};
+
 export type LaneMetrics = {
   url: string;
   finalUrl: string;
   status: number | null;
   /** True when the lane hit the time cap before the load event or a quiet network. */
   capped: boolean;
+  /** The cap this lane ran under, ms. */
+  capMs?: number;
+  lcpDetail?: LcpDetail | null;
+  images?: { byFormat: Record<string, ResourceBucket>; heaviest: HeavyResource[] };
+  waterfall?: WaterfallEntry[];
   timing: TimingMetrics;
   network: NetworkMetrics;
   edge: EdgeMetrics;
@@ -88,10 +146,10 @@ export type LaneMetrics = {
 export type LanePhase = "queued" | "launching" | "loading" | "settling" | "inspecting" | "done" | "failed";
 export type MarkName = "ttfb" | "fcp" | "lcp" | "dcl" | "load";
 
-export type RaceLaneInfo = { url: string; label: string; stack: string; preset: RacePresetId | null };
+export type RaceLaneInfo = { url: string; label: string; stack: string; preset: RacePresetId | null; own?: boolean };
 
 export type RaceEvent =
-  | { type: "start"; protocol: typeof SITE_RACE_PROTOCOL; raceId: string; profile: RaceProfile; profileLabel: string; lanes: Record<LaneId, RaceLaneInfo> }
+  | { type: "start"; protocol: typeof SITE_RACE_PROTOCOL; raceId: string; profile: RaceProfile; profileLabel: string; page?: RacePageId; capMs?: number; lanes: Record<LaneId, RaceLaneInfo> }
   | { type: "phase"; lane: LaneId; phase: LanePhase; detail?: string }
   /** performance.timeOrigin of the lane's page, epoch ms; frames are timed against it. */
   | { type: "origin"; lane: LaneId; timeOrigin: number }

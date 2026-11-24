@@ -1,6 +1,6 @@
-import { RACE_PRESETS, SITE_RACE_PROTOCOL } from "../../../packages/contracts/src/site-race";
-import type { LaneId, RaceEvent, RaceLaneInfo, RacePresetId, RaceProfile } from "../../../packages/contracts/src/site-race";
-import { PROFILES, runLane } from "./lane";
+import { OWN_HOST_PATTERN, RACE_PAGES, RACE_PRESETS, SITE_RACE_PROTOCOL } from "../../../packages/contracts/src/site-race";
+import type { LaneId, RaceEvent, RaceLaneInfo, RacePageId, RacePresetId, RaceProfile } from "../../../packages/contracts/src/site-race";
+import { LANE_CAP_MS, PROFILES, runLane } from "./lane";
 import { normalizeRaceUrl } from "./url-guard";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -15,16 +15,28 @@ function json(data: unknown, status: number, headers: Record<string, string>) {
 
 export type LaneRequest = { ok: true; lane: RaceLaneInfo } | { ok: false; reason: string };
 
-/** A lane is a preset name ("astro", "next") or a visitor URL. */
-export function resolveLane(value: string | null): LaneRequest {
+/**
+ * A lane is a preset name ("astro", "next"), a URL on one of the project's own hosts
+ * (any deployment of either build — it gets the race page's path), or a visitor's URL.
+ */
+export function resolveLane(value: string | null, pagePath: string = RACE_PAGES.home.path): LaneRequest {
   if (!value) return { ok: false, reason: "Missing site." };
   if (value in RACE_PRESETS) {
     const preset = RACE_PRESETS[value as RacePresetId];
-    return { ok: true, lane: { url: preset.url, label: preset.label, stack: preset.stack, preset: value as RacePresetId } };
+    const url = new URL(preset.url);
+    url.pathname = pagePath;
+    return { ok: true, lane: { url: url.toString(), label: preset.label, stack: preset.stack, preset: value as RacePresetId, own: true } };
   }
   const guarded = normalizeRaceUrl(value);
   if (!guarded.ok) return guarded;
-  return { ok: true, lane: { url: guarded.url, label: new URL(guarded.url).hostname.replace(/^www\./, ""), stack: "Challenger", preset: null } };
+  const url = new URL(guarded.url);
+  if (OWN_HOST_PATTERN.test(url.hostname)) {
+    url.pathname = pagePath;
+    url.search = "";
+    url.protocol = "https:";
+    return { ok: true, lane: { url: url.toString(), label: url.hostname, stack: "Project build", preset: null, own: true } };
+  }
+  return { ok: true, lane: { url: guarded.url, label: url.hostname.replace(/^www\./, ""), stack: "Challenger", preset: null, own: false } };
 }
 
 export default {
@@ -35,17 +47,20 @@ export default {
     if (url.pathname === "/health") return json({ ok: true, protocol: SITE_RACE_PROTOCOL }, 200, cors);
     if (url.pathname !== "/race" || request.method !== "GET") return json({ error: "not-found" }, 404, cors);
 
-    const a = resolveLane(url.searchParams.get("a"));
-    const b = resolveLane(url.searchParams.get("b"));
+    const pageParam = url.searchParams.get("page") ?? "home";
+    if (!(pageParam in RACE_PAGES)) return json({ error: "invalid-page", message: "Unknown page." }, 400, cors);
+    const page = pageParam as RacePageId;
+    const a = resolveLane(url.searchParams.get("a"), RACE_PAGES[page].path);
+    const b = resolveLane(url.searchParams.get("b"), RACE_PAGES[page].path);
     if (!a.ok) return json({ error: "invalid-site", lane: "a", message: a.reason }, 400, cors);
     if (!b.ok) return json({ error: "invalid-site", lane: "b", message: b.reason }, 400, cors);
     // At most one visitor URL per race: the other lane is always one of ours.
-    if (!a.lane.preset && !b.lane.preset) return json({ error: "invalid-site", message: "One side of a race must be the Astro or Next.js build." }, 400, cors);
+    if (!a.lane.own && !b.lane.own) return json({ error: "invalid-site", message: "One side of a race must be one of the project's builds." }, 400, cors);
     if (a.lane.url === b.lane.url) return json({ error: "invalid-site", message: "Pick two different sites." }, 400, cors);
     const profile: RaceProfile = url.searchParams.get("profile") === "desktop" ? "desktop" : "mobile";
 
     const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-    const challenger = !a.lane.preset || !b.lane.preset;
+    const challenger = !a.lane.own || !b.lane.own;
     const limiter = challenger ? env.CHALLENGE_LIMITER : env.RACE_LIMITER;
     if (limiter) {
       const { success } = await limiter.limit({ key: ip });
@@ -67,7 +82,7 @@ export default {
     const started = Date.now();
     const race = async () => {
       try {
-        await emit({ type: "start", protocol: SITE_RACE_PROTOCOL, raceId: crypto.randomUUID(), profile, profileLabel: PROFILES[profile].label, lanes: { a: a.lane, b: b.lane } });
+        await emit({ type: "start", protocol: SITE_RACE_PROTOCOL, raceId: crypto.randomUUID(), profile, profileLabel: PROFILES[profile].label, page, capMs: LANE_CAP_MS, lanes: { a: a.lane, b: b.lane } });
         const heartbeat = setInterval(() => { if (!closed) void writer.write(encoder.encode(`: keep-alive\n\n`)).catch(() => {}); }, 10_000);
         const lanes: LaneId[] = ["a", "b"];
         const results = await Promise.all(lanes.map((lane) => runLane(env, lane, (lane === "a" ? a : b).lane.url, profile, emit, abort.signal)));
