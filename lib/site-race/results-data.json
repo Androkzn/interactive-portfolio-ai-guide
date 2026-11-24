@@ -1,0 +1,114 @@
+{
+  "measuredOn": "2026-11-24",
+  "after": "Next.js 16",
+  "cells": {
+    "home/mobile": {
+      "races": 4,
+      "beforeCapped": true,
+      "before": {
+        "lcp": 4382,
+        "load": 30512.5,
+        "tbt": 904,
+        "totalKb": 5905.3,
+        "imageKb": 5578.65
+      },
+      "after": {
+        "lcp": 2022,
+        "load": 2436.5,
+        "tbt": 270.5,
+        "totalKb": 809.05,
+        "imageKb": 519.4000000000001
+      }
+    },
+    "catalogue/mobile": {
+      "races": 4,
+      "beforeCapped": false,
+      "before": {
+        "lcp": 2206,
+        "load": 15576,
+        "tbt": 3,
+        "totalKb": 2975.6000000000004,
+        "imageKb": 2877.8
+      },
+      "after": {
+        "lcp": 2306,
+        "load": 2491,
+        "tbt": 168.5,
+        "totalKb": 434.15,
+        "imageKb": 179.6
+      }
+    },
+    "model/mobile": {
+      "races": 4,
+      "beforeCapped": true,
+      "before": {
+        "lcp": 30000,
+        "load": 30000,
+        "tbt": 141.5,
+        "totalKb": 6023.95,
+        "imageKb": 5927.2
+      },
+      "after": {
+        "lcp": 1086,
+        "load": 3098,
+        "tbt": 137,
+        "totalKb": 530.5,
+        "imageKb": 268.5
+      }
+    },
+    "home/desktop": {
+      "races": 4,
+      "beforeCapped": false,
+      "before": {
+        "lcp": 422,
+        "load": 498.5,
+        "tbt": 125.5,
+        "totalKb": 6168.8,
+        "imageKb": 5842.1
+      },
+      "after": {
+        "lcp": 322,
+        "load": 293,
+        "tbt": 0,
+        "totalKb": 875.8,
+        "imageKb": 568.6
+      }
+    },
+    "catalogue/desktop": {
+      "races": 4,
+      "beforeCapped": false,
+      "before": {
+        "lcp": 288,
+        "load": 295,
+        "tbt": 0,
+        "totalKb": 10683.4,
+        "imageKb": 10585.45
+      },
+      "after": {
+        "lcp": 330,
+        "load": 324,
+        "tbt": 0,
+        "totalKb": 624.3499999999999,
+        "imageKb": 369.6
+      }
+    },
+    "model/desktop": {
+      "races": 4,
+      "beforeCapped": false,
+      "before": {
+        "lcp": 506,
+        "load": 518.5,
+        "tbt": 1.5,
+        "totalKb": 12144.2,
+        "imageKb": 12046.1
+      },
+      "after": {
+        "lcp": 616,
+        "load": 538,
+        "tbt": 0,
+        "totalKb": 460.35,
+        "imageKb": 198.4
+      }
+    }
+  }
+}

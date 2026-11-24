@@ -8,7 +8,7 @@ import styles from "@/components/site-race/lab-page.module.css";
 
 const title = "From slow to fast: a live before/after performance race · Andrei Tekhtelev";
 const description =
-  "An original website rebuilt and optimized in Next.js 16 one deployed commit at a time — images, LCP priority, HTML weight, JavaScript and prefetch. Race any stage against the original live, in real Chrome on Cloudflare's edge, or race your own site against the latest build.";
+  "An original website rebuilt and optimized in Next.js 16: measured before and after, then raced live in real Chrome on Cloudflare's edge. Race your own site against the optimized build too.";
 
 export const metadata: Metadata = {
   title,
@@ -44,12 +44,12 @@ export default function Page() {
           <div className={styles.columns}>
             <p>
               The <b>before</b> is the original site as it was first shipped — never tuned, heavy images and all. The <b>after</b> is the same
-              site, with the same content and routes, rebuilt in Next.js 16 and optimized in small, deployed steps. The point is the
-              transformation: the straight port was initially <i>slower</i> than the original, then each focused change moved a measurable
-              part of the experience forward.
+              site, with the same content and routes, rebuilt in Next.js 16 and optimized: images resized and compressed, the main photo
+              loaded first, less work for the browser at start. The numbers at the top are medians of repeated races; the live race lets
+              you check them yourself.
             </p>
             <p>
-              Nothing in the race is a stored number dressed up as live. When you press start, a Worker launches two Chrome sessions on
+              The race itself is live: nothing in it is replayed from storage, except the recorded race, which is labelled as one. When you press start, a Worker launches two Chrome sessions on
               Cloudflare Browser Run, applies the same mobile throttling the projects&apos; own performance reports use, and streams the
               screencast, the paint milestones, the network log and the response headers straight to your screen.
             </p>
@@ -77,11 +77,11 @@ export default function Page() {
               <li><b>Scorecard.</b> Lighthouse 10&apos;s weights (FCP 10%, Speed Index 10%, LCP 25%, TBT 30%, CLS 25%) and log-normal curves, applied to the race&apos;s own numbers. Speed Index is computed from the screencast the way speedline does it — colour histograms against the first and last frame — so it is an estimate, not a Lighthouse report.</li>
             </ul>
             <ul className={styles.list}>
-              <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip.</li>
+              <li><b>One run is one sample.</b> Network and CPU on a shared cloud browser vary; race twice and expect small gaps to flip. That is why the numbers at the top are medians of several races per page and device.</li>
               <li><b>Lab, not field.</b> No real-user (CrUX) data: this is how the page behaves under one controlled profile, not across visitors.</li>
-              <li><b>One cold page.</b> The race loads a single URL with an empty cache. Navigation, prefetching and repeat visits are not measured — which is why the Prefetch stage cannot win anything here.</li>
-              <li><b>Live, not frozen.</b> The after build is still being optimized. The race always measures what is deployed today, so the gap you see is the current state, not a best-ever screenshot.</li>
-              <li><b>Review hosts.</b> Every build runs on a preview host (pages.dev, or workers.dev for the Edge stage) marked noindex on purpose, so the Indexable check fails for all of them.</li>
+              <li><b>One cold page.</b> The race loads a single URL with an empty cache. Opening a second page, prefetching and repeat visits are not measured.</li>
+              <li><b>Pinned builds.</b> Both sides are fixed deployments: the original as first shipped, and the current optimized build (named in the race settings). When a newer build ships, the race and the numbers at the top are updated together.</li>
+              <li><b>Review hosts.</b> Both builds run on preview hosts (pages.dev) marked noindex on purpose, so the Indexable check fails for both of them.</li>
               <li><b>Your site.</b> A challenger races the optimized build in a real browser on Cloudflare&apos;s network. Only public http(s) domains are accepted, two per minute.</li>
             </ul>
           </div>

@@ -7,7 +7,8 @@ import { RACE_PAGES } from "@/packages/contracts/src/site-race";
 import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
 import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
 import { formatValue, kb, ms, scoreRace, type Round, type Verdict } from "@/lib/site-race/scoring";
-import { latestStage, stageById, stageForUrl, stageMetrics, stages, type StageId } from "@/lib/site-race/journey";
+import { featuredStage, stageById, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
+import resultsData from "@/lib/site-race/results-data.json";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
 import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
@@ -36,6 +37,7 @@ const PROFILE_NOTE: Record<RaceProfile, string> = {
 };
 const FAIRNESS_NOTE = "Before the clock starts, both sites are loaded once at full speed in a discarded session, so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). Each lane is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most.";
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
+type Metrics = { lcp: number | null; load: number | null; tbt: number | null; totalKb: number; imageKb: number };
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
 const recordingFor = (page: RacePageId, profile: RaceProfile) => `/lab/site-race/recorded-${profile}-${RECORDED_PAGES.includes(page) ? page : "model"}.ndjson`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
@@ -203,7 +205,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const startChallenge = (event: React.FormEvent) => {
     event.preventDefault();
     if (!challenge.trim()) return;
-    void start(latestStage.url, challenge.trim());
+    void start(featuredStage.url, challenge.trim());
   };
 
   const copyLink = async () => {
@@ -222,10 +224,18 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
   const afterStages = stages.filter((item) => item.id !== "original");
   const selectedStage = stageById(stage);
-  const baselineBefore = stageMetrics("original", RACE_PAGES[page].path, profile);
-  const baselineAfter = stageMetrics(stage, RACE_PAGES[page].path, profile);
+  // Medians of repeated races for this page and device (scripts/site-race/build-results.mjs),
+  // the same numbers as the result block above the race: not a single sample, not a stage report.
+  const measured = (resultsData.cells as Record<string, { before: Metrics; after: Metrics } | undefined>)[`${page}/${profile}`];
+  const baselineBefore = measured?.before;
+  const baselineAfter = measured?.after;
   const improvement = (before: number | null | undefined, after: number | null | undefined) => before && after ? Math.round((1 - after / before) * 100) : null;
   const lcpImprovement = improvement(baselineBefore?.lcp, baselineAfter?.lcp);
+  const weightImprovement = improvement(baselineBefore?.totalKb, baselineAfter?.totalKb);
+  // Say what actually improved: a gap under 15% in LCP is within run-to-run noise, so it is not a claim.
+  const headline = lcpImprovement != null && lcpImprovement >= 15 ? `${lcpImprovement}% lower LCP`
+    : weightImprovement != null && weightImprovement >= 15 ? `${weightImprovement}% less data downloaded`
+      : "Measured improvement";
   const bothFinished = finishTime(state.lanes.a) !== null && finishTime(state.lanes.b) !== null;
   const lightsState = replaying ? "replay" : racing ? (lights === 6 ? (bothFinished ? "scoring" : "go") : "armed") : state.status === "finished" ? "over" : "idle";
   const lightsLabel = {
@@ -258,14 +268,14 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
             <ArrowUpRight size={24} aria-hidden="true" />
             <span><small>Next.js optimized</small><b>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</b></span>
           </div>
-          <strong>{lcpImprovement == null ? "Measured improvement" : `${lcpImprovement}% lower LCP`}</strong>
+          <strong>{headline}</strong>
         </div>
       </div>
 
       <div className={styles.resultMetrics} aria-label="Measured performance result">
         <article><span>LCP</span><b>{baselineBefore?.lcp == null ? "—" : `${(baselineBefore.lcp / 1000).toFixed(1)}s`}</b><i>→</i><strong>{baselineAfter?.lcp == null ? "—" : `${(baselineAfter.lcp / 1000).toFixed(1)}s`}</strong><small>Main content visible</small></article>
-        <article><span>Page weight</span><b>{baselineBefore ? `${(baselineBefore.pageKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.pageKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Total cold-load transfer</small></article>
-        <article><span>Image bytes</span><b>{baselineBefore ? `${(baselineBefore.imgKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.imgKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Responsive AVIF/WebP</small></article>
+        <article><span>Page weight</span><b>{baselineBefore ? `${(baselineBefore.totalKb / 1024).toFixed(1)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.totalKb / 1024).toFixed(1)}MB` : "—"}</strong><small>Total cold-load transfer</small></article>
+        <article><span>Image bytes</span><b>{baselineBefore ? `${(baselineBefore.imageKb / 1024).toFixed(2)}MB` : "—"}</b><i>→</i><strong>{baselineAfter ? `${(baselineAfter.imageKb / 1024).toFixed(2)}MB` : "—"}</strong><small>Responsive AVIF/WebP</small></article>
       </div>
 
       <div className={styles.controls}>
@@ -354,7 +364,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         <div>
           <p className={styles.kicker}><Swords size={14} aria-hidden="true" /> Challenger round</p>
           <h3>Think your site is faster?</h3>
-          <p>Enter any public website. It races the latest optimized build (<b>{latestStage.short}</b> stage, {RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
+          <p>Enter any public website. It races the latest optimized build (<b>{featuredStage.short}</b> build, {RACE_PAGES[page].label.toLowerCase()}) under the same conditions — same browser, same throttling, same scoring.</p>
         </div>
         <div className={styles.challengeRow}>
           <input value={challenge} onChange={(event) => setChallenge(event.target.value)} placeholder="your-site.com" inputMode="url" autoComplete="url" aria-label="Website to race" maxLength={300} disabled={racing} />

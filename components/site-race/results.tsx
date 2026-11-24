@@ -1,15 +1,23 @@
 import type { CSSProperties } from "react";
 import { Gauge, ImageDown, TimerReset, Zap } from "lucide-react";
+import resultsData from "@/lib/site-race/results-data.json";
 import styles from "./results.module.css";
 
-// Before → after in one glance. Medians of 5 races of the home page on the
-// mobile profile (390 px, slow 4G, 4× CPU), original d0d11b6f vs Next.js
-// 56ce28ef, run through the same race Worker on 2026-11-24.
-const RESULTS = [
-  { icon: Zap, label: "Main content on screen", sub: "Largest contentful paint", before: 4.4, after: 2.06, unit: "s", gain: "2.1×", gainWord: "faster" },
-  { icon: TimerReset, label: "Page fully loaded", sub: "Load event", before: 30, after: 2.4, unit: "s", capped: true, gain: "12×", gainWord: "faster" },
-  { icon: ImageDown, label: "Data downloaded", sub: "Page weight", before: 5.9, after: 0.81, unit: "MB", gain: "7×", gainWord: "lighter" },
-  { icon: Gauge, label: "Page frozen while loading", sub: "Total blocking time", before: 640, after: 385, unit: "ms", gain: "−40%", gainWord: "blocking" },
+// Before → after in one glance: home page, mobile profile (390 px, slow 4G, 4× CPU), medians of
+// the races in lib/site-race/results-data.json (scripts/site-race/build-results.mjs).
+const cell = resultsData.cells["home/mobile"];
+const ratio = (before: number, after: number) => before / Math.max(after, 1e-9);
+const times = (r: number) => `${r >= 9.5 ? Math.round(r) : r.toFixed(1)}×`;
+const sec = (ms: number) => Number((ms / 1000).toFixed(2));
+const lcp = { before: sec(cell.before.lcp ?? 0), after: sec(cell.after.lcp ?? 0) };
+const load = { before: sec(cell.before.load ?? 0), after: sec(cell.after.load ?? 0) };
+const weight = { before: Number(((cell.before.totalKb ?? 0) / 1024).toFixed(1)), after: Number(((cell.after.totalKb ?? 0) / 1024).toFixed(2)) };
+const tbt = { before: Math.round(cell.before.tbt ?? 0), after: Math.round(cell.after.tbt ?? 0) };
+const RESULTS: { icon: typeof Zap; label: string; sub: string; before: number; after: number; unit: string; capped?: boolean; gain: string; gainWord: string }[] = [
+  { icon: Zap, label: "Main content on screen", sub: "Largest contentful paint", ...lcp, unit: "s", gain: times(ratio(lcp.before, lcp.after)), gainWord: "faster" },
+  { icon: TimerReset, label: "Page fully loaded", sub: "Load event", ...load, unit: "s", capped: cell.beforeCapped, gain: times(ratio(load.before, load.after)), gainWord: "faster" },
+  { icon: ImageDown, label: "Data downloaded", sub: "Page weight", ...weight, unit: "MB", gain: times(ratio(weight.before, weight.after)), gainWord: "lighter" },
+  { icon: Gauge, label: "Page frozen while loading", sub: "Total blocking time", ...tbt, unit: "ms", gain: `−${Math.round((1 - tbt.after / Math.max(tbt.before, 1)) * 100)}%`, gainWord: "blocking" },
 ];
 
 const show = (v: number, unit: string) => `${v} ${unit}`;
@@ -54,7 +62,7 @@ export function RaceResults() {
         })}
       </div>
       <p className={styles.note}>
-        Home page on a phone over slow 4G, median of 5 races. “&gt; 30 s”: the original was still loading when the race stopped it.
+        Home page on a phone over slow 4G, median of {cell.races} races. “&gt; 30 s”: the original was still loading when the race stopped it.
         <b> Don&apos;t take our word for it: race it yourself below ↓</b>
       </p>
     </section>
