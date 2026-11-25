@@ -97,7 +97,7 @@ export function ChallengeTeaser() {
               {FRAMES.map(({ image, alt, label, box }, i) => (
                 <span key={image} className={styles.frame} style={{ "--f": i } as CSSProperties}>
                   <img src={image} alt={alt} width={800} height={500} loading="lazy" decoding="async" />
-                  <span className={styles.spot} data-below={box.top < 20 || undefined} style={{ top: `${box.top}%`, left: `${box.left}%`, width: `${box.width}%`, height: `${box.height}%` }}><b>{label}</b></span>
+                  <span className={styles.spot} data-below={box.top < 20 || undefined} style={{ top: `${box.top}%`, left: `${box.left}%`, width: `${box.width}%`, height: `${box.height}%`, "--l": box.left } as CSSProperties}><b>{label}</b></span>
                 </span>
               ))}
             </span>

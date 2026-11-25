@@ -24,14 +24,14 @@
 .stack { display: grid; gap: 18px; min-width: 0; }
 
 /* ── The board ── */
-.visual { --cycle: 9s; position: relative; display: grid; gap: 14px; min-width: 0; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
+.visual { --cycle: 9s; container-type: inline-size; position: relative; display: grid; gap: 14px; min-width: 0; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
 .visualHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #a7aa9f; font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .07em; text-transform: uppercase; }
 .visualHead span:first-child { display: inline-flex; align-items: center; gap: 8px; }
 .visualHead i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a4f; box-shadow: 0 0 0 4px #ff5a4f2e; }
 .clock { padding: 4px 9px; color: #111; border-radius: 999px; background: #d4ff76; font-weight: 800; letter-spacing: 0; }
 
 .phases { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
-.phases li { padding: 6px 4px; overflow: hidden; color: #8b8e84; text-align: center; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #343731; border-radius: 999px; font: 700 var(--text-micro)/1.2 var(--font-code); animation: phase var(--cycle) calc(var(--i) * 420ms) infinite; }
+.phases li { padding: 6px 2px; overflow: hidden; color: #8b8e84; text-align: center; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #343731; border-radius: 999px; font: 700 var(--text-micro)/1.2 var(--font-code); animation: phase var(--cycle) calc(var(--i) * 420ms) infinite; }
 @keyframes phase {
   0%, 4% { color: #8b8e84; border-color: #343731; background: transparent; }
   8%, 84% { color: #111; border-color: transparent; background: #b9aeff; }
@@ -92,7 +92,8 @@
 .urls em { flex: none; padding: 2px 8px; color: #ffd98a; border-radius: 999px; background: #3a3420; font: 700 .625rem/1.4 var(--font-code); font-style: normal; }
 .urls em[data-live] { color: #8ff0b0; background: #1d3a26; }
 .urls em[data-live]::before { content: "● "; }
-.viewport { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
+/* A size container, so a spot label measures the frame (cqw), not the window. */
+.viewport { container-type: inline-size; position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
 .frame { position: absolute; inset: 0; opacity: 0; animation: frameOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
 .frame img { display: block; width: 100%; height: 100%; object-fit: cover; animation: drift var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
 @keyframes frameOn {
@@ -107,7 +108,7 @@
   13%, 30% { opacity: 1; transform: none; }
   33%, 100% { opacity: 0; transform: none; }
 }
-.spot b { position: absolute; bottom: calc(100% + 7px); left: 0; width: max-content; max-width: min(100cqw, 380px); padding: 5px 9px; color: #111; border-radius: 8px; background: #ffd166; box-shadow: 0 6px 18px #0007; font: 800 .75rem/1.25 var(--font-ui); }
+.spot b { position: absolute; bottom: calc(100% + 7px); left: 0; width: max-content; max-width: min(calc((100 - var(--l, 0)) * 1cqw - 8px), 380px); padding: 5px 9px; color: #111; border-radius: 8px; background: #ffd166; box-shadow: 0 6px 18px #0007; font: 800 .75rem/1.25 var(--font-ui); }
 .spot[data-below] b { top: calc(100% + 7px); bottom: auto; }
 .status { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; color: #a7aa9f; border-top: 1px solid #2b2d28; background: #141513; font-size: .75rem; }
 .open { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 7px 11px; color: #111; border-radius: 999px; background: #d4ff76; font: 800 .75rem/1 var(--font-ui); transition: transform .2s ease, box-shadow .2s ease; }
@@ -122,8 +123,6 @@
   .card { padding: 22px 16px; border-radius: 22px; }
   .copy h3 { font-size: clamp(34px, 11vw, 44px); }
   .proof > span { min-width: 0; flex: 1 1 calc(50% - 10px); }
-  .phases { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .board { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
   .stamp { position: static; justify-self: start; }
   .tabs > span { gap: 0; padding: 6px 10px; font-size: 0; }
   .status > span:first-child { display: none; }
@@ -141,3 +140,10 @@
   .frame:first-child, .urls > span:first-child, .frame:first-child .spot { opacity: 1; }
   .tabs > span:first-child { color: #f5f4ee; background: #2a2d27; }
 }
+
+/* The board by its own width (the card's padding and the page gutter decide it, not the window).
+   Fewer columns only when a tile would drop under 34 px, the room a four-letter label ("Rule",
+   "Repo") needs; the phase chips go to two rows of four before "Matrix" would be cut. */
+@container (max-width: 389px) { .phases { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (max-width: 353px) { .board { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; } }
+@container (max-width: 267px) { .board { grid-template-columns: repeat(5, minmax(0, 1fr)); } }

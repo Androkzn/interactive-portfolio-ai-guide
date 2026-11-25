@@ -217,7 +217,9 @@
 .scoreboard { scroll-margin-top: 20px; }
 /* The finish: a centred card announces the winner and offers the results. It opens only once the race
    is over, so it never hides the lanes while they race; Escape, the backdrop or "Keep watching" close it. */
-.winnerBackdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: #0b0c0ab8; backdrop-filter: blur(3px); animation: winner-fade .25s ease-out; }
+/* "safe center" + its own scroll: on a phone held sideways the card is taller than Safari's visible
+   height, and a centred card that cannot scroll lost its buttons below the edge. */
+.winnerBackdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: safe center; overflow-y: auto; overscroll-behavior: contain; padding: 16px; background: #0b0c0ab8; backdrop-filter: blur(3px); animation: winner-fade .25s ease-out; }
 .winnerCard { position: relative; width: min(440px, 100%); padding: 34px 28px 22px; color: #f5f4ee; text-align: center; border: 1px solid #d4ff7640; border-radius: 26px; background: radial-gradient(120% 80% at 50% 0%, #d4ff7622, transparent 60%), #151614; box-shadow: 0 30px 80px #000a, 0 0 0 6px #d4ff7612; animation: winner-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
 .winnerClose { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 36px; height: 36px; color: #b8bcb2; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
 .winnerClose:hover, .winnerClose:focus-visible { color: #fff; background: #ffffff14; }
@@ -234,6 +236,17 @@
 @keyframes winner-pop { from { opacity: 0; transform: translateY(14px) scale(.94); } }
 @keyframes winner-crown { 50% { transform: rotate(-8deg) scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .winnerBackdrop, .winnerCard, .winnerCrown { animation: none; } }
+/* Short screens (a phone in landscape): the same card, tighter, so it fits without scrolling. */
+@media (max-height: 520px) {
+  .winnerBackdrop { padding: 10px; }
+  .winnerCard { padding: 18px 24px 12px; }
+  .winnerCrown { width: 46px; height: 46px; margin-bottom: 6px; }
+  .winnerCrown svg { width: 24px; height: 24px; }
+  .winnerTitle { margin: 4px 0; font-size: 28px; }
+  .winnerScore { margin-bottom: 12px; }
+  .winnerGo { min-height: 46px; padding: 10px 20px; }
+  .winnerStay { margin-top: 4px; }
+}
 
 .verdict { position: relative; margin-top: 22px; padding: clamp(20px, 3vw, 34px); border: 1px solid #4b4772; border-radius: 20px; background: linear-gradient(135deg, #24233a, #1b1c1a); text-align: center; overflow: hidden; animation: verdict-in .7s cubic-bezier(.2, 1.4, .4, 1); }
 /* One line of text that wraps as a sentence: as a flex row, the winner's name and "wins 5–0 on rounds"
@@ -270,14 +283,15 @@
   .clock { justify-items: start; }
   .device { padding: 4px; border-radius: 22px; }
   .device img, .blank { border-radius: 18px; }
-  .phase { bottom: 8px; padding: 4px 8px; font-size: .55rem; }
+  /* A phone lane is narrow: the status wraps to a second line, centred, instead of "WAITING F…". */
+  .phase { right: 6px; bottom: 8px; left: 6px; width: fit-content; max-width: none; margin-inline: auto; padding: 4px 8px; transform: none; font-size: var(--text-micro); line-height: 1.25; text-align: center; white-space: normal; }
   .marks { grid-template-columns: 1fr 1fr; gap: 4px; }
   .counters { flex-direction: column; gap: 2px; }
   .controls { grid-template-columns: 1fr; }
   .controls .segmented button { padding-inline: 10px; }
   .settings summary span { display: none; }
   .stageSelect select { width: 100%; max-width: none; }
-  .finishBadge, .behindBadge { top: 8px; padding: 4px 8px; font-size: .62rem; }
+  .finishBadge, .behindBadge { top: 8px; padding: 4px 8px; font-size: var(--text-micro); }
   .capNote { gap: 4px; padding: 10px 12px; line-height: 1.45; }
   .capNoteInLane { display: none; }
   .capNoteWide { display: grid; margin-top: 8px; }
@@ -307,3 +321,16 @@
 
 /* The narrowest phones: the status line under the lights already says "slow 4G". */
 @media (max-width: 360px) { .controls .segmented small { display: none; } }
+
+/* Touch: 44 px controls; the photo-finish slider gets a full-height track to grab. */
+@media (pointer: coarse) {
+  .replayButton { min-height: 44px; }
+  .scrubber input { height: 44px; }
+}
+
+/* The narrowest phones (≤ 400 px, a lane ~125 px wide): the finish and "behind" badges wrap inside
+   the screen instead of running past both edges, and a mark's value ("1.15 s") stays on one line. */
+@media (max-width: 400px) {
+  .finishBadge, .behindBadge { right: 6px; left: 6px; width: fit-content; margin-inline: auto; transform: none; text-align: center; white-space: normal; }
+  .marks li b { font-size: var(--text-meta); white-space: nowrap; }
+}

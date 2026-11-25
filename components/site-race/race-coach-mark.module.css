@@ -41,3 +41,9 @@
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 @media (prefers-reduced-motion: reduce) { .ring, .card { animation: none; } }
 @media (max-width: 520px) { .card { left: 50% !important; } }
+
+/* Touch: the hint closes with a finger, not a fingertip. */
+@media (pointer: coarse) {
+  .ok { min-height: 44px; }
+  .close { top: 4px; right: 4px; width: 44px; height: 44px; }
+}

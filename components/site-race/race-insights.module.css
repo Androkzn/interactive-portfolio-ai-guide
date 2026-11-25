@@ -190,3 +190,8 @@
   .spotBox { animation: none; }
   .ringFill { transition: none; }
 }
+
+/* Touch: the tabs and the table switch at 44 px. */
+@media (pointer: coarse) {
+  .tabs button, .tableToggle { min-height: 44px; }
+}

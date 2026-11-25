@@ -153,6 +153,8 @@
   .segments li { flex: 1 1 0; min-width: 0; }
   .segmentLabel small { display: none; }
   .segment { height: 38px; }
+  /* A phone: long artifact lines wrap instead of hiding past the right edge. */
+  .artifact pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .segmentLabel { padding: 4px 3px; text-align: center; white-space: normal; text-overflow: clip; place-content: center; height: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -244,4 +246,14 @@
   .burst { display: none; }
   .stamp, .browserWrap, .page, .url, .highlight, .highlight[data-focus] { animation: none; }
   .page, .cursor { transition: none; }
+}
+
+/* The narrowest phones: a row of seven steps leaves 35 px a step, too little for "Observe".
+   The steps wrap into rows of whole labels instead. */
+@media (max-width: 380px) {
+  .segments { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); }
+}
+/* Touch: the step buttons at 44 px. */
+@media (pointer: coarse) {
+  .segment { min-height: 44px; }
 }

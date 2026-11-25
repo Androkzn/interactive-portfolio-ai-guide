@@ -41,7 +41,7 @@
 .legend { display: flex; gap: 14px; color: #888c83; font: 600 10px/1 var(--font-code); }.legend span { display: flex; align-items: center; gap: 5px; }.legend i { width: 14px; height: 3px; border-radius: 3px; }.orange { background: #ff8a4c; }.purple { background: #a99cff; }
 .weightCard { display: grid; align-content: start; gap: 13px; }.weightRow { display: grid; grid-template-columns: 48px 1fr 40px; align-items: center; gap: 7px; color: #858980; font: 600 10px/1 var(--font-code); }.weightRow > div { height: 10px; border-radius: 999px; background: #292c27; overflow: hidden; }
 .weightRow i { display: block; width: var(--finish); height: 100%; border-radius: inherit; transform-origin: left center; transform: scaleX(0); animation: weight 4.8s .3s infinite; }.weightBefore { --finish: 100%; background: linear-gradient(90deg, #a34f2b, #ff8a4c); }.weightAfter { --finish: 9%; background: linear-gradient(90deg, #796dca, #b9aeff); }.weightRow b { color: #c9ccc3; text-align: right; }
-.optimizations { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }.optimizations span { padding: 4px 6px; color: #aeb1a8; border: 1px solid #363933; border-radius: 6px; background: #21231f; font: 600 9px/1 var(--font-code); }
+.optimizations { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }.optimizations span { padding: 4px 6px; color: #aeb1a8; border: 1px solid #363933; border-radius: 6px; background: #21231f; font: 600 10px/1 var(--font-code); }
 @keyframes live { 50% { opacity: .45; box-shadow: 0 0 0 7px #7fff7a0b; } } @keyframes racePulse { 50% { transform: scale(1.22); filter: drop-shadow(0 0 8px #d4ff76); } }
 /* Same pace in x for both lines; the Next.js line is done at 58% (the crossing), the original keeps going to 94%. */
 @keyframes drawNext { 0%, 12% { stroke-dashoffset: 1; opacity: 1; } 58%, 94% { stroke-dashoffset: 0; opacity: 1; } 99%, 100% { stroke-dashoffset: 0; opacity: 0; } }
@@ -148,7 +148,7 @@
 @keyframes cp0 { 0%, 11% { color: #6c7068; } 13%, 94% { color: #d4ff76; } 99%, 100% { color: #6c7068; } }
 @keyframes cp2 { 0%, 57% { color: #6c7068; } 59%, 94% { color: #d4ff76; } 99%, 100% { color: #6c7068; } }
 
-@media (max-width: 620px) { .race { --band: 36px; height: calc(var(--band) + 114px); --car-next: clamp(96px, 30cqw, 132px); } .flag { width: 28px; left: calc(var(--line-x) + 6px - 28px * .083); top: calc(var(--band) - 28px * 62 / 52 * .927 + 1px); } .finishChip { right: calc(100cqw - var(--line-x) + 30px); top: 9px; } .checkpoint { font-size: 9px; } }
+@media (max-width: 620px) { .race { --band: 36px; height: calc(var(--band) + 114px); --car-next: clamp(96px, 30cqw, 132px); } .flag { width: 28px; left: calc(var(--line-x) + 6px - 28px * .083); top: calc(var(--band) - 28px * 62 / 52 * .927 + 1px); } .finishChip { right: calc(100cqw - var(--line-x) + 30px); top: 9px; } }
 @media (prefers-reduced-motion: reduce) {
   .runner, .speedLines, .finishGlow, .finishChip, .flag, .flagCloth, .flagCol, .carPitch, .carBob, .carBobSlow, .rollNext, .rollOriginal, .wheelBlur, .wheelBlurSlow, .rainLight, .exhaust circle, .railFill, .railHead, .checkpoint { animation: none; }
   /* The crossing frozen: nose just past the line, flag up. */
