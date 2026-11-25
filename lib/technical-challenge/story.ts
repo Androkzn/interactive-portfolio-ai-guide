@@ -86,11 +86,95 @@ export type Effect = {
   note?: Record<string, string>;
 };
 
-export type ChapterKind = "spec" | "build" | "verify" | "ship" | "bonus";
+/** A box over a screenshot, in % of the image, shown from a fraction of the screen's time on. */
+export type Highlight = { at: number; top: number; left: number; width: number; height: number; label: string };
+
+export type BrowserTab = "app" | "eval" | "readiness" | "portal";
+
+/** One page shown in the browser window: a real capture, labelled with where and when it is from. */
+export type Screen = {
+  id: string;
+  tab: BrowserTab;
+  url: string;
+  image: string;
+  width: number;
+  height: number;
+  /** Where the capture comes from, shown in the address bar: never a mock-up. */
+  provenance: string;
+  live: boolean;
+  /** Scroll position over the screen's time, as fractions of the page's scroll range. */
+  scroll?: [number, number];
+  highlights?: Highlight[];
+  caption: string;
+};
+
+const IMG = "/images/technical-challenge";
+
+export const screens = {
+  app: {
+    id: "app", tab: "app", url: "nimbus-assistant-production.vercel.app", image: `${IMG}/app-answer.webp`, width: 1200, height: 750,
+    provenance: "Live app · captured 24 Nov 2026", live: true,
+    highlights: [
+      { at: 0.12, top: 39.5, left: 10.5, width: 54.5, height: 14, label: "Documents disagree → both sources, both dates" },
+      { at: 0.5, top: 73.2, left: 25.6, width: 33.4, height: 4.8, label: "Selected model failed → the backup answered, labelled" },
+    ],
+    caption: "Brief question Q5, asked on the live link today. The selected model's key was unusable, so the backup answered — labelled, never mixed. Monitoring is how the team hears about it.",
+  },
+  edgeBefore: {
+    id: "edgeBefore", tab: "eval", url: "evals/reports/2026-10-07-19-55-01 · production", image: `${IMG}/eval-1255.webp`, width: 1200, height: 1533,
+    provenance: "Recorded run · 7 Oct, 12:55", live: false, scroll: [1, 1],
+    highlights: [{ at: 0.1, top: 93.6, left: 2, width: 96, height: 4.8, label: "“Tell me about Nimbus Edge” — 876 ms, a model call" }],
+    caption: "Before the guard: a question about a product that doesn't exist still went to a model.",
+  },
+  edgeAfter: {
+    id: "edgeAfter", tab: "eval", url: "evals/reports/2026-10-07-20-41-15", image: `${IMG}/eval-1341.webp`, width: 1200, height: 2097,
+    provenance: "Recorded run · 7 Oct, 13:41", live: false, scroll: [1, 1],
+    highlights: [
+      { at: 0.08, top: 71.5, left: 2, width: 96, height: 3.6, label: "Same question: 3–8 ms, $0.00000 — no model called" },
+      { at: 0.4, top: 91.9, left: 2, width: 96, height: 7, label: "“hi”, “Who is the CEO?” — answered by the guard" },
+    ],
+    caption: "After the guard: off-topic questions are answered deterministically — no model call, no tokens, no chance to invent.",
+  },
+  stricter: {
+    id: "stricter", tab: "eval", url: "evals/reports/2026-10-07-20-32-00", image: `${IMG}/eval-1332.webp`, width: 1200, height: 2239,
+    provenance: "Recorded run · 7 Oct, 13:32", live: false, scroll: [0, 0.1],
+    highlights: [
+      { at: 0.1, top: 5, left: 1.5, width: 97, height: 6.4, label: "21 · 21 · 19 of 25 — the stricter set bites" },
+      { at: 0.45, top: 25.8, left: 1.5, width: 97, height: 9.4, label: "FAIL: missing “Vault”, missing “disagree”" },
+    ],
+    caption: "The stricter set's first run, 13:32: real failures, each with the check that caught it. The fixes follow — 72, 73, then 75 / 75.",
+  },
+  final: {
+    id: "final", tab: "eval", url: "evals/reports/2026-10-07-20-41-15", image: `${IMG}/eval-1341.webp`, width: 1200, height: 2097,
+    provenance: "Recorded run · 7 Oct, 13:41", live: false, scroll: [0, 0.05],
+    highlights: [{ at: 0.15, top: 5.4, left: 1.5, width: 97, height: 6.8, label: "25 / 25 on every model — 75 / 75" }],
+    caption: "Nine minutes later, the same stricter set: every case passes on all three vendors.",
+  },
+  readiness: {
+    id: "readiness", tab: "readiness", url: "nimbus-assistant-dev.vercel.app/readiness", image: `${IMG}/readiness-full.webp`, width: 1200, height: 2750,
+    provenance: "Recorded readiness run · 7 Oct, 23:11 UTC", live: false, scroll: [0.05, 0.42],
+    highlights: [
+      { at: 0.06, top: 13.6, left: 2.5, width: 95, height: 9.6, label: "READY — 39 / 39 requirements verified" },
+      { at: 0.5, top: 29, left: 1.5, width: 97, height: 6, label: "Every gate, in order: typecheck → … → live probes" },
+    ],
+    caption: "Every requirement traced to its check and test result, and every gate in the order CI runs them.",
+  },
+  portal: {
+    id: "portal", tab: "portal", url: "nimbus-assistant-dev.vercel.app/knowledge-base", image: `${IMG}/knowledge-base-portal.webp`, width: 1200, height: 1073,
+    provenance: "Developer portal · screenshot, 7 Oct", live: false, scroll: [0, 1],
+    highlights: [{ at: 0.72, top: 68, left: 9.3, width: 54, height: 26.8, label: "A refused question → a knowledge-gap issue" }],
+    caption: "Questions the assistant couldn't answer become prioritised issues for the people who own the documents.",
+  },
+} satisfies Record<string, Screen>;
+
+export type ScreenId = keyof typeof screens;
+
+export type ChapterKind = "spec" | "build" | "verify" | "ship" | "bonus" | "after";
 
 export type Chapter = {
   id: string;
-  hour: 1 | 2;
+  /** 1: the challenge hour; 2: the bonus hour; 3: after the two-hour sprint. */
+  hour: 1 | 2 | 3;
   kind: ChapterKind;
   /** Short label for the chapter bar. */
   short: string;
@@ -106,13 +190,15 @@ export type Chapter = {
   /** Defects a gate stopped during this step (from the retrospective). */
   caught?: string[];
   effects: Effect[];
+  /** Browser screens, from a fraction of the chapter on (once the board has become a browser). */
+  screens?: { at: number; id: ScreenId }[];
 };
 
 const CORE_TESTED = ["R1", "R2", "R3", "R4", "R5", "E8", "E9", "E10", "S-CTX", "S-EXPORT", "G-KEY"];
 
 export const chapters: Chapter[] = [
   {
-    id: "audit", hour: 1, kind: "spec", short: "Audit", minutes: 3, seconds: 6,
+    id: "audit", hour: 1, kind: "spec", short: "Audit", minutes: 3, seconds: 5,
     title: "Read the brief. Audit the documents first.",
     did: "Read all ten knowledge-base files before any code: every product, date and table. Wrote down the correct answer to each brief question — the answer key — and found where documents disagree.",
     decision: "The answer key comes before the code.",
@@ -128,7 +214,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.45, define: ["Rule", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "E2", "E4"] }],
   },
   {
-    id: "brd", hour: 1, kind: "spec", short: "BRD", minutes: 5, seconds: 5,
+    id: "brd", hour: 1, kind: "spec", short: "BRD", minutes: 5, seconds: 4,
     title: "Business requirements",
     did: "Rewrote every brief item as a numbered requirement with a priority and the outcome each persona needs: Sarah in Sales, James in Support, Nina in Training.",
     decision: "Ambiguity gets a written assumption, not a silent guess.",
@@ -143,7 +229,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.4, define: ["R1", "R2", "R3", "R4", "R5", "E1", "E3", "E5", "E6", "E8", "E9", "E10", "S-CTX", "S-EXPORT", "G-KEY", "G-DOCS"] }],
   },
   {
-    id: "trd", hour: 1, kind: "spec", short: "TRD", minutes: 4, seconds: 5,
+    id: "trd", hour: 1, kind: "spec", short: "TRD", minutes: 4, seconds: 4,
     title: "Technical requirements",
     did: "A contract per requirement: zod-typed stream events, the model catalog in a config file, the answer rules, and the fallback state machine — with the stack decisions and the alternatives I rejected.",
     decision: "A provider failing mid-answer throws the partial text away and restarts on the backup.",
@@ -158,7 +244,7 @@ export const chapters: Chapter[] = [
     effects: [],
   },
   {
-    id: "plan", hour: 1, kind: "spec", short: "Plan + matrix", minutes: 3, seconds: 5,
+    id: "plan", hour: 1, kind: "spec", short: "Plan + matrix", minutes: 3, seconds: 4,
     title: "Plan and acceptance matrix",
     did: "Seven phases, each with a kickoff prompt for the AI agent; every build phase ends on a command that proves it's finished. Then 45 acceptance rows: brief id → requirement → expected result → the test layer that proves it.",
     decision: "“Done” is a row with evidence, never “the code looks right”.",
@@ -172,7 +258,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.45, define: ["D-REPO", "D-LIVE"] }],
   },
   {
-    id: "build", hour: 1, kind: "build", short: "Tests + code with AI agents", minutes: 28, seconds: 8,
+    id: "build", hour: 1, kind: "build", short: "Tests + code with AI agents", minutes: 28, seconds: 7,
     title: "Build with AI agents, tests first",
     did: "Agents implemented phase by phase against the docs. A phase ended only when its verification command passed: retrieval eval offline, fallback against a mock provider, E2E in a real browser with a mock LLM, a scan for keys in the bundle.",
     decision: "AI writes the code. Deterministic tests decide what ships.",
@@ -196,7 +282,7 @@ export const chapters: Chapter[] = [
     ],
   },
   {
-    id: "eval", hour: 1, kind: "verify", short: "Live eval + debug", minutes: 12, seconds: 7,
+    id: "eval", hour: 1, kind: "verify", short: "Live eval + debug", minutes: 12, seconds: 6,
     title: "Live eval on three vendors, then debug",
     did: "18 golden questions × Gemini, OpenAI and Claude, graded automatically against the answer key. Fix what failed, re-run everything.",
     decision: "Measure every model, every time.",
@@ -214,7 +300,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.05, run: runs.first }, { at: 0.38, run: runs.second }, { at: 0.66, run: runs.third }, { at: 0.86, run: runs.graderFix }],
   },
   {
-    id: "ship", hour: 1, kind: "ship", short: "Ship", minutes: 5, seconds: 5,
+    id: "ship", hour: 1, kind: "ship", short: "Ship", minutes: 5, seconds: 4,
     title: "Commit, deploy, report the honest number",
     did: "One commit with the product, the requirement docs, the tests and the eval reports: 78 files. Every core requirement lands with the test that proves it.",
     decision: "Report the real score, not the best one.",
@@ -228,7 +314,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.45, run: runs.afterCommit }],
   },
   {
-    id: "close", hour: 2, kind: "bonus", short: "Close gaps", minutes: 10, seconds: 5,
+    id: "close", hour: 2, kind: "bonus", short: "Close gaps", minutes: 10, seconds: 4,
     title: "Close the gaps without lowering the bar",
     did: "Named the literal-answer shortcut in the prompt and forbade it. 54 / 54 on all three models, confirmed by a re-run. Clickable citation chips that open the source passage.",
     decision: "Reversed an earlier change that had relaxed “full checklist” after seeing model answers.",
@@ -242,7 +328,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.2, run: runs.shortcutNamed }, { at: 0.6, run: runs.allGreen, tests: 80 }],
   },
   {
-    id: "prove", hour: 2, kind: "bonus", short: "Prove", minutes: 5, seconds: 4,
+    id: "prove", hour: 2, kind: "bonus", short: "Prove", minutes: 5, seconds: 6,
     title: "Prove the deliverables the way reviewers will",
     did: "Ran CI on a clean checkout — it failed: generated route types existed only on my machine. Fixed, then re-ran the golden set against the production URL.",
     decision: "Test what the reviewer will do, not what I do.",
@@ -256,7 +342,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.35, pass: ["D-REPO"] }, { at: 0.7, run: runs.production }],
   },
   {
-    id: "observe", hour: 2, kind: "bonus", short: "Observe", minutes: 15, seconds: 4,
+    id: "observe", hour: 2, kind: "bonus", short: "Observe", minutes: 15, seconds: 6,
     title: "Monitoring with a privacy contract",
     did: "Error monitoring on server, edge and browser, with every channel that could carry a question, prompt, answer or key switched off. Provider failures the fallback hides from users become issues.",
     decision: "If the fallback hides an outage from users, the team still has to see it.",
@@ -267,10 +353,11 @@ export const chapters: Chapter[] = [
       "beforeSend / beforeSendSpan scrub       → on",
       "vendor error text → redactSecrets() first",
     ] },
+    screens: [{ at: 0, id: "app" }],
     effects: [],
   },
   {
-    id: "guards", hour: 2, kind: "bonus", short: "Review → guards", minutes: 18, seconds: 5,
+    id: "guards", hour: 2, kind: "bonus", short: "Review → guards", minutes: 18, seconds: 7,
     title: "Independent review → deterministic guards",
     did: "Had the build reviewed independently. Finding: grounding was prompt-only. Added an off-topic guard that answers without calling any model, a figure check on every answer, product nicknames and topic carry-over.",
     decision: "An auto-fail deserves code, not just instructions.",
@@ -281,10 +368,11 @@ export const chapters: Chapter[] = [
       "“the API gateway” → Relay",
       "“SAML 2.0” is a protocol, not a release",
     ] },
+    screens: [{ at: 0, id: "edgeBefore" }, { at: 0.42, id: "edgeAfter" }],
     effects: [{ at: 0.55, note: { "G-DOCS": "in code" } }],
   },
   {
-    id: "raise", hour: 2, kind: "bonus", short: "Raise the bar", minutes: 12, seconds: 6,
+    id: "raise", hour: 2, kind: "bonus", short: "Raise the bar", minutes: 12, seconds: 8,
     title: "Raise the bar on myself",
     did: "Rebuilt the golden set stricter: 25 cases instead of 18 — “hi”, “Who is the CEO?”, “And for Vault?”, integrations for every product. The score dropped to 61 / 75, on purpose, then climbed back.",
     decision: "A score is only worth the bar it's measured against.",
@@ -295,7 +383,38 @@ export const chapters: Chapter[] = [
       "73 / 75",
       "75 / 75   three vendors, two hours after the brief",
     ] },
+    screens: [{ at: 0, id: "stricter" }, { at: 0.86, id: "final" }],
     effects: [{ at: 0.08, run: runs.stricter }, { at: 0.38, run: runs.stricter2 }, { at: 0.62, run: runs.stricter3 }, { at: 0.86, run: runs.final }],
+  },
+  {
+    id: "readiness", hour: 3, kind: "after", short: "Readiness console", minutes: 0, seconds: 8,
+    title: "After the sprint: a readiness console",
+    did: "Turned the acceptance matrix into a live report. Every gate runs in CI order, and each requirement links to its BRD item, acceptance row, check and test result — recorded and live evidence labelled apart.",
+    decision: "Evidence beats assertion.",
+    why: "A green build doesn't say which requirement it proved. Reviewers, and the next engineer, should see the proof instead of taking my word for it.",
+    artifact: { label: "readiness report", lines: [
+      "READY · 39 / 39 requirements verified",
+      "424 tests · 168 checks passed",
+      "typecheck → lint → unit → build → scan",
+      "  → browser E2E → live eval → live probes",
+    ] },
+    screens: [{ at: 0, id: "readiness" }],
+    effects: [],
+  },
+  {
+    id: "portal", hour: 3, kind: "after", short: "Knowledge portal", minutes: 0, seconds: 6,
+    title: "After the sprint: a knowledge-base portal",
+    did: "Content owners edit and publish the documents. Questions the assistant couldn't answer from them become prioritised knowledge-gap issues, with the question and the reason.",
+    decision: "A refusal should become someone's task.",
+    why: "Refusing to invent an answer is half the job. The client's real problem is scattered, stale knowledge — the portal tells its owners exactly what's missing.",
+    artifact: { label: "knowledge-gap issue", lines: [
+      "Knowledge gap detected · MEDIUM",
+      "Q: A client is getting a 500 on the API…",
+      "Why: the docs cover 403 and 429 only —",
+      "     the assistant refused to invent a checklist",
+    ] },
+    screens: [{ at: 0, id: "portal" }],
+    effects: [],
   },
 ];
 
@@ -315,10 +434,22 @@ export function locate(seconds: number): { index: number; progress: number } {
 export type TileStatus = "pending" | "defined" | "pass" | "partial" | "fail";
 export type TileState = { status: TileStatus; score: [number, number] | null; note: string | null };
 
+/** The moment everything the brief demands is green: late in "prove", once the live link passed. */
+export const CELEBRATE_AT = 0.74;
+const PROVE = chapters.findIndex((chapter) => chapter.id === "prove");
+
+export type Mode = "board" | "celebrate" | "browser";
+
+/** Every screen change on the playback clock, in order. */
+export const screenCues = chapters.flatMap((chapter, i) => (chapter.screens ?? []).map((cue) => ({ start: chapterStarts[i] + cue.at * chapter.seconds, id: cue.id })));
+
 export type Snapshot = {
   index: number;
   progress: number;
   chapter: Chapter;
+  mode: Mode;
+  /** The browser page and how far through its time we are (0–1), once the board became a browser. */
+  screen: { def: Screen; progress: number } | null;
   tiles: Record<string, TileState>;
   /** Real minutes elapsed within the current hour, approximately. */
   minuteOfHour: number;
@@ -357,10 +488,17 @@ export function snapshot(seconds: number): Snapshot {
   const chapter = chapters[index];
   const before = chapters.slice(0, index).filter((item) => item.hour === chapter.hour).reduce((sum, item) => sum + item.minutes, 0);
   const statuses = Object.values(tiles);
+  const mode: Mode = index < PROVE || (index === PROVE && progress < CELEBRATE_AT) ? "board" : index === PROVE ? "celebrate" : "browser";
+  const s = Math.max(0, Math.min(TOTAL_SECONDS, seconds));
+  const cue = mode === "browser" ? [...screenCues].reverse().find((item) => item.start <= s) ?? null : null;
+  const next = cue ? screenCues.find((item) => item.start > cue.start) : undefined;
+  const screen = cue ? { def: screens[cue.id] as Screen, progress: Math.min(1, (s - cue.start) / ((next?.start ?? TOTAL_SECONDS) - cue.start)) } : null;
   return {
     index,
     progress,
     chapter,
+    mode,
+    screen,
     tiles,
     minuteOfHour: Math.min(60, before + progress * chapter.minutes),
     defined: statuses.filter((tile) => tile.status !== "pending").length,
