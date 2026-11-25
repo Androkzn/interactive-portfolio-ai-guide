@@ -1,4 +1,5 @@
-.section { padding: clamp(56px, 7vw, 100px) 7vw; }
+/* The page gutter (app/globals.css) keeps this block on the same edges as every other section. */
+.section { padding: clamp(56px, 7vw, 100px) var(--gutter); }
 .card { display: grid; grid-template-columns: minmax(0, .86fr) minmax(520px, 1.14fr); gap: clamp(32px, 5vw, 76px); align-items: center; max-width: 1540px; margin: 0 auto; padding: clamp(26px, 4vw, 58px); color: #f5f4ee; border: 1px solid #272925; border-radius: 30px; overflow: hidden; background: radial-gradient(700px 360px at 0% 0%, #ff83471e, transparent 64%), radial-gradient(760px 360px at 100% 100%, #8071ff2c, transparent 62%), #151614; box-shadow: 0 28px 80px #1c1d1814; }
 .copy { position: relative; z-index: 1; }
 .kicker { display: flex; align-items: center; gap: 8px; width: fit-content; padding: 6px 8px 6px 10px; color: #d9dad4; border: 1px solid #4d5049; border-radius: 999px; background: #2a2c29; font-size: var(--text-caption); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
@@ -49,7 +50,7 @@
 /* Both bars grow from the start (12%) to their full size at the crossing (58%). */
 @keyframes weight { 0%, 12% { transform: scaleX(0); opacity: 1; animation-timing-function: cubic-bezier(.62, 0, .92, .5); } 58%, 94% { transform: scaleX(1); opacity: 1; } 99%, 100% { transform: scaleX(1); opacity: 0; } }
 @media (max-width: 1080px) { .card { grid-template-columns: 1fr; }.copy { max-width: 760px; } }
-@media (max-width: 620px) { .section { padding: 48px 16px; }.card { padding: 22px 16px; border-radius: 22px; }.copy h2 { font-size: clamp(39px, 12vw, 56px); }.chartGrid { grid-template-columns: 1fr; }.scoreboard { grid-template-columns: 1fr; }.racePulse { position: absolute; z-index: 2; left: calc(50% - 15px); top: calc(50% - 15px); width: 30px; height: 30px; border-radius: 50%; background: #111; transform: rotate(90deg); }}
+@media (max-width: 620px) { .section { padding: 48px var(--gutter); }.card { padding: 22px 16px; border-radius: 22px; }.copy h2 { font-size: clamp(39px, 12vw, 56px); }.chartGrid { grid-template-columns: 1fr; }.scoreboard { grid-template-columns: 1fr; }.racePulse { position: absolute; z-index: 2; left: calc(50% - 15px); top: calc(50% - 15px); width: 30px; height: 30px; border-radius: 50%; background: #111; transform: rotate(90deg); }}
 @media (prefers-reduced-motion: reduce) { .visualHead > span:first-child i, .racePulse svg, .originalLine, .optimizedLine, .chartDot, .weightRow i { animation: none; }.originalLine, .optimizedLine { stroke-dashoffset: 0; }.chartDot { opacity: 1; }.weightRow i { transform: none; } }
 .sectionHeading { max-width: 1540px; margin: 0 auto 24px; }
 

@@ -1826,12 +1826,21 @@ button > svg,a > svg { flex-shrink:0; }
 }
 
 /* ── Section gutters ──────────────────────────────────────────────────────────
-   The hero carried its own max-width plus a 4.5vw padding, so on wide screens
-   it started ~76px further in than the projects section below it. Hero and
-   workspace now share one measure, so their left edges line up.          ── */
-.intro { width:calc(100% - 9vw); max-width:1540px; margin-inline:auto; padding-inline:0; }
-@media (max-width:1000px) { .intro,.workspace-section { width:calc(100% - 12vw); } }
-@media (max-width:560px) { .intro,.workspace-section { width:calc(100% - 48px); } }
+   One gutter for every full-width block, so the header, hero, projects, the
+   lab, the challenge, case studies, recommendations, the closing call and the
+   footer share one left and one right edge. It is 7vw, widening to centre a
+   1540px column on wide screens, and 24px on phones. The % resolves against
+   each block's own containing block, so it matches the lab and case-study
+   columns (7vw padding around a centred 1540px card) to the pixel.
+   Blocks with a full-bleed background or rule pad themselves with it; the
+   hero and the projects workspace, which have neither, take it as margin.
+   Before this, the header, hero and workspace sat at 4.5vw while every
+   section below sat at 7vw, and recommendations and the closing call ignored
+   the 1540px column on wide screens.                                       ── */
+:root { --gutter:max(7vw, calc((100% - 1540px) / 2)); }
+@media (max-width:760px) { :root { --gutter:24px; } }
+.site-header,.site-footer,.case-study,.final-cta,.engineering-work-section { padding-inline:var(--gutter); }
+.intro,.workspace-section { width:auto; max-width:none; margin-inline:var(--gutter); padding-inline:0; }
 
 /* ── Hero: app marks beside "Explore projects" ────────────────────────────────
    On desktop the stats column is a two-column grid so the three marks sit in
@@ -1841,6 +1850,13 @@ button > svg,a > svg { flex-shrink:0; }
 @media (min-width:1001px) {
   .hero-stats { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:14px; }
   .hero-stats > .section-eyebrow,.hero-stats > a,.hero-stats > p { grid-column:1/-1; }
+}
+/* Laptop widths: with the shared page gutter the stats column is too narrow for the marks beside
+   "Explore projects" (its title broke onto two lines), so they take a row under it, in line with
+   the link's text (48px icon + 14px gap, less the link's -12px bleed).                         ── */
+@media (min-width:1001px) and (max-width:1799px) {
+  .hero-stats { grid-template-columns:minmax(0,1fr); }
+  .hero-app-logos { margin:-8px 0 8px 62px; }
 }
 /* Tablet portrait (an 11" iPad): two by two. The lab and challenge links fill the
    first row in source order; "Explore projects" and the engineering link (the
