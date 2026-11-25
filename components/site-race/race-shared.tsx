@@ -46,10 +46,13 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
-/** The lane was stopped at the time cap — known from the settle phase's note before its metrics arrive. */
+/** The lane was stopped at the time cap — known from the phase it entered there, before its metrics arrive. */
 export function isCapped(lane: LaneState): boolean {
-  return !!lane.metrics?.capped || (lane.phase !== "failed" && !!lane.phaseDetail);
+  return lane.cap !== null || !!lane.metrics?.capped;
 }
+
+/** Stopped at the cap while still downloading: the visitor would have been left waiting (not just a busy main thread). */
+export const stoppedLoading = (lane: LaneState) => lane.cap === "loading";
 
 /**
  * Where a lane crossed its finish line, ms: its LCP, which the Worker sends only once
@@ -59,7 +62,7 @@ export function isCapped(lane: LaneState): boolean {
  */
 export function finishTime(lane: LaneState): number | null {
   if (lane.marks.lcp !== undefined) return Math.max(lane.marks.lcp, lane.marks.fcp ?? 0);
-  if (isCapped(lane)) return lane.metrics?.capMs ?? 30_000;
+  if (isCapped(lane)) return lane.capMs;
   if (lane.phase === "failed") return Math.max(lane.marks.fcp ?? 0, lane.frames.at(-1)?.t ?? 0) || null;
   if (lane.phase === "inspecting" || lane.phase === "revisiting" || lane.phase === "navigating" || lane.phase === "done" || lane.metrics) return lane.marks.fcp ?? null;
   return null;

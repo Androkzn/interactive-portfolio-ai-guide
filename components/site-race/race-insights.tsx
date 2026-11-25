@@ -6,7 +6,7 @@ import type { LaneId, LaneMetrics, RaceProfile, WaterfallEntry } from "@/package
 import type { LaneState, RaceState } from "@/lib/site-race/use-race";
 import { band, performanceScore, type ScoreBand, type ScoreMetric } from "@/lib/site-race/lighthouse-score";
 import { progressFromFrames, speedIndex, visuallyComplete, type ProgressPoint } from "@/lib/site-race/visual-progress";
-import { kb, lcpOrCap, ms, tbtCensored } from "@/lib/site-race/scoring";
+import { capOf, kb, lcpOrCap, ms, tbtCensored, type Pending } from "@/lib/site-race/scoring";
 import { toneClass, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./race-insights.module.css";
 
@@ -14,30 +14,43 @@ const LANES: LaneId[] = ["a", "b"];
 
 export type LaneProgress = { points: ProgressPoint[]; si: number | null; complete: number | null; capped: boolean };
 
-/** Visual progress per lane, computed from the screencast once the race is over. */
+/** Where a lane's first page ended on its clock: frames after it belong to the visit (absent in older races). */
+const firstPageCut = (lane: LaneState) => lane.metrics?.firstPageEndMs ?? lane.metrics?.tappedAt;
+/** The lane's frames of its first page only, when the race says where that ended. */
+export const firstPageFrames = (lane: LaneState) => {
+  const cut = firstPageCut(lane);
+  return cut == null ? lane.frames : lane.frames.filter((frame) => frame.t <= cut);
+};
+
+/**
+ * Visual progress per lane, from the screencast. Speed Index describes the first page only, so a
+ * race that marks where each first page ended is computed as soon as both are in (the frames the
+ * visit adds later change nothing); an older race without that mark waits for the end of the race.
+ */
 export function useVisualProgress(state: RaceState): Record<LaneId, LaneProgress> | null {
   const [result, setResult] = useState<Record<LaneId, LaneProgress> | null>(null);
-  const framesA = state.lanes.a.frames;
-  const framesB = state.lanes.b.frames;
-  const finished = state.status === "finished";
+  const { a, b } = state.lanes;
+  const cutKnown = firstPageCut(a) != null && firstPageCut(b) != null;
+  const ready = state.status === "finished" || (!!a.metrics && !!b.metrics && cutKnown);
+  // Recompute only when the first page's frames change, not on every frame of the visit.
+  const framesA = useMemo(() => (ready ? firstPageFrames(a) : null), [ready, a.frames.length, firstPageCut(a)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const framesB = useMemo(() => (ready ? firstPageFrames(b) : null), [ready, b.frames.length, firstPageCut(b)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const keyA = framesA ? `${framesA.length}@${framesA.at(-1)?.t}` : "";
+  const keyB = framesB ? `${framesB.length}@${framesB.at(-1)?.t}` : "";
   useEffect(() => {
-    if (!finished) { setResult(null); return; }
+    if (!framesA || !framesB) { setResult(null); return; }
     let cancelled = false;
     void (async () => {
       const out = {} as Record<LaneId, LaneProgress>;
-      for (const [id, frames, lane] of [["a", framesA, state.lanes.a], ["b", framesB, state.lanes.b]] as const) {
-        // Speed Index describes the first page only: in a journey race the screencast goes on to the
-        // catalogue, the model page and the repeat visit, and the last of those frames must not become
-        // the "visually complete" target for the home page.
-        const cut = lane.metrics?.firstPageEndMs ?? lane.metrics?.tappedAt;
-        const points = await progressFromFrames(cut == null ? frames : frames.filter((frame) => frame.t <= cut));
+      for (const [id, frames, lane] of [["a", framesA, a], ["b", framesB, b]] as const) {
+        const points = await progressFromFrames(frames);
         out[id] = { points, si: speedIndex(points), complete: visuallyComplete(points), capped: !!lane.metrics?.capped };
       }
       if (!cancelled) setResult(out);
     })().catch(() => { if (!cancelled) setResult(null); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finished, framesA, framesB]);
+  }, [keyA, keyB]);
   return result;
 }
 
@@ -65,7 +78,7 @@ function useCountUp(target: number | null, reduced: boolean, duration = 1200) {
 
 export function RaceScorecard({ state, progress, identity }: { state: RaceState; progress: Record<LaneId, LaneProgress> | null; identity: (id: LaneId) => LaneIdentity }) {
   return (
-    <section className={styles.panel} aria-labelledby="scorecard-title">
+    <section className={styles.panel} aria-labelledby="scorecard-title" id="race-scorecard" style={{ scrollMarginTop: 20 }}>
       <header className={styles.panelHead}>
         <h3 id="scorecard-title"><Gauge size={18} aria-hidden="true" /> Scorecard</h3>
         <p>Lighthouse-style estimate: Lighthouse 10&apos;s weights and scoring curves applied to this race&apos;s numbers. Speed Index comes from the screencast frames. Not an official Lighthouse report.</p>
@@ -244,13 +257,16 @@ function ProgressChart({ progress, state, identity }: { progress: Record<LaneId,
 
 type Tab = "lcp" | "images" | "waterfall" | "journey";
 
-export function UnderTheHood({ state, identity }: { state: RaceState; identity: (id: LaneId) => LaneIdentity }) {
+/** A lane's numbers reach past its first page (a repeat visit or a tap), or its visit is under way. */
+const visitShown = (m: LaneMetrics | null, waiting: boolean | undefined) => !!m && (waiting || !!m.repeat || m.navigation !== undefined || (m.navigationSteps?.length ?? 0) > 0);
+
+export function UnderTheHood({ state, identity, pending = {} }: { state: RaceState; identity: (id: LaneId) => LaneIdentity; pending?: Pending }) {
   const [tab, setTab] = useState<Tab>("lcp");
   const tabs: { id: Tab; label: string }[] = [
     { id: "lcp", label: "LCP element" },
     { id: "images", label: "Image bytes" },
     { id: "waterfall", label: "Waterfall" },
-    ...(state.lanes.a.metrics?.navigation !== undefined || state.lanes.b.metrics?.navigation !== undefined ? [{ id: "journey" as Tab, label: "Tap & repeat visit" }] : []),
+    ...(visitShown(state.lanes.a.metrics, pending.a) || visitShown(state.lanes.b.metrics, pending.b) ? [{ id: "journey" as Tab, label: "Tap & repeat visit" }] : []),
   ];
   const a = state.lanes.a.metrics;
   const b = state.lanes.b.metrics;
@@ -271,7 +287,7 @@ export function UnderTheHood({ state, identity }: { state: RaceState; identity: 
         {tab === "lcp" && <LcpSpotlight state={state} identity={identity} />}
         {tab === "images" && <ImageBytes state={state} identity={identity} />}
         {tab === "waterfall" && <Waterfall state={state} identity={identity} />}
-        {tab === "journey" && <JourneyDetail state={state} identity={identity} />}
+        {tab === "journey" && <JourneyDetail state={state} identity={identity} pending={pending} />}
       </div>
     </section>
   );
@@ -289,7 +305,8 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
         const m = lane.metrics!;
         const who = identity(id);
         const detail = m.lcpDetail;
-        const frame = lane.frames.at(-1);
+        // The first page's last frame: in a journey race the screencast goes on to other pages.
+        const frame = firstPageFrames(lane).at(-1);
         const rect = detail?.rect && detail.viewport.width > 0 ? {
           left: (detail.rect.x / detail.viewport.width) * 100,
           top: (detail.rect.y / detail.viewport.height) * 100,
@@ -313,7 +330,7 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             </div>
             {censored ? (
               <div className={styles.spotText}>
-                <p><b>Never reached its LCP.</b> After {((m.capMs ?? 30_000) / 1000).toFixed(0)} s the browser was still downloading; the largest thing painted so far was {detail?.element ? <code>{detail.element}</code> : "nothing"}{isImage ? "" : " text"}.</p>
+                <p><b>Never reached its LCP.</b> After {ms(capOf(m))} the browser was still downloading; the largest thing painted so far was {detail?.element ? <code>{detail.element}</code> : "nothing"}{isImage ? "" : " text"}.</p>
                 {pendingImages.length > 0 && (
                   <>
                     <p className={styles.spotSub}>Still downloading when the lane stopped:</p>
@@ -326,7 +343,7 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             ) : detail ? (
               <div className={styles.spotText}>
                 <p><b>{m.timing.lcp === null ? "LCP" : `LCP at ${ms(m.timing.lcp)}`}:</b> {detail.element ? <code>{detail.element}</code> : "an element"}{isImage ? <> · <code>{detail.path}</code></> : " (text)"}</p>
-                {m.capped && <p className={styles.spotSub}>The LCP was final, but the page was still downloading {pendingImages.length ? `${pendingImages.length} more image${pendingImages.length === 1 ? "" : "s"}` : "more files"} below it at the {((m.capMs ?? 30_000) / 1000).toFixed(0)} s cap.</p>}
+                {m.capped && <p className={styles.spotSub}>The LCP was final, but the page was still downloading {pendingImages.length ? `${pendingImages.length} more image${pendingImages.length === 1 ? "" : "s"}` : "more files"} below it at the {ms(capOf(m))} cap.</p>}
                 {isImage && (
                   <>
                     <p className={styles.spotSub}>{detail.kb === null ? "size unknown" : kb(detail.kb)}{detail.format ? ` · ${detail.format.toUpperCase()}` : ""}{detail.displayed ? ` · shown at ${detail.displayed.width}×${detail.displayed.height}` : ""}</p>
@@ -485,7 +502,7 @@ function Waterfall({ state, identity }: { state: RaceState; identity: (id: LaneI
 }
 
 /** What happened after the first page: the tap to the second page, and the repeat visit with the cache on. */
-function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: LaneId) => LaneIdentity }) {
+function JourneyDetail({ state, identity, pending }: { state: RaceState; identity: (id: LaneId) => LaneIdentity; pending: Pending }) {
   const t = (value: number | null | undefined, cap: number) => (value == null ? `> ${ms(cap)}` : ms(value));
   return (
     <div className={styles.spotGrid}>
@@ -511,7 +528,8 @@ function JourneyDetail({ state, identity }: { state: RaceState; identity: (id: L
                   )}
                 </div>
               ))}
-              <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : rep ? "Home loaded again in the same browser with the HTTP cache on, once the first load had finished downloading. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
+              <p className={styles.spotSub}><b>Repeat visit.</b> {rep?.skipped ? rep.skipped : !rep && pending[id] ? "Still running." : rep ? "Home loaded again in the same browser with the HTTP cache on, once the first load had finished downloading. Both sites mark their HTML must-revalidate and their scripts immutable; the gap that matters most (how long images stay cached) shows only after hours or a deploy, which one run cannot simulate." : "Not measured."}</p>
+              {pending[id] && rep && <p className={styles.spotSub}>The taps are still running.</p>}
               {rep && !rep.skipped && (
                 <ul className={styles.fileList}>
                   <li><span>LCP</span><b>{t(rep.lcp, rep.capMs)}</b></li>

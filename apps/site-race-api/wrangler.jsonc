@@ -17,7 +17,7 @@
   // Version id of the running Worker, stamped on saved reports (preview uploads included).
   "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3001,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev"
+    "ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3001,http://localhost:3002,https://interactive-portfolio-ai-guide.pages.dev,https://andreitekhtelev.dev,https://www.andreitekhtelev.dev"
   },
   "observability": { "enabled": true, "head_sampling_rate": 1 }
 }

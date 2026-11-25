@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Flag, Gauge, Link2, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
-import type { LaneId, MarkName, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
+import { ArrowDown, Check, Crown, Flag, Gauge, Monitor, Pause, Play, Smartphone, Swords, Timer, X } from "lucide-react";
+import type { LaneId, MarkName, RaceCaps, RaceLink, RacePageId, RaceProfile } from "@/packages/contracts/src/site-race";
 import { RACE_PAGES } from "@/packages/contracts/src/site-race";
-import { frameAt, idleRace, useRace, type LaneState, type RaceState } from "@/lib/site-race/use-race";
-import { REPORT_ID, reportLink, setupKey, setupOf } from "@/lib/site-race/reports";
-import { formatValue, kb, ms, scoreRace, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
+import { frameAt, idleRace, pendingLanes, useRace, verdictFinal, verdictOf, type LaneState, type RaceState } from "@/lib/site-race/use-race";
+import { REPORT_ID, setupKey, setupOf } from "@/lib/site-race/reports";
+import { formatValue, kb, ms, weightCensored, type Round, type Verdict } from "@/lib/site-race/scoring";
 import { featuredStage, raceUrl, stageForUrl, stages, type StageId } from "@/lib/site-race/journey";
 import { RaceScorecard, UnderTheHood, useVisualProgress } from "./race-insights";
-import { finishTime, isCapped, laneClock, laneIdentity, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
+import { capSeconds, FullPageLine, PatienceWhy } from "./patience";
+import { finishTime, isCapped, laneClock, laneIdentity, stoppedLoading, toneClass, useClock, usePrefersReducedMotion, type LaneIdentity } from "./race-shared";
 import styles from "./site-race.module.css";
 
 const LANES: LaneId[] = ["a", "b"];
@@ -32,14 +33,12 @@ const PHASE_LABEL: Record<LaneState["phase"], string> = {
   done: "Done",
   failed: "Did not finish",
 };
-const PROFILE_NOTE: Record<RaceProfile, string> = {
-  mobile: "Mobile matches the projects' own performance reports: 390 px wide, slow 4G (1.6 Mbps, 150 ms), 4× CPU slowdown.",
-  desktop: "Desktop: 1440 px wide, no network or CPU throttling — a fast connection hides heavy images, so rendering and JavaScript decide.",
-};
-const FAIRNESS_NOTE = "Before the clock starts, both sites are visited once at full speed in a discarded session (every page of the visit), so both CDN caches are warmed identically; the timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s, or 30 s at most. Then each lane, in the same order: the home page again with the cache on, then two taps through the site. Before each step the previous page may finish downloading, so every step measures itself.";
+/** The fine print, with the caps the race shown ran under (the current ones before any race). */
+const fairnessNote = (caps: RaceCaps) => `Before the clock starts, both sites are visited once at full speed in a discarded session (every page of the visit), so both CDN caches are warmed identically; that load also weighs each first page in full. The timed load then starts with a cold browser (no cache, no open connections). The home page is watched until it is fully loaded and has been quiet for 5 s. One still loading at ${capSeconds(caps.firstPageMs)}, a visitor's patience, is stopped there; one that loaded in time may take those 5 s to show it is quiet. Its rounds are scored the moment both home pages are done. Then each lane, in the same order: the home page again with the cache on (${capSeconds(caps.repeatMs)} at most), then two taps through the site (${capSeconds(caps.tapMs)} each); their rounds fill in as they finish. Before each step the previous page may finish downloading, so every step measures itself.`;
 /**
  * The race's plan as the visitor sees it: one step per stage of the visit. A step is done when
- * both lanes have moved past it, so the bar always shows the slower lane's progress.
+ * both lanes have moved past it, so the bar always shows the slower lane's progress. The first
+ * page's scores arrive after the second step; the last step is the visit's rounds coming in.
  * Challenger races (a visitor's site) stop after the first page.
  */
 type ProgressStep = { id: string; label: string; phases: LaneState["phase"][] };
@@ -48,10 +47,12 @@ const PROGRESS_STEPS: ProgressStep[] = [
   { id: "home", label: "Home page, cold", phases: ["loading", "settling", "inspecting"] },
   { id: "repeat", label: "Return visit", phases: ["revisiting"] },
   { id: "taps", label: "Taps through the site", phases: ["navigating"] },
-  { id: "score", label: "Scoring", phases: ["done", "failed"] },
+  { id: "score", label: "Final score", phases: ["done", "failed"] },
 ];
 /** Index of the step a lane is on. */
 const stepOf = (lane: LaneState, steps: ProgressStep[]) => Math.max(0, steps.findIndex((step) => step.phases.includes(lane.phase)));
+/** `revealed` when the whole scoreboard shows at once (a reopened race, reduced motion). */
+const REVEAL_ALL = Number.POSITIVE_INFINITY;
 const clockText = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 /** Pages with a recorded race to fall back on when the live browsers are unavailable. */
 const RECORDED_PAGES: RacePageId[] = ["model", "home"];
@@ -84,21 +85,56 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
   const [scrub, setScrub] = useState<number | null>(null);
   const [replaying, setReplaying] = useState(false);
   const [revealed, setRevealed] = useState(0);
-  /** "copied" after a copy, or the link itself when the clipboard refused. */
-  const [copied, setCopied] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const stateRef = useRef(state);
-  /** The scoreboard reveals round by round only for a race that just finished in front of the visitor. */
+  /** The scoreboard reveals round by round only for a race that is being watched as it happens. */
   const animateReveal = useRef(false);
+  /** A race the visitor started offers its scoreboard with a floating pill (never scrolls by itself). */
+  const [offerScores, setOfferScores] = useState(false);
+  const [boardSeen, setBoardSeen] = useState(false);
 
   const racing = state.status === "connecting" || state.status === "racing";
   const now = useClock(racing || replaying);
+  const pending = pendingLanes(state);
+  const final = verdictFinal(state);
+  // The results open together, once the whole visit is scored (or the race was stopped): a scoreboard
+  // with rounds still to come read as broken while the lanes were still racing.
+  const resultsOpen = state.status === "finished" || state.status === "failed" || final;
   const verdict: Verdict | null = useMemo(
-    () => (state.lanes.a.metrics && state.lanes.b.metrics ? scoreRace(state.lanes.a.metrics, state.lanes.b.metrics) : null),
-    [state.lanes.a.metrics, state.lanes.b.metrics],
+    () => verdictOf(state),
+    // verdictOf reads only the lanes' metrics and which lanes are still on their visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.lanes.a.metrics, state.lanes.b.metrics, pending.a, pending.b],
   );
+  const firstRounds = verdict?.rounds.filter((round) => round.part === "first-page").length ?? 0;
+  const firstRoundsRef = useRef(firstRounds);
+  firstRoundsRef.current = firstRounds;
   const winnerLane = verdict && verdict.winner !== "tie" ? verdict.winner : null;
   const identity = (id: LaneId) => laneIdentity(state.lanes[id], id, stage);
+  // One line under the progress: who is through and who we are still waiting for, then the winner.
+  const raceStatus = (() => {
+    if (state.source === "report" && state.recordedAt) return `Saved race from ${when(state.recordedAt)}`;
+    if (state.source === "replay" && state.recordedAt) return `Recorded race from ${when(state.recordedAt)}`;
+    if (state.status === "finished" && verdict) {
+      if (verdict.winner === "tie") return "Race complete · A draw";
+      const w = verdict.winner, l = w === "a" ? "b" : "a";
+      return `Race complete · Winner: ${identity(w).label} (${verdict.roundsWon[w]}–${verdict.roundsWon[l]})`;
+    }
+    if (racing) {
+      const done = LANES.filter((id) => state.lanes[id].complete);
+      if (done.length === 2) return "Both finished · scoring…";
+      if (done.length === 1) {
+        const other = LANES.find((id) => id !== done[0])!;
+        return `${identity(done[0]).label} finished first · waiting for ${identity(other).label}…`;
+      }
+    }
+    return null;
+  })();
+  // How loud the line is: the finish moments are the news of the race, the rest is fine print.
+  const statusKind = notice || state.status === "failed" ? "note"
+    : state.status === "finished" && verdict && state.source === "live" ? "complete"
+    : racing && LANES.some((id) => state.lanes[id].complete) ? "waiting"
+    : "note";
   const progress = useVisualProgress(state);
 
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -109,25 +145,52 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     if (state.status === "connecting") raceStart.current = performance.now();
   }, [state.status]);
 
-  // Reveal the scoreboard one round at a time after a race; a reopened race shows it whole.
+  // Reveal the first page's rounds one at a time the moment both first pages are in; the visit's
+  // rounds then join as they finish, without running the reveal again. A reopened race shows it whole.
   useEffect(() => {
-    if (state.status !== "finished" || !verdict) { setRevealed(0); return; }
-    if (reduced || !animateReveal.current) { setRevealed(verdict.rounds.length + 1); return; }
-    animateReveal.current = false;
+    if (!resultsOpen || !verdict) { setRevealed(0); return; }
+    if (reduced || !animateReveal.current) { setRevealed(REVEAL_ALL); return; }
     setRevealed(0);
     let step = 0;
-    const timer = setInterval(() => { step += 1; setRevealed(step); if (step > verdict.rounds.length) clearInterval(timer); }, 850);
+    const timer = setInterval(() => {
+      step += 1;
+      setRevealed(step);
+      if (step > firstRoundsRef.current) { clearInterval(timer); animateReveal.current = false; }
+    }, 850);
     return () => clearInterval(timer);
-  }, [state.status, verdict, reduced]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultsOpen, reduced]);
 
+  // When the race is over, a centred card announces the winner and offers the results below the
+  // lanes (out of sight on most screens). Nothing scrolls by itself; Escape or "Keep watching" closes it.
+  useEffect(() => {
+    if (!resultsOpen || !offerScores || boardSeen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setBoardSeen(true); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [resultsOpen, offerScores, boardSeen]);
+  const showScores = () => {
+    // The Scorecard (0–100 rings) heads the results; the rounds follow it.
+    (document.getElementById("race-scorecard") ?? document.getElementById("race-scoreboard"))?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    setBoardSeen(true);
+  };
+
+  // The track and the photo finish cover the first page. The visit's later steps add frames far past
+  // it (the last page settled, ~30 s in), which would squash a 10 s first page into a third of the axis;
+  // once a lane's first page is measured, frames after it stop counting toward the scale.
   const maxT = useMemo(() => {
-    const ends = LANES.flatMap((id) => [state.lanes[id].frames.at(-1)?.t ?? 0, ...Object.values(state.lanes[id].marks)]);
+    const ends = LANES.flatMap((id) => {
+      const lane = state.lanes[id];
+      const cut = lane.metrics?.observedMs;
+      const frames = cut == null ? lane.frames : lane.frames.filter((frame) => frame.t <= cut + 500);
+      return [frames.at(-1)?.t ?? 0, cut ?? 0, ...Object.values(lane.marks)];
+    });
     return Math.max(4000, ...ends);
   }, [state.lanes]);
 
   // Photo finish: both filmstrips on one shared clock, played only when asked for —
   // a clock that restarts by itself after the race looks like the race is still on.
-  // Long races replay faster, so a 30-second loser does not hold the screen for 30 seconds.
+  // Long races replay faster: the whole visit, however long it ran, plays back in about 8 s.
   const speed = Math.max(0.6, maxT / 8000);
   const replayStart = useRef(0);
   useEffect(() => {
@@ -163,6 +226,8 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
   // Every finished race is saved by the Worker; a ?report=<id> link opens that one race.
   const openSaved = useCallback(async (id: string) => {
+    animateReveal.current = false;
+    setOfferScores(false);
     const opened = await openReport(id);
     const setup = opened ? setupOf(opened) : null;
     if (!setup) return;
@@ -183,6 +248,10 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     setReplaying(false);
     dropReportParam();
     animateReveal.current = true;
+    setOfferScores(true);
+    setBoardSeen(false);
+    // The first-visit hint about the start button has done its job.
+    window.dispatchEvent(new Event("site-race:start"));
     const result = await runLive({ a, b, profile, page });
     const ours = !a.includes(".") || stageForUrl(a) !== null;
     const theirs = !b.includes(".") || stageForUrl(b) !== null;
@@ -209,19 +278,6 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
     event.preventDefault();
     if (!challenge.trim()) return;
     void start(raceUrl(featuredStage.id), challenge.trim());
-  };
-
-  const copyLink = async () => {
-    if (!state.reportId) return;
-    const link = reportLink(state.reportId, window.location.href);
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied("copied");
-      setTimeout(() => setCopied(null), 1800);
-    } catch {
-      // No clipboard (permissions, insecure origin): show the link to copy by hand.
-      setCopied(link);
-    }
   };
 
   const tLabel = scrub === null ? null : `${(scrub / 1000).toFixed(2)} s`;
@@ -265,7 +321,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
 
       <details className={styles.settings}>
         <summary>How the race stays fair</summary>
-        <p className={styles.fairNote}>{FAIRNESS_NOTE}</p>
+        <p className={styles.fairNote}>{fairnessNote(state.caps)}</p>
       </details>
 
       {state.status !== "idle" && (
@@ -288,44 +344,42 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
         </div>
       )}
 
-      <p className={styles.status} role="status" aria-live="polite">
-        {notice ?? (state.status === "failed" ? state.error
-          : state.source === "report" && state.recordedAt ? `Saved race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
-          : state.source === "replay" && state.recordedAt ? `Recorded race from ${when(state.recordedAt)} · ${RACE_PAGES[state.page ?? "home"].label} · ${state.profileLabel}`
-          : state.profileLabel ? `${RACE_PAGES[state.page ?? page].label} · ${state.profileLabel}`
-          : PROFILE_NOTE[profile])}
+      <p className={styles.status} role="status" aria-live="polite" data-kind={statusKind}>
+        {statusKind === "complete" && raceStatus ? <span className={styles.statusBadge}><Crown size={18} aria-hidden="true" /> {raceStatus}</span>
+          : statusKind === "waiting" && raceStatus ? <span className={styles.statusBadge}><i className={styles.statusPulse} aria-hidden="true" /><Flag size={16} aria-hidden="true" /> {raceStatus}</span>
+          : notice ?? (state.status === "failed" ? state.error : raceStatus)}
       </p>
-      {state.status === "finished" && state.reportId && state.source === "live" && (
-        <p className={styles.savedNote}>
-          <Check size={14} aria-hidden="true" /> Report saved
-          {copied && copied !== "copied"
-            ? <a href={copied}>{copied}</a>
-            : <button type="button" onClick={() => void copyLink()}><Link2 size={14} aria-hidden="true" /> {copied ? "Link copied" : "Copy link"}</button>}
-        </p>
-      )}
 
       <div className={styles.arena}>
+        {/* The winner glows once the verdict is final, not while the visit can still change it. */}
         {LANES.map((id) => (
           <LaneView key={id} lane={state.lanes[id]} rival={state.lanes[id === "a" ? "b" : "a"]} identity={identity(id)} now={now} scrub={scrub} profile={state.status === "idle" ? profile : state.profile}
-            winner={revealed > (verdict?.rounds.length ?? 99) && winnerLane === id} />
+            link={state.link} running={racing && !state.lanes[id].complete} winner={final && revealed > firstRounds && winnerLane === id} />
         ))}
       </div>
+      {/* Phones: two lanes side by side leave no room for a note, so it reads across both, right under them. */}
+      {LANES.filter((id) => stoppedLoading(state.lanes[id])).map((id) => (
+        <CapNote key={id} lane={state.lanes[id]} profile={state.profile} link={state.link} className={styles.capNoteWide} label={identity(id).label} />
+      ))}
 
       <Track state={state} now={now} maxT={maxT} scrub={scrub} identity={identity} />
 
-      {state.status === "finished" && verdict && (
+      {verdict && resultsOpen && (
         <>
-          <div className={styles.scrubber}>
-            <button type="button" className={styles.replayButton} onClick={toggleReplay} aria-pressed={replaying}>
-              {replaying ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />} {replaying ? "Pause" : "Replay side by side"}
-            </button>
-            <input type="range" min={0} max={Math.round(maxT)} step={10} value={Math.round(scrub ?? maxT)} aria-label="Photo finish: moment to show on both screens"
-              onChange={(event) => { setReplaying(false); const value = Number(event.target.value); setScrub(value >= maxT ? null : value); }} />
-            <span>{tLabel ? <><Timer size={14} aria-hidden="true" /> Both screens at <b>{tLabel}</b></> : "Drag to compare both screens at the same moment"}</span>
-          </div>
+          {/* The photo finish needs every frame, so it waits for the race to end. */}
+          {state.status === "finished" && (
+            <div className={styles.scrubber}>
+              <button type="button" className={styles.replayButton} onClick={toggleReplay} aria-pressed={replaying}>
+                {replaying ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />} {replaying ? "Pause" : "Replay side by side"}
+              </button>
+              <input type="range" min={0} max={Math.round(maxT)} step={10} value={Math.round(scrub ?? maxT)} aria-label="Photo finish: moment to show on both screens"
+                onChange={(event) => { setReplaying(false); const value = Number(event.target.value); setScrub(value >= maxT ? null : value); }} />
+              <span>{tLabel ? <><Timer size={14} aria-hidden="true" /> Both screens at <b>{tLabel}</b></> : "Drag to compare both screens at the same moment"}</span>
+            </div>
+          )}
           <RaceScorecard state={state} progress={progress} identity={identity} />
-          <Scoreboard verdict={verdict} identity={identity} revealed={revealed} reduced={reduced} />
-          <UnderTheHood state={state} identity={identity} />
+          <Scoreboard verdict={verdict} identity={identity} revealed={revealed} reduced={reduced} final={final} stopped={stopped} caps={state.caps} />
+          <UnderTheHood state={state} identity={identity} pending={pending} />
         </>
       )}
 
@@ -340,11 +394,36 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
           <button type="submit" className={styles.startButton} disabled={racing || !challenge.trim()}><Flag size={16} aria-hidden="true" /> Challenge</button>
         </div>
       </form>
+      {offerScores && resultsOpen && verdict && !boardSeen && (() => {
+        const w = verdict.winner === "tie" ? null : verdict.winner;
+        const l: LaneId | null = w === "a" ? "b" : w === "b" ? "a" : null;
+        return (
+          <div className={styles.winnerBackdrop} onClick={(event) => { if (event.target === event.currentTarget) setBoardSeen(true); }}>
+            <div className={styles.winnerCard} role="dialog" aria-modal="false" aria-labelledby="race-winner-title">
+              <button type="button" className={styles.winnerClose} onClick={() => setBoardSeen(true)} aria-label="Close"><X size={18} aria-hidden="true" /></button>
+              <span className={styles.winnerCrown} aria-hidden="true"><Crown size={34} strokeWidth={2.2} /></span>
+              <p className={styles.winnerEyebrow}>Race complete</p>
+              <h3 id="race-winner-title" className={styles.winnerTitle}>
+                {w ? <><span className={toneClass(identity(w).kind)}>{identity(w).label}</span> wins</> : "A draw"}
+              </h3>
+              <p className={styles.winnerScore}>
+                {w && l
+                  ? <><b>{verdict.roundsWon[w]}–{verdict.roundsWon[l]}</b> on rounds against {identity(l).label}</>
+                  : <><b>{verdict.roundsWon.a}–{verdict.roundsWon.b}</b> on rounds</>}
+              </p>
+              <button type="button" className={styles.winnerGo} onClick={showScores} autoFocus>
+                See the results <ArrowDown size={18} aria-hidden="true" />
+              </button>
+              <button type="button" className={styles.winnerStay} onClick={() => setBoardSeen(true)}>Keep watching the lanes</button>
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 }
 
-function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane: LaneState; rival: LaneState; identity: LaneIdentity; now: number; scrub: number | null; profile: RaceProfile; winner: boolean }) {
+function LaneView({ lane, rival, identity, now, scrub, profile, link, running, winner }: { lane: LaneState; rival: LaneState; identity: LaneIdentity; now: number; scrub: number | null; profile: RaceProfile; link: RaceLink | null; running: boolean; winner: boolean }) {
   const clock = laneClock(lane, now);
   const frame = scrub !== null ? frameAt(lane.frames, scrub) : lane.frames.at(-1) ?? null;
   const { role, label, stack } = identity;
@@ -356,7 +435,10 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
   const shownT = scrub !== null && mine !== null ? Math.min(scrub, mine) : t;
   const finishedNow = mine !== null && (scrub === null || scrub >= mine);
   const capped = isCapped(lane);
-  const capS = ((lane.metrics?.capMs ?? 30_000) / 1000).toFixed(0);
+  // Still downloading at the cap: the visitor was left waiting. A lane that loaded but never went
+  // quiet for TTI was capped too, but its page was there: it finishes like any other.
+  const leftWaiting = stoppedLoading(lane);
+  const capS = capSeconds(lane.capMs);
   const hasLcp = lane.marks.lcp !== undefined;
   const seconds = (value: number) => `${(value / 1000).toFixed(2)} s`;
   // Once the rival has crossed the line, count how long this lane has been going since.
@@ -382,9 +464,9 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
       </header>
       <div className={`${styles.device} ${profile === "desktop" ? styles.deviceDesktop : ""}`}>
         {frame ? <img src={frame.src} alt={`${label} as the test browser saw it`} /> : <div className={styles.blank}>{lane.phase === "queued" ? "Waiting for the start" : "No pixels yet"}</div>}
-        {finishedNow && !capped && !failed && <span className={styles.finishBadge}>Finished · {hasLcp ? "LCP " : ""}{seconds(mine)}</span>}
-        {finishedNow && capped && (
-          <span className={`${styles.finishBadge} ${styles.finishCapped}`}>{hasLcp ? `LCP ${seconds(lane.marks.lcp!)} · ` : ""}still loading at {capS} s</span>
+        {finishedNow && !leftWaiting && !failed && <span className={styles.finishBadge}>Finished · {hasLcp ? "LCP " : ""}{seconds(mine)}</span>}
+        {finishedNow && leftWaiting && (
+          <span className={`${styles.finishBadge} ${styles.finishCapped}`}>{hasLcp ? `LCP ${seconds(lane.marks.lcp!)} · ` : ""}still loading at {capS}</span>
         )}
         {trailing !== null && (
           <span className={styles.behindBadge}>{scrub !== null ? `+${(trailing / 1000).toFixed(1)} s behind` : `Still loading · +${(trailing / 1000).toFixed(1)} s`}</span>
@@ -397,7 +479,7 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
         {MARKS.map(({ name, label: markLabel }) => {
           const at = lane.marks[name];
           const passed = at !== undefined && (scrub === null || scrub >= at);
-          const text = at !== undefined ? ms(at) : name === "lcp" && capped ? `> ${capS} s` : "—";
+          const text = at !== undefined ? ms(at) : (name === "lcp" || name === "load") && leftWaiting ? `> ${capS}` : "—";
           return <li key={name} className={passed ? styles.markOn : ""}><span>{markLabel}</span><b>{text}</b></li>;
         })}
       </ul>
@@ -407,18 +489,40 @@ function LaneView({ lane, rival, identity, now, scrub, profile, winner }: { lane
       ) : (
         <p className={styles.counters}><span><b>{lane.net.requests}</b> requests</span><span><b>{kb(lane.net.kb)}</b> downloaded</span></p>
       )}
-      {lane.metrics?.navigation && <JourneyLine metrics={lane.metrics} />}
+      {lane.metrics && (hasVisit(lane.metrics) || running) && <JourneyLine metrics={lane.metrics} running={running} />}
+      {/* Below the lane's numbers, never over its screen (on a phone it spans both lanes, under them). */}
+      {leftWaiting && <CapNote lane={lane} profile={profile} link={link} className={styles.capNoteInLane} />}
       {lane.error && <p className={styles.laneError}>{lane.error}</p>}
     </article>
   );
 }
+
+/**
+ * A lane stopped at the cap while still downloading: what it still had ahead (the warm-up's full
+ * count; on a throttled link the least time that takes), and why the race stopped waiting.
+ */
+function CapNote({ lane, profile, link, className, label }: { lane: LaneState; profile: RaceProfile; link: RaceLink | null; className: string; label?: string }) {
+  return (
+    <p className={`${styles.capNote} ${className}`} role="note">
+      <span className={styles.capFact}>
+        {label && <>{label} · </>}
+        <FullPageLine fullPage={lane.fullPage} link={profile === "mobile" ? link : null} capMs={lane.capMs}
+          received={lane.metrics?.network.totalKb ?? lane.net.kb} inFlight={lane.metrics ? (lane.metrics.waterfall ?? []).filter((entry) => entry.inFlight).length : null} />
+      </span>
+      <span className={styles.capWhy}><PatienceWhy capMs={lane.capMs} /></span>
+    </p>
+  );
+}
+
+/** The lane has numbers from after its first page: a repeat visit or a tap. */
+const hasVisit = (m: NonNullable<LaneState["metrics"]>) => !!m.repeat || !!m.navigation || (m.navigationSteps?.length ?? 0) > 0;
 
 /** Minimum gap, % of the track, between two labels in the same row before the later one is dropped. */
 const FLAG_GAP = 9;
 
 /**
  * Milestone flags for one lane. A fast lane's milestones bunch up within a second on a
- * 30-second track, so labels alternate above and below the bar, the finish line (LCP)
+ * track as long as the slower lane's run, so labels alternate above and below the bar, the finish line (LCP)
  * always keeps its label, and any other label too close to one already placed is
  * dropped — its line stays, and the value is in the milestone tiles above.
  */
@@ -460,46 +564,64 @@ function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: n
   );
 }
 
-function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict; identity: (id: LaneId) => LaneIdentity; revealed: number; reduced: boolean }) {
+/** A lane's name without its role, for short labels: "Original site". */
+const identityShort = (full: string) => full.replace(/ \((?:before|after)\)$/, "");
+/** "the 10 s cap", or "its step's cap" when the steps of an older race had different ones. */
+const capPhrase = (caps: RaceCaps) => (caps.firstPageMs === caps.repeatMs && caps.firstPageMs === caps.tapMs ? `the ${capSeconds(caps.firstPageMs)} cap` : "its step's cap");
+
+/**
+ * The rounds and the verdict. While the visit runs the verdict is provisional: the first page's
+ * rounds are decided, the visit's rounds wait for their lanes, and the headline says "so far".
+ * It becomes the race's verdict (with the confetti) once no lane has anything left to send.
+ */
+function Scoreboard({ verdict, identity, revealed, reduced, final, stopped, caps }: { verdict: Verdict; identity: (id: LaneId) => LaneIdentity; revealed: number; reduced: boolean; final: boolean; stopped: boolean; caps: RaceCaps }) {
   const name = (id: LaneId) => { const d = identity(id); return d.kind === "challenger" ? d.label : `${d.label} (${d.role.toLowerCase()})`; };
   const tone = (id: LaneId) => toneClass(identity(id).kind);
-  const done = revealed > verdict.rounds.length;
+  const firstRounds = verdict.rounds.filter((round) => round.part === "first-page").length;
+  const done = revealed > firstRounds;
+  // The first page's rounds reveal one by one; the visit's join once that is over, as they arrive.
+  const visible = (index: number) => index < revealed || done;
   const winner = verdict.winner === "tie" ? null : verdict.winner;
   const loser: LaneId | null = winner === "a" ? "b" : winner === "b" ? "a" : null;
   const byRounds = verdict.roundsWon.a !== verdict.roundsWon.b;
+  const settled = final && verdict.pending === 0;
+  const toCome = verdict.pending;
   return (
-    <div className={styles.scoreboard}>
+    <div className={styles.scoreboard} id="race-scoreboard">
       <div className={styles.tally} aria-live="polite">
         {LANES.map((id) => (
           <div key={id} className={`${styles.tallySide} ${tone(id)}`}>
             <span><i className={styles.key} aria-hidden="true" />{name(id)}</span>
-            <b>{verdict.rounds.slice(0, revealed).filter((round) => round.winner === id).length}</b>
+            <b>{verdict.rounds.filter((round, index) => visible(index) && !round.pending && round.winner === id).length}</b>
           </div>
         ))}
-        <p>rounds</p>
+        <p>rounds{settled ? "" : " so far"}</p>
       </div>
       <ol className={styles.rounds}>
         {verdict.rounds.map((round, index) => (
-          <RoundCard key={round.id} round={round} index={index} visible={index < revealed} name={name} tone={tone} />
+          <RoundCard key={round.id} round={round} index={index} visible={visible(index)} name={name} tone={tone} />
         ))}
       </ol>
       {done && (
-        <div className={styles.verdict} role="status">
-          {!reduced && winner && <Confetti tone={tone(winner)} />}
+        <div className={`${styles.verdict} ${settled ? "" : styles.verdictSoFar}`} role="status">
+          {settled && !reduced && winner && <Confetti tone={tone(winner)} />}
           {winner && loser ? (
             <h3>
-              <span className={tone(winner)}>{name(winner)}</span> {byRounds
-                ? `wins ${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]} on rounds`
-                : `edges it ${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`}
+              <span className={tone(winner)}>{name(winner)}</span> {settled
+                ? byRounds ? `wins ${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]} on rounds` : `edges it ${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics`
+                : byRounds ? `leads ${verdict.roundsWon[winner]}–${verdict.roundsWon[loser]} so far` : `is ahead ${verdict.metricWins[winner]}–${verdict.metricWins[loser]} on metrics so far`}
             </h3>
           ) : (
-            <h3>Dead heat.</h3>
+            <h3>{settled ? "Dead heat." : "Level so far."}</h3>
           )}
           <p>
+            {!settled && (stopped
+              ? "The race stopped before the visit was over, so only what was measured counts. "
+              : `The visit is still running: ${toCome} more round${toCome === 1 ? "" : "s"} to come as each step finishes. `)}
             {!byRounds && winner ? `Rounds tied ${verdict.roundsWon.a}–${verdict.roundsWon.b}, so the decisive metrics settle it. ` : ""}
             {verdict.metricWins.a + verdict.metricWins.b} decisive metrics: {name("a")} took {verdict.metricWins.a}, {name("b")} took {verdict.metricWins.b}.
             This is one race, one sample: a gap smaller than two runs of the same site differ by (measured, per metric) counts as a draw,
-            and a value capped at 30 s is a lower bound that cannot win.
+            and a value stopped at {capPhrase(caps)} is a lower bound that cannot win.
           </p>
         </div>
       )}
@@ -508,14 +630,17 @@ function Scoreboard({ verdict, identity, revealed, reduced }: { verdict: Verdict
 }
 
 function RoundCard({ round, index, visible, name, tone }: { round: Round; index: number; visible: boolean; name: (id: LaneId) => string; tone: (id: LaneId) => string }) {
+  const waitingFor = LANES.filter((id) => round.rows.some((row) => row.pending?.[id]));
   return (
-    <li className={`${styles.round} ${visible ? styles.roundVisible : ""}`} aria-hidden={!visible}>
+    <li className={`${styles.round} ${visible ? styles.roundVisible : ""} ${round.pending ? styles.roundPending : ""}`} aria-hidden={!visible}>
       <header>
         <span className={styles.roundNo}>Round {index + 1}</span>
         <h4>{round.title}</h4>
         <p>{round.subtitle}</p>
-        <strong className={round.winner === "tie" ? styles.roundTie : tone(round.winner)}>
-          {round.winner === "tie" ? "Draw" : <><i className={styles.key} aria-hidden="true" />{name(round.winner)} +1</>}
+        <strong className={round.pending ? styles.roundTie : round.winner === "tie" ? styles.roundTie : tone(round.winner)}>
+          {round.pending
+            ? waitingFor.length === 1 ? `Waiting for ${identityShort(name(waitingFor[0]))}` : "Still running"
+            : round.winner === "tie" ? "Draw" : <><i className={styles.key} aria-hidden="true" />{name(round.winner)} +1</>}
         </strong>
       </header>
       <table>
@@ -528,10 +653,11 @@ function RoundCard({ round, index, visible, name, tone }: { round: Round; index:
                 <th scope="row"><b>{row.label}</b><span>{row.hint}</span></th>
                 {(["a", "b"] as LaneId[]).map((id) => {
                   const value = row[id];
+                  const waiting = !!row.pending?.[id];
                   return (
                     <td key={id} className={`${tone(id)} ${row.winner === id ? styles.cellWin : ""}`}>
-                      <span className={styles.bar}><i style={{ width: visible && value !== null ? `${Math.max(4, (value / max) * 100)}%` : 0 }} /></span>
-                      <b>{formatValue(row, id)}{row.winner === id && <span className={styles.star} aria-label="better"> ★</span>}</b>
+                      <span className={`${styles.bar} ${waiting ? styles.barWaiting : ""}`}><i style={{ width: visible && value !== null ? `${Math.max(4, (value / max) * 100)}%` : 0 }} /></span>
+                      <b className={waiting ? styles.pendingValue : undefined} aria-label={waiting ? "still running" : undefined}>{formatValue(row, id)}{row.winner === id && <span className={styles.star} aria-label="better"> ★</span>}</b>
                       {row.note?.[id] && <small className={styles.cellNote}>{row.note[id]}</small>}
                     </td>
                   );
@@ -561,17 +687,21 @@ function Confetti({ tone }: { tone: string }) {
 const STEP_NAME: Record<string, string> = { "/pumps/": "List page", "/boom-pumps/hr40-5rz/": "Product page", "/boom-pumps/hr21-4zr/": "Product page" };
 export const stepName = (to: string) => STEP_NAME[to] ?? to;
 
-/** The journey race at a glance, in the order it runs: the home load, the return visit, then each tap. */
-function JourneyLine({ metrics }: { metrics: NonNullable<LaneState["metrics"]> }) {
+/**
+ * The journey race at a glance, in the order it runs: the home load, the return visit, then each
+ * tap. It fills in step by step while the lane's visit runs; "…" marks the step under way.
+ */
+function JourneyLine({ metrics, running }: { metrics: NonNullable<LaneState["metrics"]>; running: boolean }) {
   const steps = metrics.navigationSteps ?? (metrics.navigation ? [metrics.navigation] : []);
-  const after = (value: number | null, cap: number) => (value === null ? `> ${(cap / 1000).toFixed(0)} s` : `+${(value / 1000).toFixed(2)} s`);
+  const after = (value: number | null, cap: number) => (value === null ? `> ${capSeconds(cap)}` : `+${(value / 1000).toFixed(2)} s`);
   return (
     <p className={styles.journeyLine}>
       <span>Home: <b>{metrics.timing.lcp === null ? "no final LCP" : `LCP ${ms(metrics.timing.lcp)}`}</b></span>
-      {metrics.repeat && (metrics.repeat.skipped ? <span>Return visit: <b>skipped</b></span> : <span>Return visit: <b>{metrics.repeat.lcp === null ? `> ${(metrics.repeat.capMs / 1000).toFixed(0)} s` : `LCP ${ms(metrics.repeat.lcp)}`}</b> · {kb(metrics.repeat.net.kb)}</span>)}
+      {metrics.repeat && (metrics.repeat.skipped ? <span>Return visit: <b>skipped</b></span> : <span>Return visit: <b>{metrics.repeat.lcp === null ? `> ${capSeconds(metrics.repeat.capMs)}` : `LCP ${ms(metrics.repeat.lcp)}`}</b> · {kb(metrics.repeat.net.kb)}</span>)}
       {steps.map((step) => (
         <span key={step.to}>{stepName(step.to)}: {step.skipped ? <b>not reached</b> : <><b>{after(step.content, step.capMs)}</b> after tap · image <b>{after(step.image, step.capMs)}</b></>}</span>
       ))}
+      {running && <span className={styles.journeyNext} aria-label="next step under way">{metrics.repeat ? "Next tap" : "Return visit"}: <b>…</b></span>}
     </p>
   );
 }

@@ -65,8 +65,8 @@ export function PerformanceLabTeaser() {
   const product = cells["model/mobile"];
   const homeCell = cells["home/mobile"];
   // The weight card shows the product page, like the scoreboard above it.
-  const before = { lcp: homeCell.before.lcp ?? 0, pageKb: product.before.totalKb ?? 0 };
-  const after = { lcp: homeCell.after.lcp ?? 0, pageKb: product.after.totalKb ?? 0 };
+  const before = { lcp: homeCell.before.lcp ?? 0, pageKb: product.before.fullPageKb ?? product.before.totalKb ?? 0 };
+  const after = { lcp: homeCell.after.lcp ?? 0, pageKb: product.after.fullPageKb ?? product.after.totalKb ?? 0 };
   const ratio = (a: number | null | undefined, b: number | null | undefined) => {
     if (!a || !b) return null;
     const r = a / b;
@@ -74,7 +74,7 @@ export function PerformanceLabTeaser() {
   };
   const productLcpX = ratio(product.before.lcp, product.after.lcp);
   const homeLcpX = ratio(homeCell.before.lcp, homeCell.after.lcp);
-  const productWeightX = ratio(product.before.totalKb, product.after.totalKb);
+  const productWeightX = ratio(product.before.fullPageKb ?? product.before.totalKb, product.after.fullPageKb ?? product.after.totalKb);
   const productAfter = product.after.lcp ?? 0;
   const lcpGain = reduction(before?.lcp, after?.lcp);
   // The weight bars to scale: the original is the full track.

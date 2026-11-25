@@ -24,10 +24,12 @@ export function RaceCoachMark() {
   const dismiss = useCallback(() => { setOpen(false); markSeen(); }, []);
 
   useEffect(() => {
-    if (seen()) return;
-    const timer = window.setTimeout(() => setOpen(true), 900);
-    return () => window.clearTimeout(timer);
-  }, []);
+    // A race that starts by any path (the button, a re-render of it, a link elsewhere) retires the hint.
+    const onRace = () => { window.clearTimeout(timer); dismiss(); };
+    window.addEventListener("site-race:start", onRace);
+    const timer = seen() ? undefined : window.setTimeout(() => setOpen(true), 900);
+    return () => { window.clearTimeout(timer); window.removeEventListener("site-race:start", onRace); };
+  }, [dismiss]);
 
   useEffect(() => {
     if (!open) return;

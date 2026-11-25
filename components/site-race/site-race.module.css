@@ -82,12 +82,24 @@
 .progressMeta { margin: 14px 0 0; color: var(--race-muted); font: 700 var(--text-meta)/1.3 var(--font-code); letter-spacing: .06em; text-align: center; text-transform: uppercase; }
 .progressMeta b { color: var(--race-ink); font-variant-numeric: tabular-nums; }
 .progress[data-state="done"] .progressMeta { color: #d4ff76; }
+/* While the visit runs: the first scores are in, below the lanes. */
+.progressScores { margin: 8px 0 0; color: var(--race-muted); font-size: var(--text-meta); text-align: center; }
+.progressScores a { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 3px 10px; color: #111; border-radius: 999px; background: #d4ff76; font-weight: 800; text-decoration: none; animation: go-pop .5s cubic-bezier(.2, 1.6, .4, 1); }
+.progressScores a:hover { background: #e4ff9e; }
 @keyframes step-pulse { 50% { box-shadow: 0 0 0 7px #d4ff7626; } }
 @media (prefers-reduced-motion: reduce) { .progress li[data-status="active"] .progressDot { animation: none; } }
 @media (max-width: 560px) { .progressLabel { font-size: var(--text-micro); } .progress li:not(:last-child)::after { left: calc(50% + 16px); right: calc(-50% + 12px); } }
 @keyframes go-pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .status { min-height: 1.6em; margin: 0 auto 22px; color: var(--race-muted); font-size: var(--text-caption); text-align: center; }
+/* The finish news: one lane through and waiting for the other, then the winner. */
+.statusBadge { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; padding: 12px 20px; border-radius: 999px; font-weight: 800; font-size: clamp(15px, 1.6vw, 18px); line-height: 1.25; text-align: left; }
+.status[data-kind="waiting"] .statusBadge { color: #111; background: #d4ff76; box-shadow: 0 0 0 6px #d4ff761f, 0 10px 30px #d4ff7633; }
+.status[data-kind="complete"] .statusBadge { color: #1a1400; background: linear-gradient(135deg, #fff1a6, #ffd84a); box-shadow: 0 0 0 6px #ffd84a24, 0 12px 34px #ffd84a40; animation: status-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+.statusPulse { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #111; animation: status-pulse 1.1s ease-in-out infinite; }
+@keyframes status-pulse { 50% { opacity: .25; transform: scale(.7); } }
+@keyframes status-pop { from { transform: scale(.9); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .statusPulse, .status[data-kind="complete"] .statusBadge { animation: none; } }
 .savedNote { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 12px; margin: -14px auto 20px; color: var(--race-muted); font-size: var(--text-meta); }
 .savedNote svg { color: #d4ff76; }
 .savedNote button { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 3px 10px; color: var(--race-ink); border: 1px solid var(--race-line); border-radius: 8px; background: #1c1d1b; font-size: var(--text-meta); font-weight: 700; }
@@ -131,6 +143,15 @@
 .counters { display: flex; justify-content: space-between; gap: 8px; margin: 0; color: var(--race-muted); font-size: var(--text-meta); }
 .counters b { color: var(--race-ink); font-family: var(--font-code); font-variant-numeric: tabular-nums; }
 .laneError { margin: 0; color: #ffb4ab; font-size: var(--text-caption); }
+/* A lane stopped at the cap while still downloading: what it still had ahead, and why the race
+   stopped waiting. Inside the lane card under its numbers, never over the screen. */
+.capNote { display: grid; gap: 6px; margin: 0; padding: 10px 12px; color: #d9cbc4; border: 1px solid #8f2d2270; border-radius: 12px; background: #2a1d1a; font-size: var(--text-meta); line-height: 1.45; animation: note-in .45s ease-out; }
+.capFact b { color: var(--race-ink); font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+.capWhy { color: var(--race-muted); }
+.capNote a { color: #ffb59a; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.capNote a:hover { color: #ffd2c2; }
+@keyframes note-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.capNoteWide { display: none; }
 
 /* Track */
 .track { display: grid; gap: 12px; margin-top: 22px; padding: 18px clamp(12px, 2vw, 22px) 10px; border: 1px solid var(--race-line); border-radius: 18px; background: #121311; }
@@ -184,6 +205,33 @@
 .cellWin b { color: var(--race-ink); }
 .cellNote { display: block; font-size: 0.72rem; opacity: 0.7; font-weight: 400; }
 .cellWin .bar i { background: var(--mark); box-shadow: 0 0 12px var(--mark); }
+/* A visit round still waiting for a lane: dashed, its waiting cells breathing. */
+.roundPending { border-style: dashed; }
+.pendingValue { animation: wait-breathe 1.6s ease-in-out infinite; }
+.barWaiting { background: repeating-linear-gradient(90deg, #2b2d29 0 6px, #232522 6px 12px); }
+@keyframes wait-breathe { 50% { opacity: .35; } }
+.verdictSoFar { border-style: dashed; background: linear-gradient(135deg, #1f1f2c, #1b1c1a); animation: none; }
+.verdictSoFar h3 { font-size: clamp(1.4rem, 3.4vw, 2.4rem); }
+.scoreboard { scroll-margin-top: 20px; }
+/* The finish: a centred card announces the winner and offers the results. It opens only once the race
+   is over, so it never hides the lanes while they race; Escape, the backdrop or "Keep watching" close it. */
+.winnerBackdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: #0b0c0ab8; backdrop-filter: blur(3px); animation: winner-fade .25s ease-out; }
+.winnerCard { position: relative; width: min(440px, 100%); padding: 34px 28px 22px; color: #f5f4ee; text-align: center; border: 1px solid #d4ff7640; border-radius: 26px; background: radial-gradient(120% 80% at 50% 0%, #d4ff7622, transparent 60%), #151614; box-shadow: 0 30px 80px #000a, 0 0 0 6px #d4ff7612; animation: winner-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+.winnerClose { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 36px; height: 36px; color: #b8bcb2; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.winnerClose:hover, .winnerClose:focus-visible { color: #fff; background: #ffffff14; }
+.winnerCrown { display: inline-grid; place-items: center; width: 72px; height: 72px; margin-bottom: 14px; color: #1a1400; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6b0, #ffd84a 55%, #e0a800); box-shadow: 0 0 0 6px #ffd84a26, 0 10px 30px #ffd84a55; animation: winner-crown 1.2s ease-in-out .3s 2; }
+.winnerEyebrow { margin: 0; color: #d4ff76; font: 800 var(--text-micro)/1.2 var(--font-code); letter-spacing: .12em; text-transform: uppercase; }
+.winnerTitle { margin: 8px 0 6px; font-size: clamp(30px, 6vw, 40px); line-height: 1.05; letter-spacing: -.03em; }
+.winnerScore { margin: 0 0 22px; color: #c9ccc3; font-size: var(--text-body); }
+.winnerScore b { color: #f5f4ee; font-family: var(--font-code); }
+.winnerGo { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 54px; padding: 14px 22px; color: #111; border: 0; border-radius: 16px; background: linear-gradient(135deg, #d4ff76, #a8f07a); font: 800 17px/1.2 inherit; cursor: pointer; box-shadow: 0 10px 30px #d4ff7640; }
+.winnerGo:hover, .winnerGo:focus-visible { transform: translateY(-1px); box-shadow: 0 14px 34px #d4ff7660; }
+.winnerStay { margin-top: 10px; padding: 8px 12px; color: #a3a79d; border: 0; background: transparent; font: 600 var(--text-meta)/1.2 inherit; cursor: pointer; }
+.winnerStay:hover, .winnerStay:focus-visible { color: #f5f4ee; }
+@keyframes winner-fade { from { opacity: 0; } }
+@keyframes winner-pop { from { opacity: 0; transform: translateY(14px) scale(.94); } }
+@keyframes winner-crown { 50% { transform: rotate(-8deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .winnerBackdrop, .winnerCard, .winnerCrown { animation: none; } }
 
 .verdict { position: relative; margin-top: 22px; padding: clamp(20px, 3vw, 34px); border: 1px solid #4b4772; border-radius: 20px; background: linear-gradient(135deg, #24233a, #1b1c1a); text-align: center; overflow: hidden; animation: verdict-in .7s cubic-bezier(.2, 1.4, .4, 1); }
 .verdict h3 { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0; font-size: clamp(1.8rem, 4.6vw, 3.4rem); letter-spacing: -.04em; line-height: 1; }
@@ -226,6 +274,12 @@
   .settings summary span { display: none; }
   .stageSelect select { width: 100%; max-width: none; }
   .finishBadge, .behindBadge { top: 8px; padding: 4px 8px; font-size: .62rem; }
+  .capNote { gap: 4px; padding: 10px 12px; line-height: 1.45; }
+  .capNoteInLane { display: none; }
+  .capNoteWide { display: grid; margin-top: 8px; }
+  /* The cap's badge is the longest: let it wrap inside the narrow screen instead of spilling out. */
+  .finishCapped { width: max-content; max-width: calc(100% - 12px); white-space: normal; text-align: center; line-height: 1.25; }
+  .progressScores a { display: flex; width: fit-content; margin: 0 auto 4px; }
   .trackLane { grid-template-columns: 64px 1fr; gap: 6px; }
   .trackName { font-size: var(--text-meta); }
   .trackScale { margin-left: 70px; }
@@ -241,6 +295,7 @@
 
 .journeyLine { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0; padding-top: 8px; border-top: 1px solid var(--race-line, #ffffff1f); color: var(--race-muted); font-size: var(--text-meta); }
 .journeyLine b { color: var(--race-ink); font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+.journeyNext b { animation: wait-breathe 1.6s ease-in-out infinite; }
 
 /* The narrowest phones: the status line under the lights already says "slow 4G". */
 @media (max-width: 360px) { .controls .segmented small { display: none; } }

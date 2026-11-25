@@ -21,7 +21,8 @@ const races = Math.min(...["home/mobile", "model/mobile"].map((key) => cells[key
 const mb = (kb: number | null | undefined) => (kb == null ? null : `${(kb / 1024).toFixed(1)} MB`);
 const stat = (value: string | null, note: string) => (value ? { value, note } : undefined);
 // Seconds the original's whole home page needs on the race's slow-4G link (1.6 Mbps), bytes alone.
-const fullLoadSeconds = home?.before.totalKb ? Math.round((home.before.totalKb * 1024 * 8) / 1.6e6) : null;
+const originalHomeKb = home?.before.fullPageKb ?? home?.before.totalKb;
+const fullLoadSeconds = originalHomeKb ? Math.round((originalHomeKb * 1024 * 8) / 1.6e6) : null;
 
 // How long the live race waits at each step before it stops a lane. Mirrors RACE_CAPS in
 // packages/contracts (the Worker's LANE_CAP_MS and navigation caps); import it from there once it exists.
@@ -47,12 +48,12 @@ const story: { tone: "before" | "after" | "proof"; icon: LucideIcon; label: stri
   {
     tone: "before", icon: Snail, label: "Before", title: "The original site",
     body: "Live and never tuned for speed: full-size images everywhere and no loading priorities, so the main photo competes with everything else for the connection.",
-    stat: stat(mb(home?.before.totalKb), "for the home page on a phone"),
+    stat: stat(mb(home?.before.fullPageKb ?? home?.before.totalKb), "for the whole home page on a phone"),
   },
   {
     tone: "after", icon: Rocket, label: "After", title: "The same site in Next.js 16",
     body: "The same pages and content in both languages, rebuilt and optimized. No page, section or image was dropped to make it fast.",
-    stat: stat(mb(home?.after.totalKb), "for the same page"),
+    stat: stat(mb(home?.after.fullPageKb ?? home?.after.totalKb), "for the same page"),
   },
   {
     tone: "proof", icon: Flag, label: "The proof", title: "One live race",
@@ -291,7 +292,7 @@ export default function Page() {
               {" "}On phones, 53% of visits are likely to be abandoned if pages take longer than 3 seconds to load (<Source source={PATIENCE_SOURCES.mobile} />);
               a page still loading by then scores &ldquo;&gt; {capSeconds(RACE_CAPS.firstPageMs)}&rdquo;.
               {/* Physics, not a cap: the original's measured home page weight over the race's 1.6 Mbps link. */}
-              {fullLoadSeconds && <>{" "}The original&apos;s home page weighs {mb(home?.before.totalKb)}: at 1.6 Mbps that alone needs about {fullLoadSeconds} s to arrive, so the race stops where a visitor would rather than wait for it.</>}
+              {fullLoadSeconds && <>{" "}The original&apos;s home page weighs {mb(originalHomeKb)}: at 1.6 Mbps that alone needs about {fullLoadSeconds} s to arrive, so the race stops where a visitor would rather than wait for it.</>}
             </span>
           </p>
 
