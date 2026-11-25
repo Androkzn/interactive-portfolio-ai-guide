@@ -193,7 +193,7 @@ export function SiteRace({ page, stage, profile, onPage, onStage, onProfile, sta
       await runReplay(recordingFor(page, profile));
     }
   };
-  const startDuel = () => void start("astro", raceUrl(stage));
+  const startDuel = () => void start(raceUrl("original"), raceUrl(stage));
 
   // The journey below can ask for a race of a particular stage.
   const lastSignal = useRef(startSignal);

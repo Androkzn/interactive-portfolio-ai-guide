@@ -20,6 +20,12 @@ export type Stage = {
   build: "astro" | "next";
   /** Immutable deployment URL (no trailing slash): it never moves when newer builds ship. */
   url: string;
+  /**
+   * The demo copy the race loads instead: the same build without the client's logo (no symbol in
+   * the header, footer, scenes, documents or product renders), on the Pages branch alias "demo"
+   * (branch demo/no-logo in the site's repo). Only the stages a default race loads have one.
+   */
+  demoUrl?: string;
   commit: string;
   /** Which perf-report runs measured this stage. */
   report: { base: string; build?: string };
@@ -36,6 +42,8 @@ export const stages: Stage[] = [
     title: "The original site",
     build: "astro",
     url: "https://hrconcretepumps.pages.dev",
+    // Built from ccaaa8d, the commit the production alias served on 2026-11-24.
+    demoUrl: "https://demo.hrconcretepumps.pages.dev",
     commit: "7f66469",
     report: { base: "https://hrconcretepumps.pages.dev" },
     summary: "The site as it was first shipped, never tuned. Light on JavaScript, heavy on everything else.",
@@ -177,6 +185,9 @@ export const stages: Stage[] = [
     title: "Compile hints: start-up code compiled off the main thread",
     build: "next",
     url: "https://124fd5ad.hr-concrete-pumps-next.pages.dev",
+    // Built from e5f3d40 (a26f882 plus a navigation fix), the commit the production alias served
+    // on 2026-11-24. It does not follow later production deploys: rebuild the demo for those.
+    demoUrl: "https://demo.hr-concrete-pumps-next.pages.dev",
     commit: "a26f882",
     report: { base: "https://124fd5ad.hr-concrete-pumps-next.pages.dev", build: "a26f882" },
     summary: "Nearly all of the home page's blocking time was one boot task, and two thirds of it was V8 compiling functions on the main thread as each first ran. Chrome now compiles the start-up chunks in the background while they download.",
@@ -225,24 +236,30 @@ export function stageById(id: StageId): Stage {
   return stages.find((stage) => stage.id === id) ?? latestStage;
 }
 
-/** Which stage a raced URL belongs to, by host. The production alias belongs to the newest Pages stage. */
+/**
+ * Which stage a raced URL belongs to, by host: its own deployment or its demo copy. The
+ * production alias belongs to the newest Pages stage.
+ */
 export function stageForUrl(url: string | undefined | null): Stage | null {
   if (!url) return null;
   try {
     const host = new URL(url).host;
     if (host === production.host) return featuredStage;
-    return stages.find((stage) => new URL(stage.url).host === host) ?? null;
+    return stages.find((stage) => [stage.url, stage.demoUrl].some((own) => own && new URL(own).host === host)) ?? null;
   } catch {
     return null;
   }
 }
 
 /**
- * What a race loads for a stage: the live production alias for the build it serves, so a
- * redeploy shows in the next race, and every other stage's own deployment.
+ * What a race loads for a stage: its demo copy when it has one; otherwise the live production
+ * alias for the build it serves, so a redeploy shows in the next race, and every other stage's
+ * own deployment.
  */
 export function raceUrl(id: StageId): string {
-  return id === featuredStage.id ? production.origin : stageById(id).url;
+  const stage = stageById(id);
+  if (stage.demoUrl) return stage.demoUrl;
+  return id === featuredStage.id ? production.origin : stage.url;
 }
 
 export type PageMetrics = {

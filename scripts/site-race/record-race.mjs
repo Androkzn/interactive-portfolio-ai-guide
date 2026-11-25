@@ -2,10 +2,11 @@
 // Records one live race from the site-race Worker into a replay file the race page
 // can play back when the live browsers are unavailable (rate limit, outage, no JS budget).
 //
-//   node scripts/site-race/record-race.mjs --page model|home|catalogue --b <stage deployment URL> [--profile mobile|desktop]
+//   node scripts/site-race/record-race.mjs --page model|home|catalogue --b <stage deployment URL> [--a <original URL>] [--profile mobile|desktop]
 //
-// Lane a is always the original site. Lane b defaults to the latest stage in
-// lib/site-race/journey.ts — pass its URL. Output: public/lab/site-race/recorded-<profile>-<page>.ndjson
+// Lane a is the original site: the "astro" preset unless --a passes a deployment of it (the demo
+// copy the race loads, raceUrl("original")). Lane b defaults to the latest stage in
+// lib/site-race/journey.ts — pass the URL the race loads for it (raceUrl). Output: public/lab/site-race/recorded-<profile>-<page>.ndjson
 //
 // Each line is {"at": ms since race start, "event": RaceEvent}. Frame and milestone
 // times come from the page's own timeline (timeOrigin + t), so playback keeps the
@@ -17,10 +18,11 @@ const arg = (name, fallback) => { const i = process.argv.indexOf(`--${name}`); r
 const api = arg("api", "https://site-race-api.a-tekhtelev.workers.dev");
 const profile = arg("profile", "mobile");
 const page = arg("page", "model");
+const a = arg("a", "astro");
 const b = arg("b", "next");
 const out = arg("out", `public/lab/site-race/recorded-${profile}-${page}.ndjson`);
 
-const query = new URLSearchParams({ a: "astro", b, profile, page });
+const query = new URLSearchParams({ a, b, profile, page });
 const res = await fetch(`${api}/race?${query}`, { headers: { origin: "http://localhost:3000" } });
 if (!res.ok || !res.body) throw new Error(`race failed: ${res.status} ${await res.text()}`);
 const text = await res.text();

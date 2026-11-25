@@ -18,6 +18,11 @@
 .proof svg { color: #d4ff76; }.proof b { font: 800 17px/1 var(--font-code); }.proof small { grid-column: 1 / -1; margin-top: 5px; color: #9ca096; font-size: 11px; }
 .cta { display: inline-flex; align-items: center; gap: 9px; min-height: 52px; margin-top: 24px; padding: 12px 22px; color: #111; border-radius: 14px; background: linear-gradient(135deg, #d4ff76, #a8f07a); font-weight: 800; box-shadow: 0 10px 30px #d4ff7630; transition: transform .2s ease, box-shadow .2s ease; }
 .cta:hover, .cta:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px #d4ff7644; }
+/* Crossed chequered flags; on hover each one swings out from the foot of its stick and settles. */
+.ctaFlags { flex: none; width: 26px; height: 22px; overflow: visible; }
+.ctaFlag { transform-box: fill-box; transform-origin: 1.5px 100%; }
+@media (prefers-reduced-motion: no-preference) { .cta:hover .ctaFlag, .cta:focus-visible .ctaFlag { animation: ctaFlagWave .9s ease-in-out; } }
+@keyframes ctaFlagWave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(10deg); } 55% { transform: rotate(-6deg); } 80% { transform: rotate(3deg); } }
 .visual { position: relative; display: grid; gap: 14px; container-type: inline-size; --line-x: 78cqw; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
 .visual::before { content: ""; position: absolute; width: 280px; height: 280px; right: -120px; top: -150px; border-radius: 50%; background: #8172ff22; filter: blur(18px); }
 .visualHead { position: relative; display: flex; align-items: center; justify-content: space-between; color: #989c92; font: 700 var(--text-micro)/1.2 var(--font-code); letter-spacing: .04em; text-transform: uppercase; }

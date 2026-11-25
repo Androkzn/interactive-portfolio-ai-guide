@@ -30,6 +30,29 @@ function CheckeredFlag() {
   );
 }
 
+/** One chequered flag on its stick, drawn upright with the foot of the stick at the origin. */
+function RaceFlag() {
+  return (
+    <g className={styles.ctaFlag}>
+      <rect x="-.9" y="-25" width="1.8" height="25" rx=".9" fill="#111" />
+      <circle cy="-25.6" r="1.5" fill="#111" />
+      <rect x="1" y="-24" width="12" height="9" fill="#fff" />
+      {[0, 1, 2, 3].flatMap((c) => [0, 1, 2].filter((r) => (c + r) % 2 === 0).map((r) => <rect key={`${c}-${r}`} x={1 + c * 3} y={-24 + r * 3} width="3" height="3" fill="#111" />))}
+      <rect x="1" y="-24" width="12" height="9" fill="none" stroke="#111" strokeWidth=".8" />
+    </g>
+  );
+}
+
+/** Two chequered flags crossed on their sticks: the second is the first, mirrored. */
+function CrossedFlags() {
+  return (
+    <svg viewBox="0 0 33 28" className={styles.ctaFlags} aria-hidden="true">
+      <g transform="translate(33 0) scale(-1 1)"><g transform="translate(10 27) rotate(24)"><RaceFlag /></g></g>
+      <g transform="translate(10 27) rotate(24)"><RaceFlag /></g>
+    </svg>
+  );
+}
+
 const seconds = (value: number | null | undefined) => value == null ? "—" : `${(value / 1000).toFixed(1)}s`;
 const megabytes = (value: number | null | undefined) => value == null ? "—" : `${(value / 1024).toFixed(1)}MB`;
 /** Where the races behind these medians stopped a lane (results-data capMs; older files: 30 s). */
@@ -76,7 +99,7 @@ export function PerformanceLabTeaser() {
             <span><TimerReset size={16} /><b>{homeLcpX ?? "Faster"}</b><small>faster home page</small></span>
             <span><ImageIcon size={16} /><b>{productWeightX ?? "Lighter"}</b><small>less data</small></span>
           </div>
-          <Link className={styles.cta} href="/lab/site-race/">See the result · race it live <ArrowUpRight size={17} aria-hidden="true" /></Link>
+          <Link className={styles.cta} href="/lab/site-race/"><CrossedFlags />See the result · race it live <ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>
 
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
