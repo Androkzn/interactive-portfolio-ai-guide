@@ -1,10 +1,9 @@
 // Everything on the technical-challenge page around the timelapse. Sources: the nimbus-assistant
-// repository — README, docs/requirements (BRD, TRD, acceptance matrix, retrospective), commit
-// messages and the readiness report screenshot committed in docs/screenshots.
+// repository (private) — README, docs/requirements (BRD, TRD, acceptance matrix, retrospective),
+// commit messages and the readiness report screenshot in docs/screenshots. The page links only to
+// the live app, never to the repository.
 
 export const LIVE_URL = "https://nimbus-assistant-production.vercel.app";
-export const REPO_URL = "https://github.com/Androkzn/nimbus-assistant";
-const DOCS = `${REPO_URL}/blob/main/docs/requirements`;
 
 /** Same brief, same AI tools: what changes is the process. Left is the typical one-shot result. */
 export const contrast = [
@@ -103,13 +102,4 @@ export const afterwards = [
   { value: "39 / 39", label: "requirements verified by passing automated checks" },
   { value: "22", label: "defects stopped by a gate before a reviewer saw them" },
   { value: "29 / 30", label: "on the production default model — one intermittent miss, reported, not hidden" },
-];
-
-export const docLinks = [
-  { label: "Discovery", href: `${DOCS}/00_KB_Discovery.md` },
-  { label: "BRD", href: `${DOCS}/01_BRD.md` },
-  { label: "TRD", href: `${DOCS}/02_TRD.md` },
-  { label: "Plan", href: `${DOCS}/03_Implementation_Plan.md` },
-  { label: "Acceptance matrix", href: `${DOCS}/04_Acceptance_Matrix.md` },
-  { label: "Retrospective", href: `${DOCS}/05_Retrospective.md` },
 ];

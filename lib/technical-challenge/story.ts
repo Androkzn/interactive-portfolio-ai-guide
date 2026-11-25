@@ -1,7 +1,7 @@
 // The technical challenge as a story in chapters: what I did at each step, roughly how long it
 // took, the decision I made and why, and the artifact it produced.
 //
-// Sources, all in the public nimbus-assistant repository:
+// Sources, all in the (private) nimbus-assistant repository:
 // - the docs and test counts at the challenge commit 95738b2 (12:37, inside hour one);
 // - eval scores and per-question verdicts from the committed evals/reports/*/results.json;
 // - defects and decisions from docs/requirements/05_Retrospective.md and the commit messages.

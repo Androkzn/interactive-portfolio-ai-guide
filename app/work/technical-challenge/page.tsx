@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Ban, BookCheck, Bot, Github, Hourglass, Mail, Phone, Rocket } from "lucide-react";
 import { ChallengeTimelapse } from "@/components/technical-challenge/challenge-timelapse";
-import { afterwards, contrast, defects, docLinks, extras, ladder, layout, LIVE_URL, moreExtras, REPO_URL, stack, trace } from "@/lib/technical-challenge/content";
+import { afterwards, contrast, defects, extras, ladder, layout, LIVE_URL, moreExtras, stack, trace } from "@/lib/technical-challenge/content";
 import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
 import styles from "@/components/technical-challenge/challenge-page.module.css";
 
@@ -61,7 +61,6 @@ export default function Page() {
           <div className={styles.links}>
             <a className={styles.primary} href="#timelapse">Watch the two hours <ArrowRight size={16} aria-hidden="true" /></a>
             <a className={styles.secondary} href={LIVE_URL} target="_blank" rel="noreferrer">Open the live app <ArrowUpRight size={16} aria-hidden="true" /></a>
-            <a className={styles.secondary} href={REPO_URL} target="_blank" rel="noreferrer"><Github size={16} aria-hidden="true" /> Read the code</a>
           </div>
         </section>
 
@@ -135,10 +134,6 @@ export default function Page() {
               </li>
             ))}
           </ol>
-          <p className={styles.docLinks}>
-            Read the real documents:{" "}
-            {docLinks.map((doc, i) => <span key={doc.label}>{i > 0 && " · "}<a href={doc.href} target="_blank" rel="noreferrer">{doc.label}</a></span>)}
-          </p>
         </section>
 
         <section className={styles.section} aria-labelledby="stack-title">
@@ -230,7 +225,6 @@ export default function Page() {
           </ul>
           <div className={styles.links}>
             <a className={styles.primary} href={LIVE_URL} target="_blank" rel="noreferrer">Try the live app <ArrowUpRight size={16} aria-hidden="true" /></a>
-            <a className={styles.secondary} href={REPO_URL} target="_blank" rel="noreferrer"><Github size={16} aria-hidden="true" /> Clone it and run the README</a>
           </div>
         </section>
       </main>
