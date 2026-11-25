@@ -10,7 +10,7 @@ import type { RaceProfile } from "@/packages/contracts/src/site-race";
 export type ScoreMetric = "fcp" | "si" | "lcp" | "tbt" | "cls";
 
 /** Lighthouse 10 weights (performance-scoring docs). */
-export const WEIGHTS: Record<ScoreMetric, number> = { fcp: 0.1, si: 0.1, lcp: 0.25, tbt: 0.3, cls: 0.25 };
+const WEIGHTS: Record<ScoreMetric, number> = { fcp: 0.1, si: 0.1, lcp: 0.25, tbt: 0.3, cls: 0.25 };
 
 /** Control points of each log-normal curve: p10 scores 0.9, the median scores 0.5. */
 export const CURVES: Record<RaceProfile, Record<ScoreMetric, { p10: number; median: number }>> = {

@@ -58,7 +58,7 @@ const cls = (v: number) => v.toFixed(3);
  * site differ by. `abs` is in the metric's unit, `rel` a share of the larger value; a gap
  * within either is a draw. Calibrated from live races (see NOISE_SOURCE).
  */
-export const NOISE: Record<string, { abs: number; rel: number }> = {
+const NOISE: Record<string, { abs: number; rel: number }> = {
   // Timings: |a − b| between two lanes/runs of the same build, v2 Worker, 2026-11-24.
   // 15 A/A races (same build on two hosts) + 5 A/B races, 110 same-site pairs (66 mobile, 44 desktop).
   // Mobile p80/p90: TTFB 14/35 ms · FCP 592/924 ms · LCP 172/252 ms (7%/11%) · load 247/297 ms (7%/9%) · TBT 292/801 ms.
@@ -90,7 +90,7 @@ export const NOISE: Record<string, { abs: number; rel: number }> = {
   "repeat-kb": { abs: 30, rel: 0.2 },
   "repeat-requests": { abs: 1, rel: 0 },
 };
-export const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, plus 9 A/A journey races on the v3 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
+const NOISE_SOURCE = "110 same-site pairs from 20 live races (15 A/A) on the v2 Worker, plus 9 A/A journey races on the v3 Worker, 2026-11-24: thresholds sit near the 80th–90th percentile of the gap between two runs of one build.";
 
 /**
  * Who wins one metric, or a draw when the gap is within single-run noise (`floor` absolute,

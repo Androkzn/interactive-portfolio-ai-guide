@@ -31,15 +31,15 @@ export type GuideTurnResponse = {
   next: "try-demo" | "inspect-evidence" | "continue-tour" | "ask-follow-up";
 };
 
-export function isGuideMode(value: unknown): value is GuideMode {
+function isGuideMode(value: unknown): value is GuideMode {
   return value === "explore" || value === "tour" || value === "interview";
 }
 
-export function isGuideLanguage(value: unknown): value is GuideLanguage {
+function isGuideLanguage(value: unknown): value is GuideLanguage {
   return value === "en" || value === "ru";
 }
 
-export function isGuideViewport(value: unknown): value is GuideViewport {
+function isGuideViewport(value: unknown): value is GuideViewport {
   return value === "phone" || value === "tablet" || value === "desktop";
 }
 

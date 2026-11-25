@@ -8,7 +8,7 @@ export type GuideProject = {
   sources: string[];
 };
 
-export const approvedProjects: Record<string, GuideProject> = Object.fromEntries(
+const approvedProjects: Record<string, GuideProject> = Object.fromEntries(
   corpus.projects.map((project) => [project.id, project]),
 ) as Record<string, GuideProject>;
 

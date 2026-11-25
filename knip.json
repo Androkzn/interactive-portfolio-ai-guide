@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "apps/*/src/index.ts",
+    "scripts/**/*.mjs"
+  ],
+  "ignoreDependencies": ["@cloudflare/puppeteer"],
+  "ignoreExportsUsedInFile": true
+}

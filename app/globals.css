@@ -1,7 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
 
 :root {
-  --font-ui:Manrope,Arial,sans-serif;
+  --font-ui:var(--font-manrope),Arial,sans-serif;
   --font-display:var(--font-ui);
   --font-body:var(--font-ui);
   --font-code:ui-monospace,SFMono-Regular,Consolas,monospace;
@@ -54,7 +53,9 @@ p { line-height:1.65; }
 @keyframes header-role-item-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 @keyframes header-role-underline { 0%,100% { opacity:.2; transform:scaleX(.2); } 42%,58% { opacity:.72; transform:scaleX(1); } }
 @keyframes header-role-divider { 0%,100% { opacity:.5; transform:scale(.86); } 50% { opacity:1; transform:scale(1.08); } }
-@keyframes header-role-sheen { 0%,35% { left:-38%; opacity:0; } 45% { opacity:.8; } 65%,100% { left:120%; opacity:0; } }
+/* Moved with transform, not left: the same sweep (-38% → 120% of the role line, i.e. 158% / 28% of
+   its own width), without a layout shift on every frame. */
+@keyframes header-role-sheen { 0%,35% { transform:translateX(0) skewX(-18deg); opacity:0; } 45% { opacity:.8; } 65%,100% { transform:translateX(564%) skewX(-18deg); opacity:0; } }
 @keyframes wordmark-avatar-ring { 0%,100% { transform:scale(.96); opacity:.4; } 50% { transform:scale(1.04); opacity:.95; } }
 @keyframes wordmark-avatar-presence { 0%,100% { box-shadow:0 0 0 3px #6da45d24; } 50% { box-shadow:0 0 0 6px #6da45d14; } }
 @keyframes wordmark-name-in { from { opacity:0; transform:translateX(-5px); } to { opacity:1; transform:none; } }

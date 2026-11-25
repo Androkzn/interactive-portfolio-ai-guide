@@ -30,7 +30,7 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
       <header className="case-page-header">
         <Link className="wordmark" href="/">
           <span className="wordmark-avatar">
-            <img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" />
+            <img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" />
           </span>
           <span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span>
         </Link>

@@ -6,7 +6,6 @@ import type { CapReason, FullPageWeight, LaneId, LaneMetrics, LanePhase, MarkNam
 import { fetchReportLog, parseRaceLog, SITE_RACE_API } from "./reports";
 import { scoreRace, type Pending, type Verdict } from "./scoring";
 
-export { SITE_RACE_API };
 
 export type Frame = { t: number; src: string };
 

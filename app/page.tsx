@@ -99,9 +99,9 @@ const linkedInReviews: LinkedInReview[] = [
   },
 ];
 const deviceFrameAssets: Partial<Record<DevicePreview, { src: string; model: string }>> = {
-  iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.png", model: "iPhone 16 Pro Max" },
-  ipad: { src: "/images/device-frames/ipad-pro-11-space-gray.png", model: "iPad Pro 11-inch" },
-  android: { src: "/images/device-frames/pixel-7-pro-obsidian.png", model: "Google Pixel 7 Pro" },
+  iphone: { src: "/images/device-frames/iphone-16-pro-black-titanium.webp", model: "iPhone 16 Pro Max" },
+  ipad: { src: "/images/device-frames/ipad-pro-11-space-gray.webp", model: "iPad Pro 11-inch" },
+  android: { src: "/images/device-frames/pixel-7-pro-obsidian.webp", model: "Google Pixel 7 Pro" },
 };
 const preferredMaleVoiceNames = [
   "microsoft ryan online (natural)",
@@ -156,10 +156,10 @@ function selectBestMaleVoice(voices: SpeechSynthesisVoice[]) {
 }
 
 const projectLogoSources: Record<Project["id"], string> = {
-  "symply-house": "/images/apps/symply-house.png",
-  "hoc-v2": "/images/apps/house-of-commons-main.png",
-  "symply-health": "/images/apps/symply-health.png",
-  "symply-budget": "/images/apps/symply-budget.png",
+  "symply-house": "/images/apps/symply-house.webp",
+  "hoc-v2": "/images/apps/house-of-commons-main.webp",
+  "symply-health": "/images/apps/symply-health.webp",
+  "symply-budget": "/images/apps/symply-budget.webp",
 };
 
 function BrandLogo({ brand }: { brand: "github" | "linkedin" }) {
@@ -362,6 +362,18 @@ function EngineeringModeCard({ project, mode }: { project: Project; mode: Exclud
 
 function Avatar({ active }: { active: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
+  // The clip (~344 KB) is fetched only once the avatar is near the screen, not with the page.
+  useEffect(() => {
+    const element = video.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      element.preload = "auto";
+      observer.disconnect();
+    }, { rootMargin: "600px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     const element = video.current;
     if (!element) return;
@@ -375,8 +387,8 @@ function Avatar({ active }: { active: boolean }) {
     return () => element.pause();
   }, [active]);
   return <div className={`avatar-shell ${active ? "is-playing" : ""}`}>
-    <img className="avatar-photo" src="/images/andrei-tekhtelev-avatar.png" alt="Portrait of Andrei Tekhtelev" />
-    <video className="avatar-video" ref={video} muted loop playsInline preload="auto" poster="/images/andrei-tekhtelev-avatar.png" aria-hidden="true">
+    <img loading="lazy" decoding="async" className="avatar-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="Portrait of Andrei Tekhtelev" />
+    <video className="avatar-video" ref={video} muted loop playsInline preload="none" poster="/images/andrei-tekhtelev-avatar-240.webp" aria-hidden="true">
       <source src="/video/andrei-talking-lips-web.webm?v=talking-video-1" type="video/webm" />
       <source src="/video/andrei-talking-lips-web-60fps.mp4?v=talking-video-1" type="video/mp4" />
     </video>
@@ -426,8 +438,24 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
         return previewUrl.toString();
       })()
     : undefined;
+  // The live app is ~4 MB of its own JS: mount the frame only when the preview is about to be seen,
+  // not wherever the browser's lazy-iframe heuristics happen to start (tall desktop screens fetched it at once).
+  const host = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
   useEffect(() => {
-    if (!url) return;
+    const element = host.current;
+    if (!element || near) return;
+    if (typeof IntersectionObserver === "undefined") { setNear(true); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setNear(true);
+      observer.disconnect();
+    }, { rootMargin: "400px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [near, url]);
+  useEffect(() => {
+    if (!url || !near) return;
     loaded.current = false;
     onPreviewState("loading");
     const origin = new URL(url).origin;
@@ -467,7 +495,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     requestTheme();
     requestDemo();
     return () => { window.removeEventListener("message", receive); window.clearInterval(handshake); };
-  }, [project.id, url, attempt, onNavigate, onPreviewState]);
+  }, [project.id, url, near, attempt, onNavigate, onPreviewState]);
   const changeTheme = (next: Theme) => {
     setTheme(next);
     if (url) frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: next }, new URL(url).origin);
@@ -478,7 +506,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     <p>The other projects here embed a real Web build running against its production API. {project.name} is built for iOS and Android only — it was never compiled to run in a browser, so there is nothing to put in this frame. Nothing is being held back; the app simply does not exist in a form a browser can open.</p>
     <p className="preview-empty-note">The engineering teardown beside this panel goes to the same depth as the others.</p>
   </div>;
-  const liveFrame = <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
+  const liveFrame = !near ? <div className="connected-preview-frame" aria-hidden="true" /> : <iframe ref={frame} key={`${project.id}-${attempt}`} title={`${project.name} live Web app`} src={url} onLoad={() => {
     // The load event proves the frame fetched something, nothing more. A demo
     // hand-off is only reported once the app itself acknowledges it.
     loaded.current = true;
@@ -487,10 +515,10 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
     frame.current?.contentWindow?.postMessage({ type: "portfolio:theme", theme: themeRef.current }, origin);
     const demoMessage = portfolioDemoMessageFor(project.id);
     if (demoMessage) frame.current?.contentWindow?.postMessage(demoMessage, origin);
-  }} className="connected-preview-frame" loading="eager" referrerPolicy="no-referrer"
+  }} className="connected-preview-frame" loading="lazy" referrerPolicy="no-referrer"
     sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-same-origin allow-scripts" />;
   const frameAsset = deviceFrameAssets[device];
-  return <div className="connected-preview">
+  return <div className="connected-preview" ref={host}>
     <div className="connected-preview-bar">
       <div className="preview-bar-actions">
         <div className="app-theme-controls" role="group" aria-label="Live app appearance">
@@ -513,7 +541,7 @@ const ConnectedSourcePreview = memo(function ConnectedSourcePreview({ project, d
             <DeviceStatusBar device={device} />
             <div className="device-app-viewport">{liveFrame}</div>
           </div>
-          <img className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
+          <img loading="lazy" decoding="async" className="device-frame-art" src={frameAsset?.src} alt="" aria-hidden="true" draggable="false" />
           <span className="sr-only">Previewed in a {frameAsset?.model} frame.</span>
         </>}
       </div>
@@ -795,9 +823,9 @@ const orderedGuardrailScenarios = reviewTaskOrder
   .filter((item): item is GuardrailScenario => Boolean(item));
 
 const scenarioImageSources: Record<GuardrailScenarioId, string> = {
-  "bug-fix": "/images/scenario-cards/bug-fix.png",
-  "plumbing-assistant": "/images/scenario-cards/plumbing-assistant.png",
-  "code-review": "/images/scenario-cards/code-review.png",
+  "bug-fix": "/images/scenario-cards/bug-fix.webp",
+  "plumbing-assistant": "/images/scenario-cards/plumbing-assistant.webp",
+  "code-review": "/images/scenario-cards/code-review.webp",
 };
 
 const managerLuckMessages: Record<GuardrailScenarioId, string[]> = {
@@ -868,12 +896,12 @@ function shufflePuzzleActions(actions: typeof puzzleActions) {
 
 const correctPuzzleSequence: PuzzleActionId[] = ["contract", "ground", "bound", "typed", "confirm", "evaluate"];
 const puzzleFailures = [
-  { id: "striped-goat", title: "Wrong species. Perfect confidence.", image: "/images/pink-goat-blue-stripe.png", cause: "A prompt was mistaken for a product contract. The worst possible goat shipped." },
-  { id: "wet-goat", title: "Right intention. No protection.", image: "/images/goat-wet-white-sad.png", cause: "The output reached the world before the system had a boundary or a verified state." },
-  { id: "storm-goat", title: "The symbol replaced the substance.", image: "/images/goat-storm-on-side-white.png", cause: "The model copied the idea of a storm onto the wrong object instead of producing the capability." },
-  { id: "shower-goat", title: "Connected. Still not correct.", image: "/images/goat-under-shower-storm-generator.png", cause: "Every pipe is connected to a storm generator. The user still received a shower." },
-  { id: "advanced-storm-generator", title: "Powerful generator. Wrong output.", image: "/images/goat-advanced-storm-generator.png", cause: "Four careful handoffs produced an advanced storm engine, but the delivered subject is still a goat." },
-  { id: "near-storm-generator", title: "Almost a storm. Still a goat.", image: "/images/goat-near-storm-generator.png", cause: "Five careful handoffs held together. The generator is producing weather, but the final output is still the wrong species." },
+  { id: "striped-goat", title: "Wrong species. Perfect confidence.", image: "/images/pink-goat-blue-stripe.webp", cause: "A prompt was mistaken for a product contract. The worst possible goat shipped." },
+  { id: "wet-goat", title: "Right intention. No protection.", image: "/images/goat-wet-white-sad.webp", cause: "The output reached the world before the system had a boundary or a verified state." },
+  { id: "storm-goat", title: "The symbol replaced the substance.", image: "/images/goat-storm-on-side-white.webp", cause: "The model copied the idea of a storm onto the wrong object instead of producing the capability." },
+  { id: "shower-goat", title: "Connected. Still not correct.", image: "/images/goat-under-shower-storm-generator.webp", cause: "Every pipe is connected to a storm generator. The user still received a shower." },
+  { id: "advanced-storm-generator", title: "Powerful generator. Wrong output.", image: "/images/goat-advanced-storm-generator.webp", cause: "Four careful handoffs produced an advanced storm engine, but the delivered subject is still a goat." },
+  { id: "near-storm-generator", title: "Almost a storm. Still a goat.", image: "/images/goat-near-storm-generator.webp", cause: "Five careful handoffs held together. The generator is producing weather, but the final output is still the wrong species." },
 ] as const;
 
 function failureFor(sequence: PuzzleActionId[]) {
@@ -921,7 +949,7 @@ function GoatMode() {
   const lockedPrefixLength = Math.min(verifiedCount, verifiedPrefixLength(sequence));
   const outcomeProgress = result === "success" ? correctPuzzleSequence.length : result === "failure" ? Math.min(verifiedPrefixLength(sequence), correctPuzzleSequence.length - 1) : 0;
   const outcomeGoat = result === "success"
-    ? { id: "success", image: "/images/goat-thumbs-up-avatar.png", alt: "Happy white goat giving a thumbs-up" }
+    ? { id: "success", image: "/images/goat-thumbs-up-avatar.webp", alt: "Happy white goat giving a thumbs-up" }
     : failure
       ? { id: failure.id, image: failure.image, alt: failure.title }
       : null;
@@ -1070,7 +1098,7 @@ function GoatMode() {
         <h2>Connect the spell.<br /><em>Protect the result.</em></h2>
       </div>
       <div className="goat-mode-intro">
-        <div className="wizard-identity"><span className="wizard-avatar wizard-avatar-small"><img src="/images/wizard-programmer-ai-logos-avatar.png" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span><span><strong>AI spellcaster</strong><small>Good at intent. Needs a reviewer.</small></span></div>
+        <div className="wizard-identity"><span className="wizard-avatar wizard-avatar-small"><img loading="lazy" decoding="async" src="/images/wizard-programmer-ai-logos-avatar.webp" alt="AI wizard programmer avatar with AI lab emblems on the robe" /></span><span><strong>AI spellcaster</strong><small>Good at intent. Needs a reviewer.</small></span></div>
         <p>The goal is simple: make a storm. Choose the real production steps, place them in order and earn the verified outcome. The prompt is only the spell.</p>
       </div>
     </div>
@@ -1081,13 +1109,13 @@ function GoatMode() {
         <div className="puzzle-ideal-visuals">
           <div className="puzzle-ideal-scene puzzle-caster-scene">
             <span className="puzzle-scene-label">01 / Spell cast</span>
-            <div className={`puzzle-caster-art ${spellCast ? "is-casting" : ""}`}><img src="/images/wizard-programmer-ai-logos-avatar-calm.png" alt="A programmer wizard holding a wand with AI lab emblems on the robe" /><img className="puzzle-magic-effect" src="/images/wizard-magic-effect.png" alt="" aria-hidden="true" /></div>
+            <div className={`puzzle-caster-art ${spellCast ? "is-casting" : ""}`}><img loading="lazy" decoding="async" src="/images/wizard-programmer-ai-logos-avatar-calm.webp" alt="A programmer wizard holding a wand with AI lab emblems on the robe" /><img loading="lazy" decoding="async" className="puzzle-magic-effect" src="/images/wizard-magic-effect.webp" alt="" aria-hidden="true" /></div>
             <div className="puzzle-spell-bubble"><code>“Make a storm.”</code><button type="button" className={`puzzle-sound-button ${spellCast ? "is-playing" : ""}`} onClick={playSpell} aria-label="Speak the spell and play the storm" aria-keyshortcuts="Enter"><CornerDownLeft size={14} />Speak the spell</button></div>
           </div>
           <div className="puzzle-ideal-arrow" aria-hidden="true"><ArrowRight size={19} /><small>instant</small></div>
           <div className="puzzle-ideal-scene puzzle-result-scene">
             <span className="puzzle-scene-label">02 / Desired result</span>
-            <div className={`puzzle-ideal-art ${spellCast ? "is-animating" : ""}`}><video ref={stormVideo} src="/video/storm-spell.mp4" poster="/images/programmer-under-umbrella-storm-banner-ai-logos.png" playsInline preload="metadata" onEnded={() => setSpellCast(false)} onError={() => setSpellCast(false)} aria-label="Animated storm with rain, lightning and thunder" /></div>
+            <div className={`puzzle-ideal-art ${spellCast ? "is-animating" : ""}`}><video ref={stormVideo} src="/video/storm-spell.mp4" poster="/images/programmer-under-umbrella-storm-banner-ai-logos.webp" playsInline preload="metadata" onEnded={() => setSpellCast(false)} onError={() => setSpellCast(false)} aria-label="Animated storm with rain, lightning and thunder" /></div>
           </div>
         </div>
       </div>
@@ -1097,7 +1125,7 @@ function GoatMode() {
           <h3>Prompts do not ship outcomes.</h3>
           <p>In production, the first interpretation can drift into an unexpected result. Connect the senior-architect steps below to protect the desired result.</p>
         </div>
-        <img className="puzzle-unfortunately-wizard" src="/images/wizard-programmer-sad.png" alt="A sad programmer wizard after a spell went wrong" />
+        <img loading="lazy" decoding="async" className="puzzle-unfortunately-wizard" src="/images/wizard-programmer-sad.webp" alt="A sad programmer wizard after a spell went wrong" />
       </div>
     </div>
 
@@ -1121,9 +1149,9 @@ function GoatMode() {
             {sequence.length < puzzleActions.length && <div className={`puzzle-drop-zone puzzle-drop-zone-end ${dragOverIndex === sequence.length ? "is-target" : ""}`} onDragEnter={() => dragging && setDragOverIndex(sequence.length)} onDragOver={event => { event.preventDefault(); if (dragging) setDragOverIndex(sequence.length); }} onDrop={event => dropAction(event, sequence.length)}>Drop another step here</div>}
           </>}
         </div>
-        <div className="puzzle-controls"><p aria-live="polite"><span className={`puzzle-status-dot puzzle-status-dot-${result}`} />{status}</p><div className="puzzle-control-buttons"><button className="puzzle-hint-button" onClick={askForHint}><span className="puzzle-andrei-avatar" aria-hidden="true"><img src="/images/andrei-tekhtelev-avatar.png" alt="" /></span>Ask Andrei for a hint</button><button className="puzzle-check" onClick={checkSequence} disabled={sequence.length === 0}><Check size={16} />Ship to production</button></div></div>
+        <div className="puzzle-controls"><p aria-live="polite"><span className={`puzzle-status-dot puzzle-status-dot-${result}`} />{status}</p><div className="puzzle-control-buttons"><button className="puzzle-hint-button" onClick={askForHint}><span className="puzzle-andrei-avatar" aria-hidden="true"><img loading="lazy" decoding="async" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" /></span>Ask Andrei for a hint</button><button className="puzzle-check" onClick={checkSequence} disabled={sequence.length === 0}><Check size={16} />Ship to production</button></div></div>
         {hint && <div className={`puzzle-hint-card ${lockedPrefixLength > 0 ? "is-encouraging" : ""}`} role="status">
-          <span className="puzzle-andrei-avatar puzzle-andrei-avatar-card"><img src="/images/andrei-tekhtelev-avatar.png" alt="Andrei" /></span>
+          <span className="puzzle-andrei-avatar puzzle-andrei-avatar-card"><img loading="lazy" decoding="async" src="/images/andrei-tekhtelev-avatar-240.webp" alt="Andrei" /></span>
           <div className="puzzle-hint-bubble"><strong>Andrei’s hint</strong><p>{hint}</p></div>
         </div>}
       </div>
@@ -1141,7 +1169,7 @@ function GoatMode() {
         </div>}
       </div>
       <div className={`puzzle-result-art puzzle-result-art-progress-${outcomeProgress} ${outcomeGoat ? `puzzle-result-art-goat-${outcomeGoat.id}` : "puzzle-result-art-idle"}`}>
-        {result === "success" && outcomeGoat ? <><img className="puzzle-success-scene" src="/images/programmer-under-umbrella-storm-banner-ai-logos.png" alt="AI wizard standing under an umbrella in a storm while coding" /><span className="puzzle-success-goat-speech"><span className="puzzle-success-goat-bubble">In production, a verified sequence protects the original intent, confirms the outcome and keeps the wrong result from shipping.</span><span className="puzzle-success-goat-avatar"><img src={outcomeGoat.image} alt={outcomeGoat.alt} /></span></span></> : <><div className="puzzle-sky" aria-hidden="true"><img className="puzzle-sky-layer puzzle-sky-layer-clear" src="/images/puzzle-sky-clear.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-cloudy" src="/images/puzzle-sky-cloudy.png" alt="" /><img className="puzzle-sky-layer puzzle-sky-layer-storm" src="/images/puzzle-sky-storm.png" alt="" /></div><div className="puzzle-result-stage"><div className="puzzle-result-surface" aria-hidden="true" /><img className={`puzzle-result-wizard ${outcomeGoat ? "puzzle-result-wizard-result" : "puzzle-result-wizard-idle"}`} src={outcomeGoat ? "/images/wizard-programmer-bewildered-clean.png" : "/images/wizard-programmer-meditating-coding.png"} alt={outcomeGoat ? "Bewildered AI wizard looking at the goat with both hands raised" : "Focused AI wizard levitating in a lotus position while coding"} />{outcomeGoat && <img className={`puzzle-result-goat puzzle-result-goat-${outcomeGoat.id}`} src={outcomeGoat.image} alt={outcomeGoat.alt} />}</div></>}
+        {result === "success" && outcomeGoat ? <><img loading="lazy" decoding="async" className="puzzle-success-scene" src="/images/programmer-under-umbrella-storm-banner-ai-logos.webp" alt="AI wizard standing under an umbrella in a storm while coding" /><span className="puzzle-success-goat-speech"><span className="puzzle-success-goat-bubble">In production, a verified sequence protects the original intent, confirms the outcome and keeps the wrong result from shipping.</span><span className="puzzle-success-goat-avatar"><img loading="lazy" decoding="async" src={outcomeGoat.image} alt={outcomeGoat.alt} /></span></span></> : <><div className="puzzle-sky" aria-hidden="true"><img loading="lazy" decoding="async" className="puzzle-sky-layer puzzle-sky-layer-clear" src="/images/puzzle-sky-clear.webp" alt="" /><img loading="lazy" decoding="async" className="puzzle-sky-layer puzzle-sky-layer-cloudy" src="/images/puzzle-sky-cloudy.webp" alt="" /><img loading="lazy" decoding="async" className="puzzle-sky-layer puzzle-sky-layer-storm" src="/images/puzzle-sky-storm.webp" alt="" /></div><div className="puzzle-result-stage"><div className="puzzle-result-surface" aria-hidden="true" /><img loading="lazy" decoding="async" className={`puzzle-result-wizard ${outcomeGoat ? "puzzle-result-wizard-result" : "puzzle-result-wizard-idle"}`} src={outcomeGoat ? "/images/wizard-programmer-bewildered-clean.webp" : "/images/wizard-programmer-meditating-coding.webp"} alt={outcomeGoat ? "Bewildered AI wizard looking at the goat with both hands raised" : "Focused AI wizard levitating in a lotus position while coding"} />{outcomeGoat && <img loading="lazy" decoding="async" className={`puzzle-result-goat puzzle-result-goat-${outcomeGoat.id}`} src={outcomeGoat.image} alt={outcomeGoat.alt} />}</div></>}
       </div>
     </div>
   </div>;
@@ -1155,27 +1183,27 @@ type FlowVisualId = "evidence" | "prompt" | "investigate" | "action" | "verify" 
   | "code-context" | "code-risk" | "code-evidence" | "code-approve" | "code-shortcut" | "code-scan" | "code-shortcut-approve";
 
 const flowImageSources: Record<FlowVisualId, string> = {
-  evidence: "/images/flow-cards/evidence.png",
-  prompt: "/images/flow-cards/prompt.png",
-  investigate: "/images/flow-cards/investigate.png",
-  action: "/images/flow-cards/action.png",
-  verify: "/images/flow-cards/verify.png",
-  monitor: "/images/flow-cards/monitor.png",
-  "plumbing-map": "/images/flow-cards/tasks/plumbing-map.png",
-  "plumbing-triage": "/images/flow-cards/tasks/plumbing-triage.png",
-  "plumbing-dispatch": "/images/flow-cards/tasks/plumbing-dispatch.png",
-  "plumbing-verify": "/images/flow-cards/tasks/plumbing-verify.png",
-  "plumbing-launch": "/images/flow-cards/tasks/plumbing-launch.png",
-  "plumbing-prompt": "/images/flow-cards/tasks/plumbing-prompt.png",
-  "plumbing-infer": "/images/flow-cards/tasks/plumbing-infer.png",
-  "plumbing-connect": "/images/flow-cards/tasks/plumbing-connect.png",
-  "code-context": "/images/flow-cards/tasks/code-context.png",
-  "code-risk": "/images/flow-cards/tasks/code-risk.png",
-  "code-evidence": "/images/flow-cards/tasks/code-evidence.png",
-  "code-approve": "/images/flow-cards/tasks/code-approve.png",
-  "code-shortcut": "/images/flow-cards/tasks/code-shortcut.png",
-  "code-scan": "/images/flow-cards/tasks/code-scan.png",
-  "code-shortcut-approve": "/images/flow-cards/tasks/code-shortcut-approve.png",
+  evidence: "/images/flow-cards/evidence.webp",
+  prompt: "/images/flow-cards/prompt.webp",
+  investigate: "/images/flow-cards/investigate.webp",
+  action: "/images/flow-cards/action.webp",
+  verify: "/images/flow-cards/verify.webp",
+  monitor: "/images/flow-cards/monitor.webp",
+  "plumbing-map": "/images/flow-cards/tasks/plumbing-map.webp",
+  "plumbing-triage": "/images/flow-cards/tasks/plumbing-triage.webp",
+  "plumbing-dispatch": "/images/flow-cards/tasks/plumbing-dispatch.webp",
+  "plumbing-verify": "/images/flow-cards/tasks/plumbing-verify.webp",
+  "plumbing-launch": "/images/flow-cards/tasks/plumbing-launch.webp",
+  "plumbing-prompt": "/images/flow-cards/tasks/plumbing-prompt.webp",
+  "plumbing-infer": "/images/flow-cards/tasks/plumbing-infer.webp",
+  "plumbing-connect": "/images/flow-cards/tasks/plumbing-connect.webp",
+  "code-context": "/images/flow-cards/tasks/code-context.webp",
+  "code-risk": "/images/flow-cards/tasks/code-risk.webp",
+  "code-evidence": "/images/flow-cards/tasks/code-evidence.webp",
+  "code-approve": "/images/flow-cards/tasks/code-approve.webp",
+  "code-shortcut": "/images/flow-cards/tasks/code-shortcut.webp",
+  "code-scan": "/images/flow-cards/tasks/code-scan.webp",
+  "code-shortcut-approve": "/images/flow-cards/tasks/code-shortcut-approve.webp",
 };
 
 function flowVisualFor(title: string, code: string): FlowVisualId {
@@ -1270,7 +1298,7 @@ function PlumbingFeedback({ variant }: { variant: "stable" | "chaos" }) {
 
   return <div className={`plumbing-feedback plumbing-feedback-${variant}`} aria-label={isStable ? "Manager message and positive customer review" : "Angry manager message and negative customer review"}>
     <article className="plumbing-feedback-card plumbing-feedback-manager">
-      <div className="plumbing-manager-message"><span className="plumbing-feedback-avatar"><img src="/images/manager-assignment-avatar.png" alt="" /></span><div className="plumbing-manager-bubble"><small>MESSAGE FROM MANAGER</small><strong>{isStable ? "Good job — shipped cleanly." : "This still isn't ready."}</strong><p>{isStable ? "The handoff was clear and the release landed without surprises." : "Why are customers still waiting? We need to fix the rework before release."}</p></div></div>
+      <div className="plumbing-manager-message"><span className="plumbing-feedback-avatar"><img loading="lazy" decoding="async" src="/images/manager-assignment-avatar.webp" alt="" /></span><div className="plumbing-manager-bubble"><small>MESSAGE FROM MANAGER</small><strong>{isStable ? "Good job — shipped cleanly." : "This still isn't ready."}</strong><p>{isStable ? "The handoff was clear and the release landed without surprises." : "Why are customers still waiting? We need to fix the rework before release."}</p></div></div>
     </article>
     <article className="plumbing-feedback-card plumbing-feedback-review">
       <div className="plumbing-feedback-head"><span className="plumbing-feedback-rating">{isStable ? "★★★★★" : "★☆☆☆☆"}</span><span><small>APP STORE REVIEW</small><strong>{isStable ? "Homeowner in Toronto" : "Homeowner in Toronto"}</strong></span></div>
@@ -1308,7 +1336,7 @@ function ReviewOutcomeVisual({ scenarioId, variant }: { scenarioId: GuardrailSce
   return <div className={`outcome-visual outcome-visual-${variant}`} aria-label={caption}>
     <div className="outcome-visual-head"><span><i className="outcome-signal-dot" />LIVE SIGNAL</span><strong>{signalLabel}</strong></div>
     <div className="outcome-chart"><svg viewBox="0 0 250 100" role="img" aria-label={`${signalLabel} chart`}><path className="outcome-chart-grid" d="M8 20H242M8 50H242M8 80H242" /><path className="outcome-chart-line" d={chartPath} /></svg></div>
-    {variant === "stable" && isBugFix && <span className="outcome-caught-bug"><img src="/images/bug-in-jar.png" alt="Living bug safely caught in a glass jar" /></span>}
+    {variant === "stable" && isBugFix && <span className="outcome-caught-bug"><img loading="lazy" decoding="async" src="/images/bug-in-jar.webp" alt="Living bug safely caught in a glass jar" /></span>}
     {variant === "chaos" && <div className="outcome-bug-swarm"><span><BugIcon kind="tiny" /></span><span><BugIcon kind="round" /></span><span><BugIcon kind="winged" /></span><span><BugIcon kind="long" /></span><span><BugIcon kind="tiny" /></span></div>}
     {variant === "blocked" && <span className="outcome-blocked-mark"><ShieldCheck size={24} /></span>}
     <span className="outcome-visual-caption">{caption}</span>
@@ -1339,7 +1367,7 @@ function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, luck
     <div className="random-machine-stage">
       <div className="random-machine-controls">
         <div className="random-machine-visual">
-          <img className="random-machine-art" src="/images/random-task-slot-machine.png" alt="Interactive AI task slot machine" />
+          <img loading="lazy" decoding="async" className="random-machine-art" src="/images/random-task-slot-machine.webp" alt="Interactive AI task slot machine" />
           <div className="random-reels" aria-hidden="true">
             {[0, 1, 2].map(index => {
               const settledTool = randomToolById(result?.tools[index] ?? randomToolSymbols[index].id);
@@ -1350,7 +1378,7 @@ function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, luck
               const spin = spinPlan[index] ?? spinPlan[0];
               const spinStyle = { "--random-reel-duration": `${spin.duration}s`, "--random-reel-delay": `${spin.delay}s`, "--random-reel-mid": `-${Math.round(spin.distance * 0.34)}%`, "--random-reel-near": `-${Math.round(spin.distance * 0.72)}%`, "--random-reel-late": `-${Math.round(spin.distance * 0.92)}%`, "--random-reel-distance": `-${spin.distance}%` } as CSSProperties;
               return <div className="random-reel-window" key={index}><div className={`random-reel-strip random-reel-strip-${index} ${isSpinning ? "" : "is-settled"}`} style={spinStyle}>
-                {reelTools.map((tool, toolIndex) => <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><img className="random-tool-logo" src={tool.logo} alt="" /><small>{tool.label}</small></span>)}
+                {reelTools.map((tool, toolIndex) => <span className={`random-reel-symbol ${tool.className}`} key={`${tool.id}-${toolIndex}`}><img loading="lazy" decoding="async" className="random-tool-logo" src={tool.logo} alt="" /><small>{tool.label}</small></span>)}
               </div></div>;
             })}
           </div>
@@ -1362,10 +1390,10 @@ function RandomAssignmentMachine({ isSpinning, result, spinPlan, hasPulled, luck
         </div>
       </div>
       {hasPulled && <div className="random-luck-message" role="status" aria-live="polite">
-        <span className="random-luck-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager" /></span>
+        <span className="random-luck-avatar"><img loading="lazy" decoding="async" src="/images/manager-assignment-avatar.webp" alt="Engineering manager" /></span>
         <span className="random-luck-bubble"><small>ENGINEERING MANAGER</small><strong>{visibleLuckMessage || "Thinking…"}<span className="random-luck-typing-caret" aria-hidden="true" /></strong><span className="random-luck-bubble-tail" aria-hidden="true" /></span>
       </div>}
-      {result && resultScenario && <div className="random-assignment-result has-result" aria-live="polite" aria-atomic="true"><div className="random-result-identity" aria-hidden="true"><span className="random-result-icon random-result-task"><img src={scenarioImageSources[resultScenario.id]} alt="" /></span><span className="random-result-plus">+</span><span className="random-result-icon random-result-developer">{result.owner === "andrei" ? <img src="/images/andrei-tekhtelev-avatar.png" alt="" /> : <Bot size={20} />}</span></div><div className="random-result-copy"><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned developer · {ownerLabel}</small></div></div>}
+      {result && resultScenario && <div className="random-assignment-result has-result" aria-live="polite" aria-atomic="true"><div className="random-result-identity" aria-hidden="true"><span className="random-result-icon random-result-task"><img loading="lazy" decoding="async" src={scenarioImageSources[resultScenario.id]} alt="" /></span><span className="random-result-plus">+</span><span className="random-result-icon random-result-developer">{result.owner === "andrei" ? <img loading="lazy" decoding="async" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" /> : <Bot size={20} />}</span></div><div className="random-result-copy"><span>Selected task</span><strong>{resultScenario.label}</strong><small>Assigned developer · {ownerLabel}</small></div></div>}
     </div>
   </div>;
 }
@@ -1492,7 +1520,7 @@ function Architecture() {
       <div className="architecture-heading"><div><div className="section-eyebrow"><ShieldCheck size={15} />Architecture walkthrough</div><h2>Review the work.<br /><em>Protect the release.</em></h2></div><div><p>Give the same engineering task to Andrei or to an engineer who over-relies on AI, then compare the consequences.</p><span className="architecture-label">Choose a task · assign an owner · inspect the decisions</span></div></div>
       <div className="architecture-playground">
         <div className="manager-message" aria-live="polite">
-          <div className="manager-avatar-column"><span className="manager-avatar"><img src="/images/manager-assignment-avatar.png" alt="Engineering manager" /></span><span className="manager-presence"><i />online</span></div>
+          <div className="manager-avatar-column"><span className="manager-avatar"><img loading="lazy" decoding="async" src="/images/manager-assignment-avatar.webp" alt="Engineering manager" /></span><span className="manager-presence"><i />online</span></div>
           <div className="manager-bubble"><div className="manager-bubble-meta"><span><Mail size={13} />FROM YOUR ENGINEERING MANAGER</span><small>just now</small></div><strong>New task · choose an owner</strong><p>{typedAssignment}{isTypingAssignment && <span className="manager-typing-caret" aria-hidden="true" />}</p><span className="manager-bubble-tail" aria-hidden="true" /></div>
         </div>
         <div className="task-assignment" aria-live="polite">
@@ -1503,20 +1531,20 @@ function Architecture() {
           <div className="manual-assignment">
             <div className="playground-divider" aria-hidden="true"><span>OR</span></div>
             <div className="manual-assignment-heading"><span className="section-eyebrow"><SearchCheck size={14} />Choose manually</span><p>Select the task and owner yourself, then start the review.</p></div>
-            <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><div className="control-heading"><span className="control-heading-title"><SearchCheck size={17} aria-hidden="true" />Review task</span><p>Pick the situation you want to inspect.</p></div>{orderedGuardrailScenarios.map(item => <button key={item.id} disabled={isRandomizing} className={`scenario-option scenario-option-${item.reviews[selectedOwner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-thumb"><img src={scenarioImageSources[item.id]} alt="" aria-hidden="true" /></span><span className="scenario-option-copy"><span>{item.label}</span></span></button>)}</div>
-            <div className="review-controls"><div className="task-owner-picker" role="group" aria-label="Choose who owns the task"><div className="control-heading"><span className="control-heading-title"><Bot size={17} aria-hidden="true" />Assign the task</span><p>Choose once. The review starts immediately.</p></div><button disabled={isRandomizing} className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /><span><strong>Andrei</strong><small>Context, evidence and guardrails</small></span><Check size={16} aria-hidden="true" /></button><button disabled={isRandomizing} className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Engineer who over-relies on AI</strong><small>First answer, shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div><div className="review-action"><span>{owner ? "The decision path is ready to inspect." : "Select an owner to reveal the decision path."}</span>{owner && <button className="architecture-run-button" onClick={runScenario} disabled={isRunning || isRandomizing}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Replay this path" : "Run architecture review"}</button>}</div></div>
+            <div className="scenario-switcher" role="group" aria-label="Choose a task to review"><div className="control-heading"><span className="control-heading-title"><SearchCheck size={17} aria-hidden="true" />Review task</span><p>Pick the situation you want to inspect.</p></div>{orderedGuardrailScenarios.map(item => <button key={item.id} disabled={isRandomizing} className={`scenario-option scenario-option-${item.reviews[selectedOwner].tone} ${scenario.id === item.id ? "selected" : ""}`} aria-pressed={scenario.id === item.id} onClick={() => chooseScenario(item.id)}><span className="scenario-thumb"><img loading="lazy" decoding="async" src={scenarioImageSources[item.id]} alt="" aria-hidden="true" /></span><span className="scenario-option-copy"><span>{item.label}</span></span></button>)}</div>
+            <div className="review-controls"><div className="task-owner-picker" role="group" aria-label="Choose who owns the task"><div className="control-heading"><span className="control-heading-title"><Bot size={17} aria-hidden="true" />Assign the task</span><p>Choose once. The review starts immediately.</p></div><button disabled={isRandomizing} className={`task-owner-option ${owner === "andrei" ? "selected" : ""}`} aria-pressed={owner === "andrei"} onClick={() => chooseOwner("andrei")}><img loading="lazy" decoding="async" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" /><span><strong>Andrei</strong><small>Context, evidence and guardrails</small></span><Check size={16} aria-hidden="true" /></button><button disabled={isRandomizing} className={`task-owner-option ${owner === "prompt-only" ? "selected prompt-only" : ""}`} aria-pressed={owner === "prompt-only"} onClick={() => chooseOwner("prompt-only")}><span className="task-owner-icon"><Bot size={18} aria-hidden="true" /></span><span><strong>Engineer who over-relies on AI</strong><small>First answer, shallow verification</small></span><Sparkles size={16} aria-hidden="true" /></button></div><div className="review-action"><span>{owner ? "The decision path is ready to inspect." : "Select an owner to reveal the decision path."}</span>{owner && <button className="architecture-run-button" onClick={runScenario} disabled={isRunning || isRandomizing}><Play size={15} />{isRunning ? "Reviewing…" : isComplete ? "Replay this path" : "Run architecture review"}</button>}</div></div>
           </div>
         </div>
       </div>
       <div className={`simulation-status simulation-status-${isRunning || isComplete ? review.tone : "idle"} ${isRunning ? "is-running" : ""}`} aria-live="polite"><span className="simulation-status-dot" />{isComplete ? review.verdict : isRunning ? `RUNNING · ${review.steps[Math.min(activePhase, review.steps.length - 1)].name.toUpperCase()}` : owner ? "READY · review is queued" : "WAITING · choose an owner to reveal the solution"}</div>
       <div className={`architecture-flow ${activePhase < 0 ? "architecture-flow-initial" : ""}`} aria-label="Review stages">
-        {owner === null ? <article className="architecture-question-card architecture-owner-prompt" role="status"><span className="architecture-empty-question" aria-hidden="true">?</span><span className="architecture-empty-label">Choose who owns the task<br /><small>The solution appears here next.</small></span></article> : <><article className="architecture-step architecture-strategy is-revealed"><span className="step-top"><span>01</span><span className="architecture-strategy-label">Initial strategy</span></span><span className="architecture-step-art"><img src={flowImageSources[taskFlowVisualFor(scenario.id, review.strategy.title, review.strategy.code)]} alt="" aria-hidden="true" /></span><strong>{review.strategy.title}</strong><p>{review.strategy.body}</p><code>{review.strategy.code}</code></article>
+        {owner === null ? <article className="architecture-question-card architecture-owner-prompt" role="status"><span className="architecture-empty-question" aria-hidden="true">?</span><span className="architecture-empty-label">Choose who owns the task<br /><small>The solution appears here next.</small></span></article> : <><article className="architecture-step architecture-strategy is-revealed"><span className="step-top"><span>01</span><span className="architecture-strategy-label">Initial strategy</span></span><span className="architecture-step-art"><img loading="lazy" decoding="async" src={flowImageSources[taskFlowVisualFor(scenario.id, review.strategy.title, review.strategy.code)]} alt="" aria-hidden="true" /></span><strong>{review.strategy.title}</strong><p>{review.strategy.body}</p><code>{review.strategy.code}</code></article>
         {activePhase < 0 ? <article className="architecture-question-card" role="status"><span className="architecture-empty-question">?</span><span className="architecture-empty-label">Run the review to reveal the full approach</span></article> : <>
           {review.steps.slice(0, Math.min(activePhase + 1, completionPhase + 1)).map((step, index, visibleSteps) => {
             const blocked = review.blockedStep === index && (activePhase >= index || isComplete);
             const processing = isRunning && activePhase === index;
             const passed = activePhase > index && !blocked;
-            return <article key={step.name} className={`architecture-step is-revealed ${processing ? "is-processing" : ""} ${passed ? "is-passed" : ""} ${blocked ? "is-blocked" : ""} ${blocked && review.tone === "unverified" ? "is-unverified" : ""}`}><span className="architecture-pulse" aria-hidden="true" /><span className="step-top"><span>0{index + 2}</span>{(!isComplete || index < visibleSteps.length - 1) && <ArrowRight size={18} />}</span><span className="architecture-step-art"><img src={flowImageSources[taskFlowVisualFor(scenario.id, step.name, step.code)]} alt="" aria-hidden="true" /></span><strong>{step.name}</strong><p>{step.body}</p><code>{step.code}</code>{blocked && <span className="step-verdict">{review.tone === "unverified" ? "UNVERIFIED" : "BLOCKED"}</span>}</article>;
+            return <article key={step.name} className={`architecture-step is-revealed ${processing ? "is-processing" : ""} ${passed ? "is-passed" : ""} ${blocked ? "is-blocked" : ""} ${blocked && review.tone === "unverified" ? "is-unverified" : ""}`}><span className="architecture-pulse" aria-hidden="true" /><span className="step-top"><span>0{index + 2}</span>{(!isComplete || index < visibleSteps.length - 1) && <ArrowRight size={18} />}</span><span className="architecture-step-art"><img loading="lazy" decoding="async" src={flowImageSources[taskFlowVisualFor(scenario.id, step.name, step.code)]} alt="" aria-hidden="true" /></span><strong>{step.name}</strong><p>{step.body}</p><code>{step.code}</code>{blocked && <span className="step-verdict">{review.tone === "unverified" ? "UNVERIFIED" : "BLOCKED"}</span>}</article>;
           })}
           {!isComplete && <article className="architecture-question-card" role="status"><span className="architecture-empty-question">?</span><span className="architecture-empty-label">Next decision</span></article>}
         </>}
@@ -1623,7 +1651,7 @@ function LinkedInReviewsCarousel() {
           return <article className="linkedin-review-card" key={`${review.id}-${index}`} aria-hidden={isClone || undefined} aria-roledescription="slide" aria-label={`${(index % reviewCount) + 1} of ${reviewCount}`}>
             <div className="linkedin-review-author">
               <a href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined} aria-label={`Open ${review.name}'s LinkedIn profile`}>
-                <img className="linkedin-review-avatar" src={review.photo} alt={`${review.name}'s LinkedIn profile photo`} />
+                <img loading="lazy" decoding="async" className="linkedin-review-avatar" src={review.photo} alt={`${review.name}'s LinkedIn profile photo`} />
               </a>
               <div className="linkedin-review-author-copy">
                 <a className="linkedin-review-name" href={review.href} target="_blank" rel="noreferrer" tabIndex={isClone ? -1 : undefined}>{review.name}</a>
@@ -1695,7 +1723,7 @@ export default function Home() {
   return <div className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar.png" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
     <main>
     <section className="intro" aria-labelledby="hero-title">
       <div className="intro-main">

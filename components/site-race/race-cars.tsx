@@ -12,8 +12,8 @@ import styles from "./performance-lab-teaser.module.css";
  * CSS can roll the wheels with the distance travelled and pitch the body under load (see the .module.css).
  */
 
-export const F1_VIEW = { w: 236, h: 66 };
-export const HATCH_VIEW = { w: 166, h: 66 };
+const F1_VIEW = { w: 236, h: 66 };
+const HATCH_VIEW = { w: 166, h: 66 };
 
 const origin = (x: number, y: number) => ({ transformOrigin: `${x}px ${y}px` }) as CSSProperties;
 

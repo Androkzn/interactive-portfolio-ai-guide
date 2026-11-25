@@ -1,6 +1,4 @@
-export type Viewport = "phone" | "tablet" | "desktop";
 export type DevicePreview = "iphone" | "ipad" | "android" | "desktop";
-export type GuideMode = "explore" | "tour" | "interview";
 
 export type ScreenInsight = {
   id: string;
@@ -338,19 +336,6 @@ export const projects: Project[] = [
 ];
 
 export const DEFAULT_PROJECT_ID = "symply-house";
-
-export const quickPrompts = [
-  "What did you personally own?",
-  "What was the hardest part?",
-  "How did AI help, and what did you verify?",
-  "Show me the core flow",
-];
-
-export const tourSteps = [
-  { title: "Start with the product question", detail: "Pick the experience that best matches the kind of work you want to inspect." },
-  { title: "Try the core interaction", detail: "The app opens its real Web runtime. Where it requires a sign-in, the app itself pre-fills a shared public demo login from a flag in its own URL and you submit it yourself." },
-  { title: "Inspect the trade-off", detail: "Open a challenge card to see the boundary, alternatives and what still needs verification." },
-];
 
 export function projectById(id: string) {
   return projects.find((project) => project.id === id) ?? projects[0];

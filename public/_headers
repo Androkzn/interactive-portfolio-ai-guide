@@ -6,3 +6,24 @@
 
 /
   X-Robots-Tag: index, follow
+
+# Build output: every file name carries a content hash, so it never changes under the same URL.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images, video and icons keep their names when replaced: a day fresh, then served from cache
+# while the browser revalidates in the background.
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/video/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/favicon.ico
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/icon.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/apple-icon.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

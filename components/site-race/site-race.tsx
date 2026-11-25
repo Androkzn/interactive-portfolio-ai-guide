@@ -685,7 +685,7 @@ function Confetti({ tone }: { tone: string }) {
 }
 
 const STEP_NAME: Record<string, string> = { "/pumps/": "List page", "/boom-pumps/hr40-5rz/": "Product page", "/boom-pumps/hr21-4zr/": "Product page" };
-export const stepName = (to: string) => STEP_NAME[to] ?? to;
+const stepName = (to: string) => STEP_NAME[to] ?? to;
 
 /**
  * The journey race at a glance, in the order it runs: the home load, the return visit, then each

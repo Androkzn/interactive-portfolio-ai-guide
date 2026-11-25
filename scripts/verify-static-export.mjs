@@ -3,10 +3,11 @@ import { access, readFile } from "node:fs/promises";
 const exportUrl = (path) => new URL(`../${path}`, import.meta.url);
 
 await access(exportUrl("out/index.html"));
+// The device frames the live preview draws around the app (WebP, from scripts/media/optimize-images.py).
 await Promise.all([
-  "iphone-16-pro-black-titanium.png",
-  "ipad-pro-11-space-gray.png",
-  "pixel-7-pro-obsidian.png",
+  "iphone-16-pro-black-titanium.webp",
+  "ipad-pro-11-space-gray.webp",
+  "pixel-7-pro-obsidian.webp",
 ].map((asset) => access(exportUrl(`out/images/device-frames/${asset}`))));
 const html = await readFile(exportUrl("out/index.html"), "utf8");
 const requiredMarkers = [

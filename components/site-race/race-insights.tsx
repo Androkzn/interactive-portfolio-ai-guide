@@ -17,7 +17,7 @@ export type LaneProgress = { points: ProgressPoint[]; si: number | null; complet
 /** Where a lane's first page ended on its clock: frames after it belong to the visit (absent in older races). */
 const firstPageCut = (lane: LaneState) => lane.metrics?.firstPageEndMs ?? lane.metrics?.tappedAt;
 /** The lane's frames of its first page only, when the race says where that ended. */
-export const firstPageFrames = (lane: LaneState) => {
+const firstPageFrames = (lane: LaneState) => {
   const cut = firstPageCut(lane);
   return cut == null ? lane.frames : lane.frames.filter((frame) => frame.t <= cut);
 };

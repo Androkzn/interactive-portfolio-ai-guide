@@ -30,7 +30,8 @@ export type PortfolioDemoMessage = {
  * builds do not read it — it is sent for the host's own bookkeeping only. */
 export type PortfolioDemoSessionId = string;
 
-export type PortfolioPreviewMessage =
+/** What the embedded app may post to the portfolio. */
+type PortfolioPreviewMessage =
   | { type: "portfolio:theme-ready" }
   | { type: "portfolio:theme-applied"; theme: "light" | "dark" }
   | { type: "portfolio:demo-ready"; projectId: string }
@@ -49,6 +50,7 @@ export function createPortfolioSessionId(): PortfolioDemoSessionId {
   return `portfolio-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function acceptsPreviewMessage(event: Pick<MessageEvent, "source" | "origin" | "data">, frameWindow: Window | null | undefined, origin: string): boolean {
+/** True only for one of the app's messages, from the embedded frame's own window and origin. */
+export function acceptsPreviewMessage(event: Pick<MessageEvent, "source" | "origin" | "data">, frameWindow: Window | null | undefined, origin: string): event is Pick<MessageEvent, "source" | "origin"> & { data: PortfolioPreviewMessage } {
   return !!frameWindow && event.source === frameWindow && event.origin === origin && !!event.data && typeof event.data === "object" && ["portfolio:theme-ready", "portfolio:theme-applied", "portfolio:demo-ready", "portfolio:navigation"].includes(event.data.type);
 }

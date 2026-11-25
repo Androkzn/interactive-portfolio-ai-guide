@@ -294,7 +294,7 @@ export type JourneyData = {
   runs: StageRun[];
 };
 
-export const journey = journeyData as unknown as JourneyData;
+const journey = journeyData as unknown as JourneyData;
 
 /** The newest report run that measured this stage's deployment, if any. */
 export function runFor(stageId: StageId): StageRun | null {
@@ -316,11 +316,6 @@ export function stageMetrics(stageId: StageId, pagePath: string, profile: "mobil
     pageKb: med((r) => r.pageKb) ?? 0, jsKb: med((r) => r.jsKb) ?? 0, imgKb: med((r) => r.imgKb) ?? 0, htmlKb: med((r) => r.htmlKb) ?? 0,
     requests: med((r) => r.requests) ?? 0, imageFormats: {}, lcpElement: null, lcpResource: null,
   };
-}
-
-/** The newest stage a report run measured: the default "after" for the race and the journey. */
-export function latestMeasuredStage(): Stage {
-  return [...stages].reverse().find((stage) => runFor(stage.id)) ?? latestStage;
 }
 
 export function median(values: number[]): number | null {
