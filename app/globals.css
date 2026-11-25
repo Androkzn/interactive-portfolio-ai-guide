@@ -1842,10 +1842,15 @@ button > svg,a > svg { flex-shrink:0; }
   .hero-stats { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:14px; }
   .hero-stats > .section-eyebrow,.hero-stats > a,.hero-stats > p { grid-column:1/-1; }
 }
+/* Tablet portrait (an 11" iPad): two by two. The lab and challenge links fill the
+   first row in source order; "Explore projects" and the engineering link (the
+   last link) share the second, and the marks sit under "Explore projects".
+   Pinning every link to one cell, as this did when there was a single link,
+   stacked three cards on top of each other.                               ── */
 @media (min-width:761px) and (max-width:1000px) {
-  .hero-stats > button { grid-column:1; grid-row:2; }
-  .hero-stats > a { grid-column:2; grid-row:2; }
-  .hero-app-logos { grid-column:1/-1; grid-row:3; }
+  .hero-stats > button { grid-column:1; grid-row:3; }
+  .hero-stats > a:last-of-type { grid-column:2; grid-row:3; }
+  .hero-app-logos { grid-column:1; grid-row:4; }
 }
 
 /* ── "People I’ve / worked with." ─────────────────────────────────────────────
