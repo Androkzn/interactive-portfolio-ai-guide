@@ -1856,13 +1856,6 @@ button > svg,a > svg { flex-shrink:0; }
   .hero-stats { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:14px; }
   .hero-stats > .section-eyebrow,.hero-stats > a,.hero-stats > p { grid-column:1/-1; }
 }
-/* Laptop widths: with the shared page gutter the stats column is too narrow for the marks beside
-   "Explore projects" (its title broke onto two lines), so they take a row under it, in line with
-   the link's text (48px icon + 14px gap, less the link's -12px bleed).                         ── */
-@media (min-width:1001px) and (max-width:1799px) {
-  .hero-stats { grid-template-columns:minmax(0,1fr); }
-  .hero-app-logos { margin:-8px 0 8px 62px; }
-}
 /* Tablet portrait (an 11" iPad): two by two. The lab and challenge links fill the
    first row in source order; "Explore projects" and the engineering link (the
    last link) share the second, and the marks sit under "Explore projects".

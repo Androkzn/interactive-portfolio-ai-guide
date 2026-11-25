@@ -2,13 +2,14 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Gauge, Layers3, Timer, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
+import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Layers3, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
 import { PauseOffscreen } from "@/components/pause-offscreen";
 import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
 import { PerformanceLabTeaser } from "@/components/site-race/performance-lab-teaser";
 import { ChallengeTeaser } from "@/components/technical-challenge/challenge-teaser";
+import { HeroExplore } from "@/components/hero/hero-explore";
 import { contactUrl, emailUrl, githubUrl, phoneUrl, recommendationsUrl } from "@/lib/site-links";
 
 type Message = { id: number; role: "guide" | "visitor"; text: string; animate?: boolean };
@@ -1740,14 +1741,7 @@ export default function Home() {
         <h1 id="hero-title">From idea to production.<br /><em>Serious about quality.</em></h1>
         <p className="hero-description">I design and build web, mobile, and AI-powered products. My work spans architecture, implementation, testing, and production support, with AI integrated throughout the development process.</p>
       </div>
-      <div className="hero-stats">
-        <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
-        <a href="#performance-lab"><span className="stat-symbol" aria-hidden="true"><Gauge size={24} /></span><span><strong>Watch a slow site get fast</strong><small>A real business site vs. my rebuild, racing side by side, live in your browser.</small></span></a>
-        <a href="/work/technical-challenge/"><span className="stat-symbol" aria-hidden="true"><Timer size={24} /></span><span><strong>Ship an AI product in one hour</strong><small>A timed technical challenge, step by step: requirements, tests, code, proof — and every decision.</small></span></a>
-        <button onClick={() => explore()}><span className="stat-symbol" aria-hidden="true"><Smartphone size={26} /></span><span><strong>Explore my personal projects</strong><small>See the products and engineering decisions behind them.</small></span></button>
-        <nav className="hero-app-logos" aria-label="Open a project directly">{projects.map(item => <button key={item.id} className="hero-app-logo" title={item.name} aria-label={`Open ${item.name}`} onClick={() => explore(item.id)}><ProjectLogo id={item.id} /></button>)}</nav>
-        <a href="#engineering-work"><span className="stat-symbol" aria-hidden="true"><FileCheck2 size={24} /></span><span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span></a>
-      </div>
+      <HeroExplore onExplore={explore} Logo={ProjectLogo} />
     </section>
     <PerformanceLabTeaser />
     <ChallengeTeaser />
