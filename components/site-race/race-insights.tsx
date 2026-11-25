@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, CircleX, Gauge, Microscope, Table2 } from "lucide-react";
 import type { LaneId, LaneMetrics, RaceProfile, WaterfallEntry } from "@/packages/contracts/src/site-race";
 import type { LaneState, RaceState } from "@/lib/site-race/use-race";
@@ -293,6 +293,18 @@ export function UnderTheHood({ state, identity, pending = {} }: { state: RaceSta
   );
 }
 
+/** A file path that wraps between folders (after a slash) before it ever breaks inside a name. */
+function Path({ path }: { path: string }) {
+  const parts = path.split("/");
+  return (
+    <code>
+      {parts.map((part, index) => (
+        <Fragment key={index}>{part}{index < parts.length - 1 && <>/{index > 0 && <wbr />}</>}</Fragment>
+      ))}
+    </code>
+  );
+}
+
 function Check({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   return <li className={ok ? styles.checkOk : styles.checkNo}>{ok ? <CheckCircle2 size={14} aria-label="yes" /> : <CircleX size={14} aria-label="no" />} {children}</li>;
 }
@@ -335,14 +347,14 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
                   <>
                     <p className={styles.spotSub}>Still downloading when the lane stopped:</p>
                     <ul className={styles.fileList}>
-                      {pendingImages.slice(0, 5).map((entry) => <li key={entry.path}><code>{entry.path}</code><b>{kb(entry.kb)} so far</b></li>)}
+                      {pendingImages.slice(0, 5).map((entry) => <li key={entry.path}><Path path={entry.path} /><b>{kb(entry.kb)} so far</b></li>)}
                     </ul>
                   </>
                 )}
               </div>
             ) : detail ? (
               <div className={styles.spotText}>
-                <p><b>{m.timing.lcp === null ? "LCP" : `LCP at ${ms(m.timing.lcp)}`}:</b> {detail.element ? <code>{detail.element}</code> : "an element"}{isImage ? <> · <code>{detail.path}</code></> : " (text)"}</p>
+                <p><b>{m.timing.lcp === null ? "LCP" : `LCP at ${ms(m.timing.lcp)}`}:</b> {detail.element ? <code>{detail.element}</code> : "an element"}{isImage ? <> · <Path path={detail.path!} /></> : " (text)"}</p>
                 {m.capped && <p className={styles.spotSub}>The LCP was final, but the page was still downloading {pendingImages.length ? `${pendingImages.length} more image${pendingImages.length === 1 ? "" : "s"}` : "more files"} below it at the {ms(capOf(m))} cap.</p>}
                 {isImage && (
                   <>
@@ -437,7 +449,7 @@ function ImageBytes({ state, identity }: { state: RaceState; identity: (id: Lane
             <div key={id} className={toneClass(identity(id).kind)}>
               <p className={styles.scoreWho}><i className={styles.key} aria-hidden="true" />Heaviest downloads · {identity(id).role}</p>
               <ol className={styles.fileList}>
-                {list.map((item) => <li key={item.path}><code>{item.path}</code><b>{kb(item.kb)}{item.format ? ` ${item.format.toUpperCase()}` : ` ${item.type}`}</b></li>)}
+                {list.map((item) => <li key={item.path}><Path path={item.path} /><b>{kb(item.kb)}{item.format ? ` ${item.format.toUpperCase()}` : ` ${item.type}`}</b></li>)}
               </ol>
             </div>
           );
@@ -505,14 +517,14 @@ function Waterfall({ state, identity }: { state: RaceState; identity: (id: LaneI
 function JourneyDetail({ state, identity, pending }: { state: RaceState; identity: (id: LaneId) => LaneIdentity; pending: Pending }) {
   const t = (value: number | null | undefined, cap: number) => (value == null ? `> ${ms(cap)}` : ms(value));
   return (
-    <div className={styles.spotGrid}>
+    <div className={`${styles.spotGrid} ${styles.journeyGrid}`}>
       {LANES.map((id) => {
         const m = state.lanes[id].metrics!;
         const who = identity(id);
         const nav = m.navigation;
         const rep = m.repeat;
         return (
-          <article key={id} className={`${styles.spotCard} ${toneClass(who.kind)}`}>
+          <article key={id} className={`${styles.spotCard} ${styles.spotCardText} ${toneClass(who.kind)}`}>
             <p className={styles.scoreWho}><i className={styles.key} aria-hidden="true" />{who.role} · {who.label}</p>
             <div className={styles.spotText}>
               {(m.navigationSteps ?? (nav ? [nav] : [])).map((step, index) => (
@@ -522,7 +534,7 @@ function JourneyDetail({ state, identity, pending }: { state: RaceState; identit
                     <ul className={styles.fileList}>
                       <li><span>URL changed</span><b>{t(step.commit, step.capMs)}</b></li>
                       <li><span>Heading on screen</span><b>{t(step.content, step.capMs)}</b></li>
-                      <li><span>Main image painted{step.imagePath ? <> · <code>{step.imagePath}</code></> : ""}</span><b>{t(step.image, step.capMs)}</b></li>
+                      <li><span>Main image painted{step.imagePath ? <> · <Path path={step.imagePath} /></> : ""}</span><b>{t(step.image, step.capMs)}</b></li>
                       <li><span>Downloaded from scrolling to the link on</span><b>{kb(step.net.kb)} · {step.net.network} requests</b></li>
                     </ul>
                   )}

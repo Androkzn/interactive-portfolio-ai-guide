@@ -78,12 +78,17 @@
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; padding: 4px; width: fit-content; max-width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: #141513; }
 .tabs button { min-height: 38px; padding: 6px 14px; color: var(--ink-3); border-radius: 9px; background: transparent; font-size: var(--text-caption); font-weight: 700; }
 .tabs .tabOn { color: #111; background: #e9e7ff; }
-.tabPanel { min-height: 120px; }
+/* The panel's own width, not the window's, decides how the tabs lay out (see the @container rules below):
+   the page around it narrows the panel differently on a phone, an iPad and a desktop. */
+.tabPanel { min-height: 120px; container-type: inline-size; }
 .empty { color: var(--ink-3); }
 
 /* LCP spotlight */
-.spotGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.spotCard { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; grid-template-rows: auto 1fr; gap: 0 16px; padding: 16px; border: 1px solid var(--hair); border-radius: 16px; background: #20221f; }
+.spotGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.spotCard { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 0 16px; padding: 16px; border: 1px solid var(--hair); border-radius: 16px; background: #20221f; }
+/* Text only (the visit details): no screenshot column to leave empty. */
+.spotCardText { grid-template-columns: minmax(0, 1fr); }
+.spotCardText .fileList { margin-bottom: 12px; }
 .spotCard .scoreWho { grid-column: 1 / -1; }
 .spotFrame { position: relative; align-self: start; aspect-ratio: 390 / 844; border-radius: 14px; overflow: hidden; background: #0b0b0a; box-shadow: 0 0 0 1px #4a4d46; }
 .spotDesktop { aspect-ratio: 16 / 10; }
@@ -103,8 +108,11 @@
 .checkNo { color: var(--ink-3); }
 .checkNo svg { color: var(--poor); }
 .fileList { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.fileList li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--hair); font-size: var(--text-meta); }
-.fileList b { color: var(--ink); font: 700 var(--text-meta)/1.4 var(--font-code); white-space: nowrap; }
+/* Label and value share a line while the label keeps at least 18ch; narrower, the value drops below it
+   instead of running over it. */
+.fileList li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 5px 0; border-bottom: 1px solid var(--hair); font-size: var(--text-meta); }
+.fileList li > :first-child { flex: 1 1 18ch; min-width: 0; }
+.fileList b { margin-left: auto; color: var(--ink); font: 700 var(--text-meta)/1.4 var(--font-code); white-space: nowrap; }
 
 /* Image bytes: grouped horizontal bars on one KB axis */
 .imageGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -148,7 +156,7 @@
 @media (max-width: 980px) {
   .scoreGrid { grid-template-columns: 1fr 1fr; }
   .scoreGrid > figure { grid-column: 1 / -1; }
-  .spotGrid, .imageGrid { grid-template-columns: 1fr; }
+  .imageGrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
   .panel { padding: 12px; border-radius: 14px; }
@@ -158,9 +166,25 @@
   .ring { width: 104px; }
   .ring b { font-size: 2rem; }
   .parts li > span:first-child { font-size: var(--text-micro); }
-  .spotCard { grid-template-columns: 110px 1fr; padding: 12px; }
+}
+/* Side by side only while each card keeps a readable text column next to its screenshot (~490 px a card):
+   a desktop or an iPad in landscape. An iPad in portrait stacks them, each at full width. */
+@container (min-width: 1000px) { .spotGrid { grid-template-columns: 1fr 1fr; } }
+@container (min-width: 760px) { .journeyGrid { grid-template-columns: 1fr 1fr; } }
+/* Phone: the screenshot sits beside the headline only; what follows (the files still downloading,
+   the checks) takes the card's full width. */
+@container (max-width: 559px) {
+  .spotCard { grid-template-columns: 104px minmax(0, 1fr); grid-template-rows: none; gap: 0 12px; padding: 12px; }
+  .spotCardText { grid-template-columns: minmax(0, 1fr); }
+  .spotFrame { grid-column: 1; grid-row: 2; }
+  .spotFrame + div.spotText { display: contents; }
+  .spotFrame + div.spotText > * { grid-column: 1 / -1; }
+  .spotFrame + div.spotText > :first-child { grid-column: 2; grid-row: 2; }
+  .spotFrame + div.spotText > :nth-child(2) { margin-top: 12px; }
   .waterfalls { --label-w: 42%; }
   .waterLabel code { display: none; }
+  /* Every other second mark, so the labels do not run into each other. */
+  .waterScale span:nth-child(even) { visibility: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
   .spotBox { animation: none; }

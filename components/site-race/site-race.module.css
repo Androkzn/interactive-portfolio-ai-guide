@@ -164,6 +164,8 @@
 .flag i { display: block; width: 2px; height: 44px; background: var(--mark); box-shadow: 0 0 8px var(--mark); }
 .flagLow { top: auto; bottom: -7px; align-items: flex-end; }
 .flagLow i { height: 44px; }
+/* Near the finish the label goes left of its line, or it runs off the track (a phone clipped "Loaded" to "Loade"). */
+.flagEnd { flex-direction: row-reverse; translate: calc(-100% + 2px) 0; }
 @keyframes flag-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
 .trackScale { display: flex; justify-content: space-between; margin-left: 96px; color: #74776f; font: 600 var(--text-micro)/1 var(--font-code); }
 
@@ -234,7 +236,9 @@
 @media (prefers-reduced-motion: reduce) { .winnerBackdrop, .winnerCard, .winnerCrown { animation: none; } }
 
 .verdict { position: relative; margin-top: 22px; padding: clamp(20px, 3vw, 34px); border: 1px solid #4b4772; border-radius: 20px; background: linear-gradient(135deg, #24233a, #1b1c1a); text-align: center; overflow: hidden; animation: verdict-in .7s cubic-bezier(.2, 1.4, .4, 1); }
-.verdict h3 { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0; font-size: clamp(1.8rem, 4.6vw, 3.4rem); letter-spacing: -.04em; line-height: 1; }
+/* One line of text that wraps as a sentence: as a flex row, the winner's name and "wins 5–0 on rounds"
+   became two columns on a phone. */
+.verdict h3 { margin: 0; font-size: clamp(1.8rem, 4.6vw, 3.4rem); letter-spacing: -.04em; line-height: 1.05; text-wrap: balance; }
 .verdict h3 svg { color: #ffd54a; filter: drop-shadow(0 0 12px #ffd54a90); }
 .verdict p { max-width: 60ch; margin: 12px auto 0; color: #cfd1c8; font-size: var(--text-small); }
 @keyframes verdict-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
@@ -283,7 +287,11 @@
   .trackLane { grid-template-columns: 64px 1fr; gap: 6px; }
   .trackName { font-size: var(--text-meta); }
   .trackScale { margin-left: 70px; }
-  .round header { grid-template-areas: "no badge" "title title" "sub sub"; grid-template-columns: auto auto; justify-content: space-between; row-gap: 6px; }
+  /* A flexible second column: with "auto auto" the subtitle, which spans both, stretched the round tag
+     and the badge to half the card each and pushed "+1" onto a line of its own. */
+  .round header { grid-template-areas: "no badge" "title title" "sub sub"; grid-template-columns: auto minmax(0, 1fr); row-gap: 6px; }
+  .roundNo { justify-self: start; }
+  .round header strong { justify-self: end; }
   .round th { width: 34%; }
   .round th span { display: none; }
   .challengeRow { grid-template-columns: 1fr; }

@@ -553,7 +553,7 @@ function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: n
             <div className={styles.trackBar}>
               <div className={styles.trackFill} style={{ width: `${Math.min(100, (clock / maxT) * 100)}%` }} />
               {trackFlags(lane, maxT).map((flag) => (
-                <span key={flag.name} className={`${styles.flag} ${flag.low ? styles.flagLow : ""}`} style={{ left: `${flag.x}%` }}><i />{flag.labelled ? flag.label : null}</span>
+                <span key={flag.name} className={`${styles.flag} ${flag.low ? styles.flagLow : ""} ${flag.x > 75 ? styles.flagEnd : ""}`} style={{ left: `${flag.x}%` }}><i />{flag.labelled ? flag.label : null}</span>
               ))}
             </div>
           </div>
