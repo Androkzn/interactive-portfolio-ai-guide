@@ -5,6 +5,7 @@ import resultsData from "@/lib/site-race/results-data.json";
 import { PauseOffscreen } from "@/components/pause-offscreen";
 import styles from "./performance-lab-teaser.module.css";
 import { F1Car, Hatchback } from "./race-cars";
+import { SparklineDraw } from "./sparkline-draw";
 import { SyncAnimations } from "./sync-animations";
 
 function NextMark() {
@@ -124,14 +125,14 @@ export function PerformanceLabTeaser() {
               {/* Drawn on the compositor: each line is a whole, still path in its own <svg>, revealed by
                   an animated clip-path (the half-plane behind the pen, cut square to the stroke), with a
                   disc for the round cap riding at the pen point. That is the shape stroke-dashoffset
-                  drew, frame by frame, without a repaint per frame. Keyframes: performance-lab-teaser.module.css. */}
+                  drew, frame by frame, without a repaint per frame. SparklineDraw builds those keyframes from the paths. */}
               <div className={styles.sparkline} aria-hidden="true">
                 <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.gridLine} d="M0 24H360M0 56H360M0 88H360" /></svg>
-                <div className={styles.lineOriginal}>
+                <div className={styles.lineOriginal} data-line="original">
                   <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.originalLine} d="M0 100 C60 99 110 95 160 88 S270 70 360 60" /></svg>
                   <svg viewBox="0 0 360 112" preserveAspectRatio="none"><circle className={styles.pen} r="2" /></svg>
                 </div>
-                <div className={styles.lineNext}>
+                <div className={styles.lineNext} data-line="next">
                   <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.optimizedLine} d="M0 100 C46 98 78 86 110 62 S170 18 202 14" /></svg>
                   <svg viewBox="0 0 360 112" preserveAspectRatio="none"><circle className={styles.pen} r="2" /></svg>
                 </div>
@@ -147,6 +148,7 @@ export function PerformanceLabTeaser() {
                     <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
                 </svg>
+                <SparklineDraw />
               </div>
               <div className={styles.legend}><span><i className={styles.orange} />Original</span><span><i className={styles.purple} />Next.js</span></div>
             </div>
