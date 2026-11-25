@@ -210,12 +210,17 @@ export function ChallengeTimelapse() {
     const node = rootRef.current;
     if (!node) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
+    // Start once the replay's top (its clock and current step) is in the upper three quarters of the
+    // screen. Measured against the screen, not the replay: on a phone the replay is taller than two
+    // screens, so "40% of it visible" (the old threshold) was never reached and it never started; and
+    // a phone held sideways, opened at #timelapse, shows the clock at about two thirds down.
+    // The last entry is the current one when a fast scroll queues several.
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[entries.length - 1]?.isIntersecting) return;
       preload();
       if (!touched.current && !reduced) { touched.current = true; setPlaying(true); }
       observer.disconnect();
-    }, { threshold: 0.4 });
+    }, { rootMargin: "0px 0px -25% 0px" });
     observer.observe(node);
     return () => observer.disconnect();
   }, [preload]);
