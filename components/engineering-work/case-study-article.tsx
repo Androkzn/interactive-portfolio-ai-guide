@@ -9,6 +9,7 @@ import {
   sourceKindLabels,
   verificationStatusLabels,
 } from "@/lib/engineering-work";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
 
 const backHref = "/#engineering-work";
@@ -31,6 +32,7 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
         <Link className="wordmark" href="/">
           <span className="wordmark-avatar">
             <img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" />
+            <span className="wordmark-presence" />
           </span>
           <span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span>
         </Link>
@@ -40,6 +42,7 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
           <a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a>
           <a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><img className="brand-logo brand-logo-github" src="/images/brand/github.svg" alt="" aria-hidden="true" /><span>GitHub</span></a>
         </nav>
+        <PauseOffscreen />
       </header>
 
       <main>

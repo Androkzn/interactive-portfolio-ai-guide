@@ -7,6 +7,7 @@ import {
   FileCode2, Flag, FlaskConical, Flame, Gauge, Globe, Hand, House, ImageDown, Info, ListChecks, Mail, Monitor, Phone, Rocket,
   RotateCcw, Scale, Smartphone, Snail, Snowflake, Swords, Timer, Trophy, Type, Users, Wifi, Zap,
 } from "lucide-react";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import { LabExperience } from "@/components/site-race/lab-experience";
 import resultsData from "@/lib/site-race/results-data.json";
 import { contactUrl, emailUrl, githubUrl, phoneUrl } from "@/lib/site-links";
@@ -169,6 +170,7 @@ export default function Page() {
         <Link className="wordmark" href="/">
           <span className="wordmark-avatar">
             <img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" />
+            <span className="wordmark-presence" />
           </span>
           <span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span>
         </Link>
@@ -178,6 +180,7 @@ export default function Page() {
           <a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a>
           <a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><img className="brand-logo brand-logo-github" src="/images/brand/github.svg" alt="" aria-hidden="true" /><span>GitHub</span></a>
         </nav>
+        <PauseOffscreen />
       </header>
 
       <main className={styles.main}>

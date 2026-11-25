@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Gauge, Image as ImageIcon, TimerReset, Zap } from "lucide-react";
 import resultsData from "@/lib/site-race/results-data.json";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import styles from "./performance-lab-teaser.module.css";
 import { F1Car, Hatchback } from "./race-cars";
 import { SyncAnimations } from "./sync-animations";
@@ -104,6 +105,7 @@ export function PerformanceLabTeaser() {
 
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
           <SyncAnimations />
+          <PauseOffscreen />
           <div className={styles.visualHead}><span><i />Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
             <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? `> ${capSeconds}s` : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>

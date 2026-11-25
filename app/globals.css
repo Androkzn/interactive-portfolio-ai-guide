@@ -38,7 +38,11 @@ p { line-height:1.65; }
 .wordmark:hover,.wordmark:focus-visible { border-color:#ddd9ef; background:linear-gradient(135deg,#fbfaf6,#f2f0fa); transform:translateY(-1px); }
 .wordmark-avatar { position:relative; display:block; width:76px; height:76px; flex:0 0 76px; border-radius:50%; }
 .wordmark-avatar::before { content:""; position:absolute; inset:-4px; border:1px solid #b9afea; border-radius:50%; opacity:.7; animation:wordmark-avatar-ring 5.5s cubic-bezier(.22,1,.36,1) infinite; }
-.wordmark-avatar::after { content:""; position:absolute; right:1px; bottom:6px; width:9px; height:9px; border:2px solid var(--paper); border-radius:50%; background:#6da45d; box-shadow:0 0 0 3px #6da45d24; animation:wordmark-avatar-presence 2.8s ease-in-out infinite; }
+.wordmark-avatar::after { content:""; position:absolute; right:1px; bottom:6px; width:9px; height:9px; border:2px solid var(--paper); border-radius:50%; background:#6da45d; }
+/* The presence dot's pulse: a green disc the dot's size (13 px with its border) behind it, scaled and
+   faded. It draws the same ring the dot's box-shadow did (3 → 6 px spread, alpha 36/255 → 20/255),
+   but as transform and opacity, which the compositor runs, not a repaint on every frame. */
+.wordmark-presence { position:absolute; right:1px; bottom:6px; width:13px; height:13px; border-radius:50%; background:#6da45d; opacity:.1412; transform:scale(1.4615); pointer-events:none; animation:wordmark-avatar-presence 2.8s ease-in-out infinite; }
 .wordmark-photo { display:block; width:100%; height:100%; object-fit:cover; border:2px solid var(--paper); border-radius:50%; box-shadow:0 5px 13px #252a1720; }
 .wordmark-name { position:relative; display:block; padding:3px 2px 5px; animation:wordmark-name-in .7s .18s cubic-bezier(.22,1,.36,1) both; }
 .wordmark-name::after { content:""; position:absolute; right:2px; bottom:0; left:2px; height:2px; border-radius:999px; background:linear-gradient(90deg,var(--violet),#9c91ec 60%,transparent); transform-origin:left; animation:wordmark-name-line 4.2s ease-in-out infinite; }
@@ -57,7 +61,7 @@ p { line-height:1.65; }
    its own width), without a layout shift on every frame. */
 @keyframes header-role-sheen { 0%,35% { transform:translateX(0) skewX(-18deg); opacity:0; } 45% { opacity:.8; } 65%,100% { transform:translateX(564%) skewX(-18deg); opacity:0; } }
 @keyframes wordmark-avatar-ring { 0%,100% { transform:scale(.96); opacity:.4; } 50% { transform:scale(1.04); opacity:.95; } }
-@keyframes wordmark-avatar-presence { 0%,100% { box-shadow:0 0 0 3px #6da45d24; } 50% { box-shadow:0 0 0 6px #6da45d14; } }
+@keyframes wordmark-avatar-presence { 0%,100% { opacity:.1412; transform:scale(1.4615); } 50% { opacity:.0784; transform:scale(1.9231); } }
 @keyframes wordmark-name-in { from { opacity:0; transform:translateX(-5px); } to { opacity:1; transform:none; } }
 @keyframes wordmark-name-line { 0%,100% { transform:scaleX(.42); opacity:.5; } 45%,65% { transform:scaleX(1); opacity:1; } }
 .header-contact { display:flex; align-items:center; gap:10px; flex-shrink:0; font-size:var(--text-caption); font-weight:700; }

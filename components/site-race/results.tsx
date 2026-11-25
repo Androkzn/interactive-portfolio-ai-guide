@@ -3,6 +3,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { ArrowDown } from "lucide-react";
 import resultsData from "@/lib/site-race/results-data.json";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import styles from "./results.module.css";
 
 // Before → after across the site, mobile profile (390 px, slow 4G, 4× CPU): medians of the races
@@ -105,6 +106,7 @@ export function RaceResults() {
           <span>Don&apos;t take our word for it.</span>
           <a className={styles.cta} href="#race">Race it yourself <ArrowDown size={18} aria-hidden="true" /></a>
         </p>
+        <PauseOffscreen />
       </div>
 
       <div className={styles.board}>

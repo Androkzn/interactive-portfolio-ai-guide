@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { ArrowUpRight, Check, FlaskConical, Hourglass, Lock, MessageSquare, Play, ShieldCheck, Timer } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import { board } from "@/lib/technical-challenge/story";
 import styles from "./challenge-teaser.module.css";
 
@@ -106,6 +107,7 @@ export function ChallengeTeaser() {
               <span className={styles.open}><Play size={13} aria-hidden="true" />Open the replay</span>
             </span>
           </Link>
+          <PauseOffscreen />
         </div>
       </div>
     </section>

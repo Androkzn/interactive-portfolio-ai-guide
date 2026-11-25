@@ -169,15 +169,28 @@ export function ChallengeTimelapse() {
   useEffect(() => {
     if (!playing) return;
     preload();
+    const node = rootRef.current;
     let last = performance.now();
-    let frame = requestAnimationFrame(function tick(now) {
+    let frame = 0;
+    let onScreen = true;
+    let finished = false;
+    // Far off screen the clock keeps running but nothing is drawn: the loop stops, and its first frame
+    // back adds the time spent away, so the replay is exactly where (or as finished as) it would be.
+    // It wakes a screen early, so the catch-up is drawn before any of the player scrolls into view.
+    const tick = (now: number) => {
       const next = position.current + (now - last) / 1000;
       last = now;
       seek(next);
-      if (next >= TOTAL_SECONDS) { setPlaying(false); return; }
-      frame = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(frame);
+      if (next >= TOTAL_SECONDS) { finished = true; frame = 0; setPlaying(false); return; }
+      frame = onScreen ? requestAnimationFrame(tick) : 0;
+    };
+    frame = requestAnimationFrame(tick);
+    const observer = node && typeof IntersectionObserver !== "undefined" ? new IntersectionObserver((entries) => {
+      onScreen = Boolean(entries[entries.length - 1]?.isIntersecting);
+      if (onScreen && !frame && !finished) frame = requestAnimationFrame(tick);
+    }, { rootMargin: "100% 0px" }) : null;
+    if (node) observer?.observe(node);
+    return () => { cancelAnimationFrame(frame); observer?.disconnect(); };
   }, [playing, seek, preload]);
 
   // ?at=<chapter>[:fraction] opens paused there (the chapter's end by default), so a link can

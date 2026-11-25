@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { ArrowDown, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BatteryFull, Bot, Braces, Check, ClipboardCheck, Code2, CornerDownLeft, DatabaseZap, FileCheck2, Gauge, Layers3, Timer, LockKeyhole, Mail, MonitorCog, Moon, Phone, Play, RotateCcw, SearchCheck, Send, ShieldCheck, Signal, Smartphone, Sparkles, Sun, TabletSmartphone, WandSparkles, Wifi } from "lucide-react";
 import { DEFAULT_PROJECT_ID, DevicePreview, Project, ScreenInsight, projectById, projects, screenInsightFor } from "@/lib/content";
 import { acceptsPreviewMessage, createPortfolioSessionId, deviceWidths, portfolioDemoMessageFor } from "@/lib/preview";
+import { PauseOffscreen } from "@/components/pause-offscreen";
 import { EngineeringWorkSection } from "@/components/engineering-work/engineering-work-section";
 import { PerformanceLabTeaser } from "@/components/site-race/performance-lab-teaser";
 import { ChallengeTeaser } from "@/components/technical-challenge/challenge-teaser";
@@ -1573,6 +1574,8 @@ function LinkedInReviewsCarousel() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  // Until the carousel has taken its start position it scrolls instantly (see startAtMiddleSet).
+  const [settled, setSettled] = useState(false);
   const reviewCount = linkedInReviews.length;
   const extendedReviews = [...linkedInReviews, ...linkedInReviews, ...linkedInReviews];
 
@@ -1598,11 +1601,16 @@ function LinkedInReviewsCarousel() {
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    // Instant, not the viewport's smooth scroll: the start position is never meant to be seen moving.
+    // A smooth scroll at load, even the browser's own snap on first layout, counts as a scroll in
+    // Chrome, which then stops recording the page's LCP; and its in-between positions sent onScroll
+    // into a re-centering loop. The server markup scrolls instantly until this has happened.
     const startAtMiddleSet = () => {
       const step = stepSize();
-      if (step) viewport.scrollLeft = step * reviewCount;
+      if (step) viewport.scrollTo({ left: step * reviewCount, behavior: "instant" });
     };
     startAtMiddleSet();
+    const settle = requestAnimationFrame(() => setSettled(true));
     const onScroll = () => {
       const step = stepSize();
       if (!step) return;
@@ -1618,7 +1626,7 @@ function LinkedInReviewsCarousel() {
       setActiveIndex(((logicalIndex % reviewCount) + reviewCount) % reviewCount);
     };
     viewport.addEventListener("scroll", onScroll, { passive: true });
-    return () => viewport.removeEventListener("scroll", onScroll);
+    return () => { cancelAnimationFrame(settle); viewport.removeEventListener("scroll", onScroll); };
   }, [reviewCount, stepSize]);
 
   useEffect(() => {
@@ -1638,6 +1646,7 @@ function LinkedInReviewsCarousel() {
     <div
       className="linkedin-carousel-viewport"
       ref={viewportRef}
+      style={settled ? undefined : { scrollBehavior: "auto" }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
@@ -1723,7 +1732,7 @@ export default function Home() {
   return <div className="site-shell" id="top">
     <a className="skip-link" href="#workspace">Skip to the live projects</a>
     <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav></header>
+    <header className="site-header"><a className="wordmark" href="#top"><span className="wordmark-avatar"><img className="wordmark-photo" src="/images/andrei-tekhtelev-avatar-240.webp" alt="" aria-hidden="true" /><span className="wordmark-presence" /></span><span className="wordmark-name">ANDREI<br /><b>TEKHTELEV</b></span></a><span className="header-role" aria-label="Full-stack engineer, applied AI, quality engineering"><span className="header-role-item">FULL-STACK ENGINEER</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">APPLIED AI</span><span className="header-role-divider" aria-hidden="true" /><span className="header-role-item">QUALITY ENGINEERING</span></span><nav className="header-contact" aria-label="Contact links"><a href={contactUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn"><BrandLogo brand="linkedin" /><span>LinkedIn</span></a><a href={emailUrl} aria-label="Email Andrei" title="Email Andrei"><Mail size={20} strokeWidth={2.1} aria-hidden="true" /><span>Email</span></a><a href={phoneUrl} aria-label="Call Andrei" title="Call Andrei"><Phone size={20} strokeWidth={2.1} aria-hidden="true" /><span>Call</span></a><a href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><BrandLogo brand="github" /><span>GitHub</span></a></nav><PauseOffscreen /></header>
     <main>
     <section className="intro" aria-labelledby="hero-title">
       <div className="intro-main">
