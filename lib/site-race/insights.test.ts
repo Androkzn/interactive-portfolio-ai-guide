@@ -91,15 +91,21 @@ describe("journey", () => {
     ];
     for (const [url, id] of deployments) expect(stageForUrl(url)?.id, url).toBe(id);
   });
-  it("races the newest Pages build on the live alias and every other stage on its own deployment", () => {
+  it("races a stage's logo-free demo copy when it has one, and every other stage on its own deployment", () => {
     const alias = new URL(RACE_PRESETS.next.url);
     expect(featuredStage.id).toBe("compile");
     expect(latestStage.id).toBe("edge");
-    expect(raceUrl(featuredStage.id)).toBe(alias.origin);
+    // The default race, before and after, loads the demo copies.
+    expect(raceUrl("original")).toBe(stageById("original").demoUrl);
+    expect(raceUrl(featuredStage.id)).toBe(featuredStage.demoUrl);
     for (const stage of stages) {
       // No stage claims the moving alias as its own URL.
       expect(new URL(stage.url).host).not.toBe(alias.host);
-      if (stage.id !== featuredStage.id) expect(raceUrl(stage.id)).toBe(stage.url);
+      if (stage.demoUrl) {
+        expect(OWN_HOST_PATTERN.test(new URL(stage.demoUrl).host)).toBe(true);
+        expect(raceUrl(stage.id)).toBe(stage.demoUrl);
+        expect(stageForUrl(`${stage.demoUrl}/pumps/`)?.id).toBe(stage.id);
+      } else expect(raceUrl(stage.id)).toBe(stage.url);
     }
   });
   it("matches report runs to stages", () => {

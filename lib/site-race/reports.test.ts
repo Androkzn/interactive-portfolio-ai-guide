@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { RACE_PRESETS } from "../../packages/contracts/src/site-race";
 import { newReportId } from "../../apps/site-race-api/src/report";
-import { featuredStage } from "./journey";
+import { featuredStage, raceUrl, stageForUrl } from "./journey";
 import { parseRaceLog, REPORT_ID, reportLink, setupOf } from "./reports";
 import { foldRaceLog } from "./use-race";
 
@@ -18,11 +18,15 @@ describe("saved reports", () => {
     expect(setupOf(state)).toEqual({ page: "model", stage: featuredStage.id, profile: "mobile" });
   });
 
-  it("give a race against the production alias to the stage the race runs by default", () => {
+  it("give a race against what the default stage loads to that stage", () => {
     const state = foldRaceLog(log("recorded-mobile-home"), "report");
-    // Recorded either with the `next` preset or with the alias URL itself: both are the alias.
-    expect(new URL(state.lanes.b.info?.url ?? "").host).toBe(new URL(RACE_PRESETS.next.url).host);
+    // The recordings race what a default race loads: the stage's demo copy when it has one.
+    expect(new URL(state.lanes.b.info?.url ?? "").host).toBe(new URL(raceUrl(featuredStage.id)).host);
     expect(setupOf(state)).toEqual({ page: "home", stage: featuredStage.id, profile: "mobile" });
+  });
+
+  it("give a race against the production alias to the default stage too", () => {
+    expect(stageForUrl(RACE_PRESETS.next.url)?.id).toBe(featuredStage.id);
   });
 
   it("carry the report id the Worker saved them under", () => {
