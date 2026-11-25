@@ -1,15 +1,40 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowUpRight, Check, FlaskConical, Hourglass, Play, ShieldCheck, Timer } from "lucide-react";
+import { ArrowUpRight, Check, FlaskConical, Hourglass, Lock, MessageSquare, Play, ShieldCheck, Timer } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { board } from "@/lib/technical-challenge/story";
 import styles from "./challenge-teaser.module.css";
 
 const PHASES = ["Audit", "BRD", "TRD", "Plan", "Matrix", "Build", "Eval", "Ship"];
 
 /**
- * The homepage block after the performance lab: the technical challenge in one card. The board on
- * the right loops through what the timelapse shows in full — every brief item specified first
- * (violet), then proved (green), then the 27 / 27 stamp. CSS only; reduced motion shows the end.
+ * Three real frames from inside the project, cycled in a browser window: each is the exact 16:10
+ * area the timelapse spotlights, cut from the captures in public/images/technical-challenge, with
+ * the highlight box in % of the frame.
+ */
+const FRAMES: { tab: string; icon: LucideIcon; url: string; badge: string; live?: boolean; image: string; alt: string; label: string; box: { top: number; left: number; width: number; height: number } }[] = [
+  {
+    tab: "Product assistant", icon: MessageSquare, url: "nimbus-assistant-production.vercel.app", badge: "Live app", live: true,
+    image: "/images/technical-challenge/teaser-app.webp", alt: "The live app answering which products support SAML 2.0, with citations, a documents-disagree note and the backup model's label.",
+    label: "Selected model failed → the backup answered, labelled", box: { top: 73.2, left: 25.6, width: 33.4, height: 4.8 },
+  },
+  {
+    tab: "Live answer eval", icon: FlaskConical, url: "evals/reports · 7 Oct, 13:41", badge: "Recorded run",
+    image: "/images/technical-challenge/teaser-eval.webp", alt: "Eval report rows for off-topic questions, each answered in a few milliseconds for $0.00000 on three models.",
+    label: "Off-topic: 3–8 ms, $0 — no model was called", box: { top: 77.3, left: 2, width: 96, height: 19.7 },
+  },
+  {
+    tab: "Readiness", icon: ShieldCheck, url: "nimbus-assistant-dev.vercel.app/readiness", badge: "Recorded run",
+    image: "/images/technical-challenge/teaser-readiness.webp", alt: "Readiness report: READY, 39 of 39 requirements verified, 424 tests.",
+    label: "READY — 39 / 39 requirements verified", box: { top: 9.6, left: 2.5, width: 95, height: 35.2 },
+  },
+];
+
+/**
+ * The homepage block after the performance lab: the technical challenge in one card. The board
+ * loops through what the timelapse shows in full — every brief item specified first (violet), then
+ * proved (green) — and a browser below it cycles through real frames from inside the project.
+ * CSS only; reduced motion shows the finished board and the first frame.
  */
 export function ChallengeTeaser() {
   return (
@@ -32,23 +57,55 @@ export function ChallengeTeaser() {
             <span><FlaskConical size={16} aria-hidden="true" /><b>75 / 75</b><small>stricter eval, 3 vendors</small></span>
             <span><ShieldCheck size={16} aria-hidden="true" /><b>22</b><small>defects stopped by gates</small></span>
           </div>
-          <Link className={styles.cta} href="/work/technical-challenge/#timelapse"><Play size={17} aria-hidden="true" />Watch the two hours <ArrowUpRight size={17} aria-hidden="true" /></Link>
+          <Link className={styles.cta} href="/work/technical-challenge/#timelapse"><Play size={17} aria-hidden="true" />Watch 2 hours in 1 minute <ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>
 
-        <div className={styles.visual} aria-hidden="true">
-          <div className={styles.visualHead}><span><i />Requirement board · replay</span><span className={styles.clock}>60:00</span></div>
-          <ol className={styles.phases}>
-            {PHASES.map((phase, i) => <li key={phase} style={{ "--i": i } as CSSProperties}>{phase}</li>)}
-          </ol>
-          <ol className={styles.board}>
-            {board.map((item, i) => (
-              <li key={item.id} data-tier={item.tier} style={{ "--i": i } as CSSProperties}>
-                <span>{item.tier === "rule" ? "Rule" : item.tier === "guard" ? "Fail" : item.code === "Ship" ? (item.id === "D-LIVE" ? "Live" : "Repo") : item.code}</span>
-              </li>
-            ))}
-          </ol>
-          <div className={styles.legend}><span data-k="spec" />specified <span data-k="pass" />proved by a test or an eval</div>
-          <div className={styles.stamp}><Check size={18} strokeWidth={3} />27 / 27 green</div>
+        <div className={styles.stack}>
+          <div className={styles.visual} aria-hidden="true">
+            <div className={styles.visualHead}><span><i />Requirement board · replay</span><span className={styles.clock}>60:00</span></div>
+            <ol className={styles.phases}>
+              {PHASES.map((phase, i) => <li key={phase} style={{ "--i": i } as CSSProperties}>{phase}</li>)}
+            </ol>
+            <ol className={styles.board}>
+              {board.map((item, i) => (
+                <li key={item.id} data-tier={item.tier} style={{ "--i": i } as CSSProperties}>
+                  <span>{item.tier === "rule" ? "Rule" : item.tier === "guard" ? "Fail" : item.code === "Ship" ? (item.id === "D-LIVE" ? "Live" : "Repo") : item.code}</span>
+                </li>
+              ))}
+            </ol>
+            <div className={styles.legend}><span data-k="spec" />specified <span data-k="pass" />proved by a test or an eval</div>
+            <div className={styles.stamp}><Check size={18} strokeWidth={3} />27 / 27 green</div>
+          </div>
+
+          {/* Real frames from inside: the whole window opens the replay. */}
+          <Link className={styles.browser} href="/work/technical-challenge/#timelapse" aria-label="Open the replay: the live app, the eval reports and the readiness console">
+            <span className={styles.chrome} aria-hidden="true">
+              <span className={styles.lights}><i /><i /><i /></span>
+              <span className={styles.tabs}>
+                {FRAMES.map(({ tab, icon: Icon }, i) => <span key={tab} style={{ "--f": i } as CSSProperties}><Icon size={11} />{tab}</span>)}
+              </span>
+            </span>
+            <span className={styles.address} aria-hidden="true">
+              <Lock size={11} />
+              <span className={styles.urls}>
+                {FRAMES.map(({ url, badge, live }, i) => (
+                  <span key={url} style={{ "--f": i } as CSSProperties}><b>{url}</b><em data-live={live || undefined}>{badge}</em></span>
+                ))}
+              </span>
+            </span>
+            <span className={styles.viewport}>
+              {FRAMES.map(({ image, alt, label, box }, i) => (
+                <span key={image} className={styles.frame} style={{ "--f": i } as CSSProperties}>
+                  <img src={image} alt={alt} width={800} height={500} loading="lazy" decoding="async" />
+                  <span className={styles.spot} data-below={box.top < 20 || undefined} style={{ top: `${box.top}%`, left: `${box.left}%`, width: `${box.width}%`, height: `${box.height}%` }}><b>{label}</b></span>
+                </span>
+              ))}
+            </span>
+            <span className={styles.status}>
+              <span>Inside: the live app, every eval run, the readiness console</span>
+              <span className={styles.open}><Play size={13} aria-hidden="true" />Open the replay</span>
+            </span>
+          </Link>
         </div>
       </div>
     </section>

@@ -27,8 +27,8 @@ const STATUS: Record<TileStatus, { icon: LucideIcon; label: string }> = {
 
 const KIND_LABEL = { spec: "Spec", build: "Build", verify: "Verify", ship: "Ship", bonus: "Bonus", after: "After" } as const;
 const HOURS = [
-  { hour: 1 as const, title: "Hour 1 · core requirements", note: "60 min" },
-  { hour: 2 as const, title: "Hour 2 · bonus, by choice", note: "60 min" },
+  { hour: 1 as const, title: "One-hour core challenge", note: "60 min" },
+  { hour: 2 as const, title: "Bonus hour, by choice", note: "60 min" },
   { hour: 3 as const, title: "After the sprint", note: "later" },
 ];
 const TABS: { id: BrowserTab; label: string; icon: LucideIcon }[] = [
@@ -230,7 +230,7 @@ export function ChallengeTimelapse() {
           <p className={styles.kicker}><span className={styles.rec} data-on={playing || undefined} aria-hidden="true" />Timelapse · two hours in about a minute</p>
           <div className={styles.clockRow}>
             <span className={styles.clock}>{clock}</span>
-            <span className={styles.hourChip}>{chapter.hour === 1 ? "Hour 1 · core" : chapter.hour === 2 ? "Hour 2 · bonus" : "After the sprint"}</span>
+            <span className={styles.hourChip}>{chapter.hour === 1 ? "One-hour core challenge" : chapter.hour === 2 ? "Bonus hour" : "After the sprint"}</span>
           </div>
           <p className={styles.clockNote}>{clockNote}</p>
         </div>
@@ -246,7 +246,7 @@ export function ChallengeTimelapse() {
         <article key={chapter.id} className={styles.card} data-kind={chapter.kind}>
           <p className={styles.cardMeta}>
             <span className={styles.kind}>{KIND_LABEL[chapter.kind]}</span>
-            {chapter.hour === 3 ? <>After the sprint · {step} of {inHour.length}</> : <>Hour {chapter.hour} · step {step} of {inHour.length} · <b>≈ {chapter.minutes} min</b></>}
+            {chapter.hour === 3 ? <>After the sprint · {step} of {inHour.length}</> : <>{chapter.hour === 1 ? "Core challenge" : "Bonus hour"} · step {step} of {inHour.length} · <b>≈ {chapter.minutes} min</b></>}
           </p>
           <h3 className={styles.cardTitle}>{chapter.title}</h3>
           <p className={styles.did}>{chapter.did}</p>
@@ -302,7 +302,7 @@ export function ChallengeTimelapse() {
             <p className={styles.hourTitle}>{title} <span>{note}</span></p>
             <ol className={styles.segments}>
               {chapters.map((item, i) => item.hour !== hour ? null : (
-                <li key={item.id} style={{ flexGrow: item.minutes || 1 } as CSSProperties}>
+                <li key={item.id} style={{ "--grow": item.minutes || 1 } as CSSProperties}>
                   <button
                     type="button"
                     className={styles.segment}

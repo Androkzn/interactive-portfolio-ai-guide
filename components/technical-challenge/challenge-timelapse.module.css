@@ -112,14 +112,18 @@
 .legend [data-status="fail"] span { background: var(--fail); }
 
 /* ── Chapter bar: real proportions of each hour, like chapters on a video ── */
-.chapters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .42fr); gap: 10px; }
+/* Two rows: the core hour on its own across the full width, then the bonus hour beside the epilogue.
+   Each segment is as wide as its minutes (--grow), so the bar shows where the time went, and with a
+   full row per hour even a 3-minute step keeps its label. Phones give every step the same width. */
+.chapters { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 12px 10px; }
+.hourTrack[data-hour="1"] { grid-column: 1 / -1; }
 .hourTitle { display: flex; justify-content: space-between; margin: 0 0 6px; color: var(--muted); font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .06em; text-transform: uppercase; }
 .hourTrack[data-hour="1"] .hourTitle { color: var(--hour1); }
 .hourTrack[data-hour="2"] .hourTitle { color: var(--hour2); }
 .hourTrack[data-hour="3"] .hourTitle { color: var(--after); }
 .hourTitle span { color: var(--muted); }
 .segments { display: flex; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.segments li { flex-basis: 0; min-width: 0; }
+.segments li { flex: var(--grow, 1) 1 0; min-width: 52px; }
 .segment { --kind: var(--hour1); position: relative; display: block; width: 100%; height: 46px; padding: 0; overflow: hidden; text-align: left; border: 1px solid var(--line); border-radius: 9px; background: #1a1c19; }
 .segment[data-kind="spec"] { --kind: var(--spec); }
 .segment[data-kind="verify"] { --kind: #8fd3ff; }
@@ -146,8 +150,10 @@
   .stats > div { min-width: 0; }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chapters { grid-template-columns: minmax(0, 1fr); }
+  .segments li { flex: 1 1 0; min-width: 0; }
   .segmentLabel small { display: none; }
   .segment { height: 38px; }
+  .segmentLabel { padding: 4px 3px; text-align: center; white-space: normal; text-overflow: clip; place-content: center; height: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .card, .tileBadge, .rec[data-on] { animation: none; }

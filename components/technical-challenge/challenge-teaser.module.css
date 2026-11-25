@@ -20,6 +20,10 @@
 .cta { display: inline-flex; align-items: center; gap: 9px; min-height: 52px; margin-top: 24px; padding: 12px 22px; color: #111; border-radius: 14px; background: linear-gradient(135deg, #d4ff76, #a8f07a); font-weight: 800; box-shadow: 0 10px 30px #d4ff7630; transition: transform .2s ease, box-shadow .2s ease; }
 .cta:hover, .cta:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px #d4ff7644; }
 
+/* ── The right column: the board and a browser, staggered like two open windows ── */
+.stack { display: grid; gap: 18px; min-width: 0; }
+.stack > .visual { margin-right: clamp(0px, 3vw, 44px); }
+
 /* ── The board ── */
 .visual { --cycle: 9s; position: relative; display: grid; gap: 14px; min-width: 0; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
 .visualHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #a7aa9f; font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .07em; text-transform: uppercase; }
@@ -66,6 +70,50 @@
   95%, 100% { opacity: 0; transform: none; }
 }
 
+/* ── The browser: three real frames from inside, 4 s each, on one 12 s loop ── */
+.browser { --loop: 12s; display: block; margin-left: clamp(0px, 3vw, 44px); overflow: hidden; color: inherit; border: 1px solid #3d4038; border-radius: 14px; background: #0c0d0b; box-shadow: 0 26px 60px #000c, inset 0 0 0 1px #ffffff08; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+.browser:hover, .browser:focus-visible { transform: translateY(-3px); border-color: #6c62c9; box-shadow: 0 32px 70px #000d, 0 0 0 3px #b9aeff33; }
+.browser:focus-visible { outline: 3px solid #cfc8ff; outline-offset: 3px; }
+.chrome { display: flex; align-items: flex-end; gap: 12px; padding: 8px 12px 0; background: #1c1e1a; }
+.lights { display: flex; gap: 6px; padding-bottom: 8px; }
+.lights i { width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; }
+.lights i:nth-child(3) { background: #28c840; }
+.tabs { display: flex; gap: 2px; min-width: 0; overflow: hidden; }
+.tabs > span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; color: #8b8e84; border-radius: 9px 9px 0 0; font-size: .6875rem; font-weight: 700; white-space: nowrap; animation: tabOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
+@keyframes tabOn {
+  0%, 1% { color: #8b8e84; background: transparent; }
+  3%, 32% { color: #f5f4ee; background: #2a2d27; }
+  34%, 100% { color: #8b8e84; background: transparent; }
+}
+.address { display: flex; align-items: center; gap: 8px; padding: 6px 12px; color: #8b8e84; border-bottom: 1px solid #3d4038; background: #2a2d27; }
+.urls { position: relative; flex: 1; min-width: 0; height: 18px; }
+.urls > span { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; opacity: 0; animation: frameOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
+.urls b { overflow: hidden; color: #dfe3d4; font: 600 .6875rem/1.4 var(--font-code); white-space: nowrap; text-overflow: ellipsis; }
+.urls em { flex: none; padding: 2px 8px; color: #ffd98a; border-radius: 999px; background: #3a3420; font: 700 .625rem/1.4 var(--font-code); font-style: normal; }
+.urls em[data-live] { color: #8ff0b0; background: #1d3a26; }
+.urls em[data-live]::before { content: "● "; }
+.viewport { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
+.frame { position: absolute; inset: 0; opacity: 0; animation: frameOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; animation: drift var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
+@keyframes frameOn {
+  0% { opacity: 0; }
+  4%, 31% { opacity: 1; }
+  35%, 100% { opacity: 0; }
+}
+@keyframes drift { 0% { transform: scale(1); } 34%, 100% { transform: scale(1.045); } }
+.spot { position: absolute; border: 2px solid #ffd166; border-radius: 8px; box-shadow: 0 0 0 9999px rgb(8 9 7 / .36), 0 0 22px #ffd16688; opacity: 0; animation: spotOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
+@keyframes spotOn {
+  0%, 9% { opacity: 0; transform: scale(1.06); }
+  13%, 30% { opacity: 1; transform: none; }
+  33%, 100% { opacity: 0; transform: none; }
+}
+.spot b { position: absolute; bottom: calc(100% + 7px); left: 0; width: max-content; max-width: min(100cqw, 380px); padding: 5px 9px; color: #111; border-radius: 8px; background: #ffd166; box-shadow: 0 6px 18px #0007; font: 800 .75rem/1.25 var(--font-ui); }
+.spot[data-below] b { top: calc(100% + 7px); bottom: auto; }
+.status { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; color: #a7aa9f; border-top: 1px solid #2b2d28; background: #141513; font-size: .75rem; }
+.open { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 7px 11px; color: #111; border-radius: 999px; background: #d4ff76; font: 800 .75rem/1 var(--font-ui); transition: transform .2s ease, box-shadow .2s ease; }
+.browser:hover .open, .browser:focus-visible .open { transform: translateX(2px); box-shadow: 0 0 0 4px #d4ff7633; }
+
 @media (max-width: 1080px) {
   .card { grid-template-columns: minmax(0, 1fr); }
   .copy { max-width: 760px; }
@@ -78,6 +126,11 @@
   .phases { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .board { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
   .stamp { position: static; justify-self: start; }
+  .stack > .visual, .browser { margin-inline: 0; }
+  .tabs > span { gap: 0; padding: 6px 10px; font-size: 0; }
+  .status > span:first-child { display: none; }
+  .status { justify-content: flex-end; }
+  .spot b { font-size: .6875rem; }
 }
 /* Reduced motion: the finished board, no loop. */
 @media (prefers-reduced-motion: reduce) {
@@ -86,4 +139,7 @@
   .phases li:nth-child(n + 6) { background: #d4ff76; }
   .board li { border-color: #3c7a50; background: #1d3526; }
   .stamp { opacity: 1; }
+  .tabs > span, .urls > span, .frame, .frame img, .spot { animation: none; }
+  .frame:first-child, .urls > span:first-child, .frame:first-child .spot { opacity: 1; }
+  .tabs > span:first-child { color: #f5f4ee; background: #2a2d27; }
 }

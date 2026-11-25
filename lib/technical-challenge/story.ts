@@ -244,7 +244,7 @@ export const chapters: Chapter[] = [
     effects: [],
   },
   {
-    id: "plan", hour: 1, kind: "spec", short: "Plan + matrix", minutes: 3, seconds: 4,
+    id: "plan", hour: 1, kind: "spec", short: "Plan", minutes: 3, seconds: 4,
     title: "Plan and acceptance matrix",
     did: "Seven phases, each with a kickoff prompt for the AI agent; every build phase ends on a command that proves it's finished. Then 45 acceptance rows: brief id → requirement → expected result → the test layer that proves it.",
     decision: "“Done” is a row with evidence, never “the code looks right”.",
@@ -258,7 +258,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.45, define: ["D-REPO", "D-LIVE"] }],
   },
   {
-    id: "build", hour: 1, kind: "build", short: "Tests + code with AI agents", minutes: 28, seconds: 7,
+    id: "build", hour: 1, kind: "build", short: "Build", minutes: 28, seconds: 7,
     title: "Build with AI agents, tests first",
     did: "Agents implemented phase by phase against the docs. A phase ended only when its verification command passed: retrieval eval offline, fallback against a mock provider, E2E in a real browser with a mock LLM, a scan for keys in the bundle.",
     decision: "AI writes the code. Deterministic tests decide what ships.",
@@ -282,7 +282,7 @@ export const chapters: Chapter[] = [
     ],
   },
   {
-    id: "eval", hour: 1, kind: "verify", short: "Live eval + debug", minutes: 12, seconds: 6,
+    id: "eval", hour: 1, kind: "verify", short: "Eval", minutes: 12, seconds: 6,
     title: "Live eval on three vendors, then debug",
     did: "18 golden questions × Gemini, OpenAI and Claude, graded automatically against the answer key. Fix what failed, re-run everything.",
     decision: "Measure every model, every time.",
@@ -357,7 +357,7 @@ export const chapters: Chapter[] = [
     effects: [],
   },
   {
-    id: "guards", hour: 2, kind: "bonus", short: "Review → guards", minutes: 18, seconds: 7,
+    id: "guards", hour: 2, kind: "bonus", short: "Guards", minutes: 18, seconds: 7,
     title: "Independent review → deterministic guards",
     did: "Had the build reviewed independently. Finding: grounding was prompt-only. Added an off-topic guard that answers without calling any model, a figure check on every answer, product nicknames and topic carry-over.",
     decision: "An auto-fail deserves code, not just instructions.",
@@ -372,7 +372,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.55, note: { "G-DOCS": "in code" } }],
   },
   {
-    id: "raise", hour: 2, kind: "bonus", short: "Raise the bar", minutes: 12, seconds: 8,
+    id: "raise", hour: 2, kind: "bonus", short: "Raise bar", minutes: 12, seconds: 8,
     title: "Raise the bar on myself",
     did: "Rebuilt the golden set stricter: 25 cases instead of 18 — “hi”, “Who is the CEO?”, “And for Vault?”, integrations for every product. The score dropped to 61 / 75, on purpose, then climbed back.",
     decision: "A score is only worth the bar it's measured against.",
@@ -387,7 +387,7 @@ export const chapters: Chapter[] = [
     effects: [{ at: 0.08, run: runs.stricter }, { at: 0.38, run: runs.stricter2 }, { at: 0.62, run: runs.stricter3 }, { at: 0.86, run: runs.final }],
   },
   {
-    id: "readiness", hour: 3, kind: "after", short: "Readiness console", minutes: 0, seconds: 8,
+    id: "readiness", hour: 3, kind: "after", short: "Readiness", minutes: 0, seconds: 8,
     title: "After the sprint: a readiness console",
     did: "Turned the acceptance matrix into a live report. Every gate runs in CI order, and each requirement links to its BRD item, acceptance row, check and test result — recorded and live evidence labelled apart.",
     decision: "Evidence beats assertion.",
@@ -402,7 +402,7 @@ export const chapters: Chapter[] = [
     effects: [],
   },
   {
-    id: "portal", hour: 3, kind: "after", short: "Knowledge portal", minutes: 0, seconds: 6,
+    id: "portal", hour: 3, kind: "after", short: "Portal", minutes: 0, seconds: 6,
     title: "After the sprint: a knowledge-base portal",
     did: "Content owners edit and publish the documents. Questions the assistant couldn't answer from them become prioritised knowledge-gap issues, with the question and the reason.",
     decision: "A refusal should become someone's task.",

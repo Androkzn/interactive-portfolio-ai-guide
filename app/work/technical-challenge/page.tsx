@@ -59,7 +59,7 @@ export default function Page() {
             took, the decision I made at each one, and why.
           </p>
           <div className={styles.links}>
-            <a className={styles.primary} href="#timelapse">Watch the two hours <ArrowRight size={16} aria-hidden="true" /></a>
+            <a className={styles.primary} href="#timelapse">Watch 2 hours in 1 minute <ArrowRight size={16} aria-hidden="true" /></a>
             <a className={styles.secondary} href={LIVE_URL} target="_blank" rel="noreferrer">Open the live app <ArrowUpRight size={16} aria-hidden="true" /></a>
           </div>
         </section>
