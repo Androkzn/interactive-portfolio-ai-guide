@@ -24,39 +24,55 @@
 .stack { display: grid; gap: 18px; min-width: 0; }
 
 /* ── The board ── */
-.visual { --cycle: 9s; container-type: inline-size; position: relative; display: grid; gap: 14px; min-width: 0; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
+/* z-index 1: the board's drop shadow keeps falling over the browser's tab strip below it, as it did
+   before the tabs became layers (a hovered browser lifts above it, as before; see .browser). */
+.visual { --cycle: 9s; container-type: inline-size; position: relative; z-index: 1; display: grid; gap: 14px; min-width: 0; padding: clamp(17px, 2.2vw, 26px); border: 1px solid #3a3d37; border-radius: 23px; background: linear-gradient(145deg, #111310, #171917); box-shadow: inset 0 1px #ffffff08, 0 30px 60px #0004; overflow: hidden; }
 .visualHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #a7aa9f; font: 700 var(--text-micro)/1.3 var(--font-code); letter-spacing: .07em; text-transform: uppercase; }
 .visualHead span:first-child { display: inline-flex; align-items: center; gap: 8px; }
 .visualHead i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a4f; box-shadow: 0 0 0 4px #ff5a4f2e; }
 .clock { padding: 4px 9px; color: #111; border-radius: 999px; background: #d4ff76; font-weight: 800; letter-spacing: 0; }
 
 .phases { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
-.phases li { padding: 6px 2px; overflow: hidden; color: #8b8e84; text-align: center; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #343731; border-radius: 999px; font: 700 var(--text-micro)/1.2 var(--font-code); animation: phase var(--cycle) calc(var(--i) * 420ms) infinite; }
-@keyframes phase {
-  0%, 4% { color: #8b8e84; border-color: #343731; background: transparent; }
-  8%, 84% { color: #111; border-color: transparent; background: #b9aeff; }
-  94%, 100% { color: #8b8e84; border-color: #343731; background: transparent; }
-}
-.phases li:nth-child(n + 6) { animation-name: phaseBuild; }
-@keyframes phaseBuild {
-  0%, 4% { color: #8b8e84; border-color: #343731; background: transparent; }
-  8%, 84% { color: #111; border-color: transparent; background: #d4ff76; }
-  94%, 100% { color: #8b8e84; border-color: #343731; background: transparent; }
-}
+/* Motion here is opacity only, so it runs on the compositor, not the main thread. Each look is a layer
+   faded on the keyframes and easing the colour animation used, and two looks cross-fade with
+   `plus-lighter` inside an isolated group: (1 − t)·A + t·B, which is exactly the colour mix of every
+   frame, edges included. A chip: the violet (lime) fill fades in under the grey outline as the outline
+   fades out (that order matches a border fading to transparent over an incoming background), and the
+   grey label cross-fades into the dark one. */
+.phases li { position: relative; min-width: 0; padding: 6px 2px; text-align: center; border: 1px solid transparent; border-radius: 999px; font: 700 var(--text-micro)/1.2 var(--font-code); }
+.phases li::before, .phases li::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; animation: phaseOn calc(var(--cycle) * 10) calc(var(--i) * 420ms) infinite; }
+/* The transparent border: the lit chip was a background under a transparent border, and that is how it is painted. */
+.phases li::before { border: 1px solid transparent; background: #b9aeff; opacity: 0; }
+.phases li:nth-child(n + 6)::before { background: #d4ff76; }
+.phases li::after { border: 1px solid #343731; animation-name: phaseOff; }
+.phases li > span { position: relative; display: block; isolation: isolate; }
+.phases li > span > span { display: block; overflow: hidden; color: #8b8e84; text-overflow: ellipsis; white-space: nowrap; mix-blend-mode: plus-lighter; animation: phaseOff calc(var(--cycle) * 10) calc(var(--i) * 420ms) infinite; }
+.phases li > span > span + span { position: absolute; inset: 0; color: #111; opacity: 0; animation-name: phaseOn; }
+/* Ten cycles written out per iteration (generated: one cycle's keyframes repeated at 10% steps). A
+   composited animation costs the main thread a style recalc at every iteration boundary, and these
+   loops run on staggered delays, so ten times fewer boundaries is ten times fewer wake-ups. */
+@keyframes phaseOn { 0%, 0.4%, 9.4%, 10%, 10.4%, 19.4%, 20%, 20.4%, 29.4%, 30%, 30.4%, 39.4%, 40%, 40.4%, 49.4%, 50%, 50.4%, 59.4%, 60%, 60.4%, 69.4%, 70%, 70.4%, 79.4%, 80%, 80.4%, 89.4%, 90%, 90.4%, 99.4%, 100% { opacity: 0; } 0.8%, 8.4%, 10.8%, 18.4%, 20.8%, 28.4%, 30.8%, 38.4%, 40.8%, 48.4%, 50.8%, 58.4%, 60.8%, 68.4%, 70.8%, 78.4%, 80.8%, 88.4%, 90.8%, 98.4% { opacity: 1; } }
+@keyframes phaseOff { 0%, 0.4%, 9.4%, 10%, 10.4%, 19.4%, 20%, 20.4%, 29.4%, 30%, 30.4%, 39.4%, 40%, 40.4%, 49.4%, 50%, 50.4%, 59.4%, 60%, 60.4%, 69.4%, 70%, 70.4%, 79.4%, 80%, 80.4%, 89.4%, 90%, 90.4%, 99.4%, 100% { opacity: 1; } 0.8%, 8.4%, 10.8%, 18.4%, 20.8%, 28.4%, 30.8%, 38.4%, 40.8%, 48.4%, 50.8%, 58.4%, 60.8%, 68.4%, 70.8%, 78.4%, 80.8%, 88.4%, 90.8%, 98.4% { opacity: 0; } }
 
 .board { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.board li { display: grid; place-items: center; aspect-ratio: 1.25; border: 1px solid #343731; border-radius: 9px; background: #1a1c19; animation: tile var(--cycle) calc(var(--i) * 45ms) infinite; }
-.board li[data-tier="should"] { border-style: dashed; }
-.board span { color: #c9ccc1; font: 800 var(--text-micro)/1 var(--font-code); }
-@keyframes tile {
-  0%, 10% { border-color: #343731; background: #1a1c19; box-shadow: none; }
-  18%, 40% { border-color: #6c62c9; background: #262341; box-shadow: none; }
-  46% { border-color: #5fd08a; background: #2b5a3a; box-shadow: 0 0 16px #5fd08a88; }
-  52%, 88% { border-color: #3c7a50; background: #1d3526; box-shadow: none; }
-  96%, 100% { border-color: #343731; background: #1a1c19; box-shadow: none; }
-}
+/* A tile is its four faces (idle, specified, the proving flash with its glow, proved) cross-faded in
+   turn inside the tile's isolated group; at every moment the faces' opacities add up to one. */
+.board li { position: relative; isolation: isolate; display: grid; place-items: center; aspect-ratio: 1.25; border: 1px solid transparent; border-radius: 9px; }
+.board li > i { position: absolute; inset: -1px; border: 1px solid; border-radius: inherit; mix-blend-mode: plus-lighter; }
+.board li[data-tier="should"] > i { border-style: dashed; }
+.board .tileIdle { border-color: #343731; background: #1a1c19; animation: tileIdle calc(var(--cycle) * 10) calc(var(--i) * 45ms) infinite; }
+.board .tileSpec { border-color: #6c62c9; background: #262341; opacity: 0; animation: tileSpec calc(var(--cycle) * 10) calc(var(--i) * 45ms) infinite; }
+.board .tileFlash { border-color: #5fd08a; background: #2b5a3a; box-shadow: 0 0 16px #5fd08a88; opacity: 0; animation: tileFlash calc(var(--cycle) * 10) calc(var(--i) * 45ms) infinite; }
+.board .tileProved { border-color: #3c7a50; background: #1d3526; opacity: 0; animation: tileProved calc(var(--cycle) * 10) calc(var(--i) * 45ms) infinite; }
+.board span { position: relative; color: #c9ccc1; font: 800 var(--text-micro)/1 var(--font-code); }
+/* One 9 s cycle: idle 0–10%, specified 18–40%, flash at 46%, proved 52–88%, idle again from 96%; ten per iteration (see phaseOn). */
+@keyframes tileIdle { 0%, 1%, 9.6%, 10%, 11%, 19.6%, 20%, 21%, 29.6%, 30%, 31%, 39.6%, 40%, 41%, 49.6%, 50%, 51%, 59.6%, 60%, 61%, 69.6%, 70%, 71%, 79.6%, 80%, 81%, 89.6%, 90%, 91%, 99.6%, 100% { opacity: 1; } 1.8%, 8.8%, 11.8%, 18.8%, 21.8%, 28.8%, 31.8%, 38.8%, 41.8%, 48.8%, 51.8%, 58.8%, 61.8%, 68.8%, 71.8%, 78.8%, 81.8%, 88.8%, 91.8%, 98.8% { opacity: 0; } }
+@keyframes tileSpec { 0%, 1%, 4.6%, 10%, 11%, 14.6%, 20%, 21%, 24.6%, 30%, 31%, 34.6%, 40%, 41%, 44.6%, 50%, 51%, 54.6%, 60%, 61%, 64.6%, 70%, 71%, 74.6%, 80%, 81%, 84.6%, 90%, 91%, 94.6%, 100% { opacity: 0; } 1.8%, 4%, 11.8%, 14%, 21.8%, 24%, 31.8%, 34%, 41.8%, 44%, 51.8%, 54%, 61.8%, 64%, 71.8%, 74%, 81.8%, 84%, 91.8%, 94% { opacity: 1; } }
+@keyframes tileFlash { 0%, 4%, 5.2%, 10%, 14%, 15.2%, 20%, 24%, 25.2%, 30%, 34%, 35.2%, 40%, 44%, 45.2%, 50%, 54%, 55.2%, 60%, 64%, 65.2%, 70%, 74%, 75.2%, 80%, 84%, 85.2%, 90%, 94%, 95.2%, 100% { opacity: 0; } 4.6%, 14.6%, 24.6%, 34.6%, 44.6%, 54.6%, 64.6%, 74.6%, 84.6%, 94.6% { opacity: 1; } }
+@keyframes tileProved { 0%, 4.6%, 9.6%, 10%, 14.6%, 19.6%, 20%, 24.6%, 29.6%, 30%, 34.6%, 39.6%, 40%, 44.6%, 49.6%, 50%, 54.6%, 59.6%, 60%, 64.6%, 69.6%, 70%, 74.6%, 79.6%, 80%, 84.6%, 89.6%, 90%, 94.6%, 99.6%, 100% { opacity: 0; } 5.2%, 8.8%, 15.2%, 18.8%, 25.2%, 28.8%, 35.2%, 38.8%, 45.2%, 48.8%, 55.2%, 58.8%, 65.2%, 68.8%, 75.2%, 78.8%, 85.2%, 88.8%, 95.2%, 98.8% { opacity: 1; } }
 
-.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: #9ca096; font-size: var(--text-micro); }
+/* Positioned, so it still paints over the tiles' glow (the tiles are layers now). */
+.legend { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: #9ca096; font-size: var(--text-micro); }
 .legend span { width: 11px; height: 11px; border-radius: 3px; }
 .legend [data-k="spec"] { border: 1px solid #6c62c9; background: #262341; }
 .legend [data-k="pass"] { margin-left: 6px; border: 1px solid #3c7a50; background: #1d3526; }
@@ -71,7 +87,7 @@
 
 /* ── The browser: three real frames from inside, 4 s each, on one 12 s loop ── */
 .browser { --loop: 12s; display: block; overflow: hidden; color: inherit; border: 1px solid #3d4038; border-radius: 14px; background: #0c0d0b; box-shadow: 0 26px 60px #000c, inset 0 0 0 1px #ffffff08; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
-.browser:hover, .browser:focus-visible { transform: translateY(-3px); border-color: #6c62c9; box-shadow: 0 32px 70px #000d, 0 0 0 3px #b9aeff33; }
+.browser:hover, .browser:focus-visible { z-index: 2; transform: translateY(-3px); border-color: #6c62c9; box-shadow: 0 32px 70px #000d, 0 0 0 3px #b9aeff33; }
 .browser:focus-visible { outline: 3px solid #cfc8ff; outline-offset: 3px; }
 .chrome { display: flex; align-items: flex-end; gap: 12px; padding: 8px 12px 0; background: #1c1e1a; }
 .lights { display: flex; gap: 6px; padding-bottom: 8px; }
@@ -79,21 +95,21 @@
 .lights i:nth-child(2) { background: #febc2e; }
 .lights i:nth-child(3) { background: #28c840; }
 .tabs { display: flex; gap: 2px; min-width: 0; overflow: hidden; }
-.tabs > span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; color: #8b8e84; border-radius: 9px 9px 0 0; font-size: .6875rem; font-weight: 700; white-space: nowrap; animation: tabOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
-@keyframes tabOn {
-  0%, 1% { color: #8b8e84; background: transparent; }
-  3%, 32% { color: #f5f4ee; background: #2a2d27; }
-  34%, 100% { color: #8b8e84; background: transparent; }
-}
+/* A tab's active look is a copy of the tab laid over it and faded in and out (opacity only). */
+.tabs > span { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; color: #8b8e84; border-radius: 9px 9px 0 0; font-size: .6875rem; font-weight: 700; white-space: nowrap; }
+.tabActive { position: absolute; inset: 0; display: flex; align-items: center; gap: 6px; padding: 6px 11px; color: #f5f4ee; border-radius: inherit; background: #2a2d27; opacity: 0; animation: tabOn calc(var(--loop) * 10) calc(var(--f) * var(--loop) / 3) infinite both; }
+/* One 12 s loop: on 3–32%; ten per iteration (see phaseOn). */
+@keyframes tabOn { 0%, 0.1%, 3.4%, 10%, 10.1%, 13.4%, 20%, 20.1%, 23.4%, 30%, 30.1%, 33.4%, 40%, 40.1%, 43.4%, 50%, 50.1%, 53.4%, 60%, 60.1%, 63.4%, 70%, 70.1%, 73.4%, 80%, 80.1%, 83.4%, 90%, 90.1%, 93.4%, 100% { opacity: 0; } 0.3%, 3.2%, 10.3%, 13.2%, 20.3%, 23.2%, 30.3%, 33.2%, 40.3%, 43.2%, 50.3%, 53.2%, 60.3%, 63.2%, 70.3%, 73.2%, 80.3%, 83.2%, 90.3%, 93.2% { opacity: 1; } }
 .address { display: flex; align-items: center; gap: 8px; padding: 6px 12px; color: #8b8e84; border-bottom: 1px solid #3d4038; background: #2a2d27; }
-.urls { position: relative; flex: 1; min-width: 0; height: 18px; }
+/* z-index 2 (and on .viewport): over the board's shadow, where they always painted (see .visual). */
+.urls { position: relative; z-index: 2; flex: 1; min-width: 0; height: 18px; }
 .urls > span { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; opacity: 0; animation: frameOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
 .urls b { overflow: hidden; color: #dfe3d4; font: 600 .6875rem/1.4 var(--font-code); white-space: nowrap; text-overflow: ellipsis; }
 .urls em { flex: none; padding: 2px 8px; color: #ffd98a; border-radius: 999px; background: #3a3420; font: 700 .625rem/1.4 var(--font-code); font-style: normal; }
 .urls em[data-live] { color: #8ff0b0; background: #1d3a26; }
 .urls em[data-live]::before { content: "● "; }
 /* A size container, so a spot label measures the frame (cqw), not the window. */
-.viewport { container-type: inline-size; position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
+.viewport { container-type: inline-size; position: relative; z-index: 2; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: #fff; }
 .frame { position: absolute; inset: 0; opacity: 0; animation: frameOn var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
 .frame img { display: block; width: 100%; height: 100%; object-fit: cover; animation: drift var(--loop) calc(var(--f) * var(--loop) / 3) infinite both; }
 @keyframes frameOn {
@@ -125,20 +141,22 @@
   .proof > span { min-width: 0; flex: 1 1 calc(50% - 10px); }
   .stamp { position: static; justify-self: start; }
   .tabs > span { gap: 0; padding: 6px 10px; font-size: 0; }
+  .tabActive { gap: 0; padding: 6px 10px; }
   .status > span:first-child { display: none; }
   .status { justify-content: flex-end; }
   .spot b { font-size: .6875rem; }
 }
 /* Reduced motion: the finished board, no loop. */
 @media (prefers-reduced-motion: reduce) {
-  .phases li, .board li, .stamp { animation: none; }
-  .phases li { color: #111; border-color: transparent; background: #b9aeff; }
-  .phases li:nth-child(n + 6) { background: #d4ff76; }
-  .board li { border-color: #3c7a50; background: #1d3526; }
+  .phases li::before, .phases li::after, .phases li > span > span, .board li > i, .stamp { animation: none; }
+  .phases li::before, .phases li > span > span + span { opacity: 1; }
+  .phases li::after, .phases li > span > span:first-child { opacity: 0; }
+  .board .tileProved { opacity: 1; }
+  .board .tileIdle { opacity: 0; }
   .stamp { opacity: 1; }
-  .tabs > span, .urls > span, .frame, .frame img, .spot { animation: none; }
+  .tabActive, .urls > span, .frame, .frame img, .spot { animation: none; }
   .frame:first-child, .urls > span:first-child, .frame:first-child .spot { opacity: 1; }
-  .tabs > span:first-child { color: #f5f4ee; background: #2a2d27; }
+  .tabs > span:first-child .tabActive { opacity: 1; }
 }
 
 /* The board by its own width (the card's padding and the page gutter decide it, not the window).

@@ -106,10 +106,12 @@ export function PerformanceLabTeaser() {
         <div className={styles.visual} aria-label="Animated comparison of the original site and the Next.js optimized site">
           <SyncAnimations />
           <PauseOffscreen />
-          <div className={styles.visualHead}><span><i />Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
+          <div className={styles.visualHead}><span><i><b /><b /></i>Product page · phone on slow 4G · median of {product.races} races</span><span className={styles.nextChip}><NextMark /> Next.js</span></div>
           <div className={styles.scoreboard}>
             <div className={styles.scoreOriginal}><span>Original site</span><strong>{product.beforeCapped ? `> ${capSeconds}s` : seconds(product.before.lcp)}</strong><small>product photo on screen</small></div>
-            <div className={styles.racePulse} aria-hidden="true"><Zap size={18} fill="currentColor" /></div>
+            {/* The pulse's glow is a copy of the bolt with the bolt's drop shadow, faded in and out
+                (opacity, on the compositor); the copy itself sits off to the side, clipped. */}
+            <div className={styles.racePulse} aria-hidden="true"><span className={styles.pulseGlow}><Zap size={18} fill="currentColor" /></span><Zap size={18} fill="currentColor" /></div>
             <div className={styles.scoreNext}><span>Next.js optimized</span><strong>{seconds(productAfter)}</strong><small>product photo on screen</small></div>
           </div>
           <div className={styles.chartGrid}>
@@ -119,12 +121,33 @@ export function PerformanceLabTeaser() {
                   (202 units over 12–58% of the cycle = 360 units over 12–94%). The Next.js line ends at
                   the dot, so the dot lights exactly as the F1 car crosses the line (58%); the original
                   keeps crawling and stays under half, because its photo never arrives in the race. */}
-              <svg className={styles.sparkline} viewBox="0 0 360 112" preserveAspectRatio="none" aria-hidden="true">
-                <path className={styles.gridLine} d="M0 24H360M0 56H360M0 88H360" />
-                <path className={styles.originalLine} pathLength="1" d="M0 100 C60 99 110 95 160 88 S270 70 360 60" />
-                <path className={styles.optimizedLine} pathLength="1" d="M0 100 C46 98 78 86 110 62 S170 18 202 14" />
-                <circle className={styles.chartDot} cx="202" cy="14" r="5" />
-              </svg>
+              {/* Drawn on the compositor: each line is a whole, still path in its own <svg>, revealed by
+                  an animated clip-path (the half-plane behind the pen, cut square to the stroke), with a
+                  disc for the round cap riding at the pen point. That is the shape stroke-dashoffset
+                  drew, frame by frame, without a repaint per frame. Keyframes: performance-lab-teaser.module.css. */}
+              <div className={styles.sparkline} aria-hidden="true">
+                <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.gridLine} d="M0 24H360M0 56H360M0 88H360" /></svg>
+                <div className={styles.lineOriginal}>
+                  <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.originalLine} d="M0 100 C60 99 110 95 160 88 S270 70 360 60" /></svg>
+                  <svg viewBox="0 0 360 112" preserveAspectRatio="none"><circle className={styles.pen} r="2" /></svg>
+                </div>
+                <div className={styles.lineNext}>
+                  <svg viewBox="0 0 360 112" preserveAspectRatio="none"><path className={styles.optimizedLine} d="M0 100 C46 98 78 86 110 62 S170 18 202 14" /></svg>
+                  <svg viewBox="0 0 360 112" preserveAspectRatio="none"><circle className={styles.pen} r="2" /></svg>
+                </div>
+                <svg viewBox="0 0 360 112" preserveAspectRatio="none"><circle className={styles.chartDot} cx="202" cy="14" r="5" /></svg>
+                {/* The Next.js line's glow, in the chart's own units: the line's drop shadow used to be
+                    blurred in the stretched viewBox, so its blur is a fraction of this box (σ = 6 units
+                    of 360 × 112, which is what drop-shadow(0 0 6px) gave there), not a fixed number of pixels. */}
+                <svg className={styles.sparkDefs} aria-hidden="true">
+                  <filter id="race-next-glow" x="-10%" y="-60%" width="120%" height="220%" primitiveUnits="objectBoundingBox" colorInterpolationFilters="sRGB">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation={`${6 / 360} ${6 / 112}`} result="blur" />
+                    <feFlood floodColor="#8d7fff" floodOpacity="0.5333" />
+                    <feComposite in2="blur" operator="in" result="glow" />
+                    <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </svg>
+              </div>
               <div className={styles.legend}><span><i className={styles.orange} />Original</span><span><i className={styles.purple} />Next.js</span></div>
             </div>
             <div className={styles.weightCard}>
@@ -150,8 +173,9 @@ export function PerformanceLabTeaser() {
           <div className={styles.timeline} aria-hidden="true">
             <div className={styles.rail}><i className={styles.railFill} /><i className={styles.railHead} /></div>
             {/* What the track shows: the product page opening cold, from the request to its photo on screen. */}
-            <span className={`${styles.checkpoint} ${styles.checkpoint0}`}><i />Page requested</span>
-            <span className={`${styles.checkpoint} ${styles.checkpoint2}`}><i />Photo on screen · {seconds(productAfter)}</span>
+            {/* Each checkpoint twice, grey and lime, cross-faded (see .checkpoint in the CSS). */}
+            <span className={`${styles.checkpoint} ${styles.checkpoint0}`}><span><i />Page requested</span><span><i />Page requested</span></span>
+            <span className={`${styles.checkpoint} ${styles.checkpoint2}`}><span><i />Photo on screen · {seconds(productAfter)}</span><span><i />Photo on screen · {seconds(productAfter)}</span></span>
           </div>
         </div>
       </div>

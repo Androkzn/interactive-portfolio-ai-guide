@@ -64,12 +64,16 @@ export function ChallengeTeaser() {
         <div className={styles.stack}>
           <div className={styles.visual} aria-hidden="true">
             <div className={styles.visualHead}><span><i />Requirement board · replay</span><span className={styles.clock}>60:00</span></div>
+            {/* Each chip and tile changes state by fading whole layers in and out (opacity only, on
+                the compositor) instead of animating colours: the same keyframes and easing, so every
+                frame matches a colour transition. See challenge-teaser.module.css. */}
             <ol className={styles.phases}>
-              {PHASES.map((phase, i) => <li key={phase} style={{ "--i": i } as CSSProperties}>{phase}</li>)}
+              {PHASES.map((phase, i) => <li key={phase} style={{ "--i": i } as CSSProperties}><span><span>{phase}</span><span>{phase}</span></span></li>)}
             </ol>
             <ol className={styles.board}>
               {board.map((item, i) => (
                 <li key={item.id} data-tier={item.tier} style={{ "--i": i } as CSSProperties}>
+                  <i className={styles.tileIdle} /><i className={styles.tileSpec} /><i className={styles.tileFlash} /><i className={styles.tileProved} />
                   <span>{item.tier === "rule" ? "Rule" : item.tier === "guard" ? "Fail" : item.code === "Ship" ? (item.id === "D-LIVE" ? "Live" : "Repo") : item.code}</span>
                 </li>
               ))}
@@ -83,7 +87,7 @@ export function ChallengeTeaser() {
             <span className={styles.chrome} aria-hidden="true">
               <span className={styles.lights}><i /><i /><i /></span>
               <span className={styles.tabs}>
-                {FRAMES.map(({ tab, icon: Icon }, i) => <span key={tab} style={{ "--f": i } as CSSProperties}><Icon size={11} />{tab}</span>)}
+                {FRAMES.map(({ tab, icon: Icon }, i) => <span key={tab} style={{ "--f": i } as CSSProperties}><Icon size={11} />{tab}<span className={styles.tabActive}><Icon size={11} />{tab}</span></span>)}
               </span>
             </span>
             <span className={styles.address} aria-hidden="true">
