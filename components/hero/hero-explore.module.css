@@ -2,9 +2,11 @@
    The column's layout stays in globals.css (.hero-stats, .stat-symbol, .hero-app-logos);
    this file adds the icons' scenes. Each row's scene lasts one lap of its clock (--skit) and ends on the row's resting look,
    so the spotlight can leave a row at the end of any lap without a jump. Scenes animate only
-   while their row has [data-playing]. Layout never animates: transform and opacity on HTML,
-   and on the small SVGs transform, dash offset and stroke colour, which repaint only the
-   icon. Reduced motion: the component never starts a scene. ── */
+   while their row has [data-playing]. Layout never animates, and nothing here needs the main
+   thread per frame: transform and opacity, and clip-path on whole <svg>s, all run on the
+   compositor. (A stroke-dashoffset or stroke-colour keyframe would repaint on the main thread every
+   frame and make Chrome re-sample every SVG transform in the column with it.) Reduced motion: the
+   component never starts a scene. ── */
 
 .race { --skit: 4.2s; }
 .challenge { --skit: 4.2s; }
@@ -45,14 +47,32 @@
 
 /* ── 2 · "Ship an AI product in one hour": the crown clicks, the hand sweeps the hour, the
    elapsed pie fills and goes green, and a check lands on the badge. ── */
-.elapsed { stroke: #8b7ff0; stroke-opacity: .45; stroke-dasharray: 100; stroke-dashoffset: 100; }
-.challenge[data-playing] .elapsed { animation: elapsed var(--skit) linear infinite; }
-@keyframes elapsed {
-  0%, 8% { stroke-dashoffset: 100; stroke: #8b7ff0; opacity: 1; }
-  70% { stroke-dashoffset: 0; stroke: #8b7ff0; opacity: 1; }
-  73%, 86% { stroke-dashoffset: 0; stroke: #3f9a57; opacity: 1; }
-  96%, 100% { stroke-dashoffset: 0; stroke: #3f9a57; opacity: 0; }
-}
+/* The elapsed pie: radius 8 around (12, 14) of the icon, the old stroke's #8b7ff0 at .45, filled
+   clockwise from twelve between 8% and 70%, turning #3f9a57 by 73% and gone by 96%. The right window
+   shows a left half-disc turning into it (12 → 6 o'clock), then the left window a right half-disc
+   (6 → 12). The windows and the green disc add up under plus-lighter, so the seam between the windows
+   and the colour change come out exactly as one stroke did. It sits under the stopwatch, which is
+   positioned after it for that (the only icon that is: positioning moves an icon's raster by a
+   fraction of a pixel, so the others stay as they were). */
+.pie { position: absolute; left: 14px; top: 16px; width: 16px; height: 16px; isolation: isolate; visibility: hidden; pointer-events: none; }
+.pie ~ .icon { position: relative; }
+.pieHalf { position: absolute; top: 0; width: 8px; height: 16px; overflow: hidden; mix-blend-mode: plus-lighter; }
+.pieHalf:first-child { left: 8px; }
+.pieHalf:nth-child(2) { left: 0; }
+.pieWedge { position: absolute; top: 0; width: 8px; height: 16px; background: rgb(139 127 240 / .45); }
+.pieHalf:first-child .pieWedge { left: -8px; border-radius: 8px 0 0 8px; transform-origin: 100% 50%; }
+.pieHalf:nth-child(2) .pieWedge { left: 8px; border-radius: 0 8px 8px 0; transform-origin: 0 50%; }
+.pieGreen { position: absolute; inset: 0; border-radius: 50%; background: rgb(63 154 87 / .45); opacity: 0; mix-blend-mode: plus-lighter; }
+.challenge[data-playing] .pie { visibility: visible; animation: pieFade var(--skit) linear infinite; }
+.challenge[data-playing] .pieHalf { animation: piePurple var(--skit) linear infinite; }
+.challenge[data-playing] .pieHalf:first-child .pieWedge { animation: pieFirst var(--skit) linear infinite; }
+.challenge[data-playing] .pieHalf:nth-child(2) .pieWedge { animation: pieSecond var(--skit) linear infinite; }
+.challenge[data-playing] .pieGreen { animation: pieGreen var(--skit) linear infinite; }
+@keyframes pieFirst { 0%, 8% { transform: rotate(0); } 39%, 100% { transform: rotate(180deg); } }
+@keyframes pieSecond { 0%, 39% { transform: rotate(0); } 70%, 100% { transform: rotate(180deg); } }
+@keyframes piePurple { 0%, 70% { opacity: 1; } 73%, 100% { opacity: 0; } }
+@keyframes pieGreen { 0%, 70% { opacity: 0; } 73%, 100% { opacity: 1; } }
+@keyframes pieFade { 0%, 86% { opacity: 1; } 96%, 100% { opacity: 0; } }
 .challenge[data-playing] .hand { animation: hand var(--skit) linear infinite; }
 @keyframes hand {
   0% { transform: rotate(0); animation-timing-function: ease-in-out; }
@@ -98,18 +118,50 @@
 
 .sheet { fill: #fbfaff; stroke-opacity: .5; opacity: 0; }
 .sheetFill { fill: #fbfaff; opacity: 0; }
-.writing { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: .75; }
 .tick { stroke-dasharray: 10; stroke-dashoffset: 0; }
 .engineering[data-playing] .sheetMid { animation: fanMid var(--skit) ease-in-out infinite; }
 .engineering[data-playing] .sheetBack { animation: fanBack var(--skit) ease-in-out infinite; }
 .engineering[data-playing] .sheetFill { animation: paper var(--skit) linear infinite; }
-.engineering[data-playing] .writing { animation: write var(--skit) calc(var(--l) * 220ms) linear infinite both; }
-.engineering[data-playing] .tick { animation: tick var(--skit) linear infinite; }
 @keyframes fanMid { 0%, 4% { opacity: 0; transform: none; } 16%, 76% { opacity: 1; transform: rotate(10deg); } 90%, 100% { opacity: 0; transform: none; } }
 @keyframes fanBack { 0%, 8% { opacity: 0; transform: none; } 22%, 72% { opacity: 1; transform: rotate(20deg); } 88%, 100% { opacity: 0; transform: none; } }
 @keyframes paper { 0% { opacity: 0; } 8%, 84% { opacity: 1; } 94%, 100% { opacity: 0; } }
-@keyframes write { 0%, 22% { stroke-dashoffset: 1; opacity: .75; } 34%, 80% { stroke-dashoffset: 0; opacity: .75; } 90%, 100% { stroke-dashoffset: 0; opacity: 0; } }
-@keyframes tick { 0% { stroke-dashoffset: 0; } 6%, 46% { stroke-dashoffset: 10; } 60%, 100% { stroke-dashoffset: 0; } }
+/* The writing and the check, drawn as a dash with round caps was: the whole stroke clipped square at
+   the pen, plus a disc of the stroke's radius at the pen. The lines (1.6 wide, at .75) write between
+   22% and 34% of their lap, 220 ms apart, and fade out from 80% to 90%. The check (2 wide) is undrawn
+   from its end (0% → 6%) and drawn again (46% → 60%); its two legs (1 : 2 long) are clipped
+   separately, square to each leg, and meet in round caps, which is the round join it had. While the
+   scene plays the icon's own check is hidden under the drawn one. */
+.ink { position: absolute; left: 10px; top: 10px; width: 24px; height: 24px; visibility: hidden; pointer-events: none; }
+.engineering[data-playing] .ink { visibility: visible; }
+.engineering[data-playing] .tick { visibility: hidden; }
+.ink > span, .ink svg { position: absolute; inset: 0; width: 24px; height: 24px; overflow: visible; }
+.ink path { fill: none; stroke: currentColor; stroke-linecap: round; }
+.ink circle { fill: currentColor; opacity: 0; }
+.line { opacity: .75; }
+.line path { stroke-width: 1.6; }
+.tickDraw path { stroke-width: 2; }
+.engineering[data-playing] .line { animation: inkFade var(--skit) calc(var(--l) * 220ms) linear infinite both; }
+.engineering[data-playing] .line > svg:first-child { animation: inkLine12 var(--skit) calc(var(--l) * 220ms) linear infinite both; }
+.engineering[data-playing] .line:nth-child(3) > svg:first-child { animation-name: inkLine10; }
+.engineering[data-playing] .line circle { animation: inkPen0 var(--skit) calc(var(--l) * 220ms) linear infinite both; }
+.engineering[data-playing] .line:nth-child(2) circle { animation-name: inkPen1; }
+.engineering[data-playing] .line:nth-child(3) circle { animation-name: inkPen2; }
+.engineering[data-playing] .tickDraw > svg:nth-child(1) { animation: tickFirst var(--skit) linear infinite; }
+.engineering[data-playing] .tickDraw > svg:nth-child(2) { animation: tickSecond var(--skit) linear infinite; }
+.engineering[data-playing] .tickDraw circle { animation: tickPen var(--skit) linear infinite; }
+@keyframes inkFade { 0%, 80% { opacity: .75; } 90%, 100% { opacity: 0; } }
+/* Lines from x 12 (and 10.5) to 16: hidden, then the pen at the start, then at the end. */
+@keyframes inkLine12 { 0%, 21.999% { clip-path: inset(0 53.375% 0 0); } 22% { clip-path: inset(0 50% 0 0); } 34%, 100% { clip-path: inset(0 33.333% 0 0); } }
+@keyframes inkLine10 { 0%, 21.999% { clip-path: inset(0 59.625% 0 0); } 22% { clip-path: inset(0 56.25% 0 0); } 34%, 100% { clip-path: inset(0 33.333% 0 0); } }
+@keyframes inkPen0 { 0%, 21.999% { opacity: 0; transform: translate(12px, 12.5px); } 22% { opacity: 1; transform: translate(12px, 12.5px); } 34%, 100% { opacity: 1; transform: translate(16px, 12.5px); } }
+@keyframes inkPen1 { 0%, 21.999% { opacity: 0; transform: translate(12px, 15.5px); } 22% { opacity: 1; transform: translate(12px, 15.5px); } 34%, 100% { opacity: 1; transform: translate(16px, 15.5px); } }
+@keyframes inkPen2 { 0%, 21.999% { opacity: 0; transform: translate(10.5px, 18.5px); } 22% { opacity: 1; transform: translate(10.5px, 18.5px); } 34%, 100% { opacity: 1; transform: translate(16px, 18.5px); } }
+/* The check's legs, A(3,15) → B(5,17) → C(9,13): the pen is at C at 0%, B at 4%, A just before 6%,
+   then hidden until 46%, back at B by 50.667% and at C at 60%. Each cut is the half-plane behind the
+   pen, square to its leg. */
+@keyframes tickFirst { 0%, 3.999% { clip-path: polygon(-8.629% 112.081%, -79.340% 41.371%, -8.629% -29.340%, 62.081% 41.371%); } 4% { clip-path: polygon(-14.522% 106.189%, -85.233% 35.478%, -14.522% -35.233%, 56.189% 35.478%); } 5.999% { clip-path: polygon(-22.855% 97.855%, -93.566% 27.145%, -22.855% -43.566%, 47.855% 27.145%); } 6%, 46% { clip-path: polygon(-25.949% 94.762%, -96.660% 24.051%, -25.949% -46.660%, 44.762% 24.051%); } 46.001% { clip-path: polygon(-22.855% 97.855%, -93.566% 27.145%, -22.855% -43.566%, 47.855% 27.145%); } 50.667% { clip-path: polygon(-14.522% 106.189%, -85.233% 35.478%, -14.522% -35.233%, 56.189% 35.478%); } 50.668%, 100% { clip-path: polygon(-8.629% 112.081%, -79.340% 41.371%, -8.629% -29.340%, 62.081% 41.371%); } }
+@keyframes tickSecond { 0% { clip-path: polygon(78.748% 83.629%, 8.037% 154.340%, -62.673% 83.629%, 8.037% 12.919%); } 0.001% { clip-path: polygon(72.855% 89.522%, 2.145% 160.233%, -68.566% 89.522%, 2.145% 18.811%); } 4% { clip-path: polygon(56.189% 106.189%, -14.522% 176.899%, -85.233% 106.189%, -14.522% 35.478%); } 4.001%, 50.667% { clip-path: polygon(53.095% 109.282%, -17.616% 179.993%, -88.326% 109.282%, -17.616% 38.572%); } 50.668% { clip-path: polygon(56.189% 106.189%, -14.522% 176.899%, -85.233% 106.189%, -14.522% 35.478%); } 60% { clip-path: polygon(72.855% 89.522%, 2.145% 160.233%, -68.566% 89.522%, 2.145% 18.811%); } 60.001%, 100% { clip-path: polygon(78.748% 83.629%, 8.037% 154.340%, -62.673% 83.629%, 8.037% 12.919%); } }
+@keyframes tickPen { 0% { opacity: 1; transform: translate(9px, 13px); } 4% { opacity: 1; transform: translate(5px, 17px); } 5.999% { opacity: 1; transform: translate(3px, 15px); } 6%, 46% { opacity: 0; transform: translate(3px, 15px); } 46.001% { opacity: 1; transform: translate(3px, 15px); } 50.667% { opacity: 1; transform: translate(5px, 17px); } 60%, 100% { opacity: 1; transform: translate(9px, 13px); } }
 
 /* ── Reduced motion: no scenes, and nothing eases into place. ── */
 @media (prefers-reduced-motion: reduce) {
