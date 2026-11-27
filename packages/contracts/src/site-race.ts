@@ -48,11 +48,12 @@ export type RaceProfile = "mobile" | "desktop";
 /**
  * Sites the race knows by name. Anything else is a visitor's challenger URL.
  * The story is before → after: the original site as it was, never tuned, and
- * the same site rebuilt in Next.js specifically to be fast.
+ * the same site rebuilt in Next.js specifically to be fast. Both are frozen, logo-free
+ * snapshots (repo site-race-snapshots), so work on the live sites never moves the race.
  */
 export const RACE_PRESETS = {
-  astro: { url: "https://hrconcretepumps.pages.dev/", role: "Before", label: "Original site", stack: "Original site · not optimized" },
-  next: { url: "https://hr-concrete-pumps-next.pages.dev/", role: "After", label: "Next.js optimized site", stack: "Rebuilt in Next.js 16 · optimized" },
+  astro: { url: "https://site-race-astro-original.a-tekhtelev.workers.dev/", role: "Before", label: "Original site", stack: "Original site · not optimized" },
+  next: { url: "https://site-race-next-optimized.a-tekhtelev.workers.dev/", role: "After", label: "Next.js optimized site", stack: "Rebuilt in Next.js 16 · optimized" },
 } as const;
 export type RacePresetId = keyof typeof RACE_PRESETS;
 
@@ -67,10 +68,11 @@ export type RacePageId = keyof typeof RACE_PAGES;
 /**
  * Hosts that belong to this project: either build's production alias, any of its
  * immutable deployment URLs (<hash>.project.pages.dev) and branch aliases, and the Next.js
- * build's Cloudflare Worker (edge stage). Lanes
+ * build's Cloudflare Worker (edge stage), and the frozen logo-free snapshots
+ * (site-race-<astro|next>-<name>.a-tekhtelev.workers.dev, repo site-race-snapshots). Lanes
  * on these hosts count as "ours" (not a visitor's challenger) and take the race page path.
  */
-export const OWN_HOST_PATTERN = /^(?:(?:[a-z0-9-]+\.)?(?:hrconcretepumps|hr-concrete-pumps-next)\.pages\.dev|hr-concrete-pumps-next-edge\.a-tekhtelev\.workers\.dev)$/;
+export const OWN_HOST_PATTERN = /^(?:(?:[a-z0-9-]+\.)?(?:hrconcretepumps|hr-concrete-pumps-next)\.pages\.dev|hr-concrete-pumps-next-edge\.a-tekhtelev\.workers\.dev|site-race-(?:astro|next)-[a-z0-9-]+\.a-tekhtelev\.workers\.dev)$/;
 
 export type TimingMetrics = {
   /** Navigation Timing responseStart, ms from navigation start. */
