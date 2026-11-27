@@ -319,12 +319,24 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
         const detail = m.lcpDetail;
         // The first page's last frame: in a journey race the screencast goes on to other pages.
         const frame = firstPageFrames(lane).at(-1);
-        const rect = detail?.rect && detail.viewport.width > 0 ? {
+        const measured = detail?.rect && detail.viewport.width > 0 ? {
           left: (detail.rect.x / detail.viewport.width) * 100,
           top: (detail.rect.y / detail.viewport.height) * 100,
           width: (detail.rect.width / detail.viewport.width) * 100,
           height: (detail.rect.height / detail.viewport.height) * 100,
         } : null;
+        // Only the part inside this last frame is outlined. An element can be off screen by then (a
+        // carousel slide that moved on): an outline drawn outside the frame showed nothing, so under
+        // a quarter in view it is left out and the text says so.
+        const rect = measured ? (() => {
+          const left = Math.max(0, measured.left), top = Math.max(0, measured.top);
+          const right = Math.min(100, measured.left + measured.width), bottom = Math.min(100, measured.top + measured.height);
+          const shown = (Math.max(0, right - left) * Math.max(0, bottom - top)) / Math.max(1e-6, measured.width * measured.height);
+          return shown >= 0.25 ? { left, top, width: right - left, height: bottom - top } : null;
+        })() : null;
+        const offFrame = measured && !rect
+          ? <p className={styles.spotSub}>Not outlined: by the last frame it had moved off screen.</p>
+          : null;
         const isImage = !!detail?.path;
         const modern = detail?.format === "avif" || detail?.format === "webp";
         const pendingImages = (m.waterfall ?? []).filter((entry) => entry.inFlight && entry.type === "image").sort((x, y) => y.kb - x.kb);
@@ -335,7 +347,9 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             <div className={`${styles.spotFrame} ${state.profile === "desktop" ? styles.spotDesktop : ""}`}>
               {frame && <img src={frame.src} alt={`${who.label}: the last frame, with the LCP element outlined`} />}
               {rect && (
-                <span className={styles.spotBox} style={{ left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%`, "--l": rect.left } as CSSProperties}>
+                // The label (~22 px) goes inside the outline when there is no room above it in the frame:
+                // a phone frame is at least ~225 px tall (10% ≈ 22 px), a 16:10 desktop one ~75–120 px.
+                <span className={styles.spotBox} data-inside={rect.top < (state.profile === "desktop" ? 22 : 11) || undefined} style={{ left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%`, "--l": rect.left } as CSSProperties}>
                   <em>{censored ? "largest so far" : "LCP"}</em>
                 </span>
               )}
@@ -343,6 +357,7 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             {censored ? (
               <div className={styles.spotText}>
                 <p><b>Never reached its LCP.</b> After {ms(capOf(m))} the browser was still downloading; the largest thing painted so far was {detail?.element ? <code>{detail.element}</code> : "nothing"}{isImage ? "" : " text"}.</p>
+                {offFrame}
                 {pendingImages.length > 0 && (
                   <>
                     <p className={styles.spotSub}>Still downloading when the lane stopped:</p>
@@ -355,6 +370,7 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             ) : detail ? (
               <div className={styles.spotText}>
                 <p><b>{m.timing.lcp === null ? "LCP" : `LCP at ${ms(m.timing.lcp)}`}:</b> {detail.element ? <code>{detail.element}</code> : "an element"}{isImage ? <> · <Path path={detail.path!} /></> : " (text)"}</p>
+                {offFrame}
                 {m.capped && <p className={styles.spotSub}>The LCP was final, but the page was still downloading {pendingImages.length ? `${pendingImages.length} more image${pendingImages.length === 1 ? "" : "s"}` : "more files"} below it at the {ms(capOf(m))} cap.</p>}
                 {isImage && (
                   <>
