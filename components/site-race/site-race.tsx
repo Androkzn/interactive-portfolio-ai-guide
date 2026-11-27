@@ -519,6 +519,9 @@ const hasVisit = (m: NonNullable<LaneState["metrics"]>) => !!m.repeat || !!m.nav
 
 /** Minimum gap, % of the track, between two labels in the same row before the later one is dropped. */
 const FLAG_GAP = 9;
+/** The widest flag label ("Loaded", 10 px code font) plus a little air. On a phone the track is ~200 px,
+ *  where 9% is 18 px and "TTFB" printed over "LCP"; the gap is never narrower than a label. */
+const FLAG_LABEL_PX = 44;
 
 /**
  * Milestone flags for one lane. A fast lane's milestones bunch up within a second on a
@@ -526,7 +529,7 @@ const FLAG_GAP = 9;
  * always keeps its label, and any other label too close to one already placed is
  * dropped — its line stays, and the value is in the milestone tiles above.
  */
-function trackFlags(lane: LaneState, maxT: number) {
+function trackFlags(lane: LaneState, maxT: number, gap: number) {
   const flags = MARKS.flatMap(({ name, label }, index) => {
     const t = lane.marks[name];
     return t === undefined ? [] : [{ name, label, low: index % 2 === 1, x: Math.min(100, (t / maxT) * 100) }];
@@ -535,14 +538,25 @@ function trackFlags(lane: LaneState, maxT: number) {
   const labelled = new Set<MarkName>();
   for (const flag of [...flags].sort((p, q) => Number(q.name === "lcp") - Number(p.name === "lcp"))) {
     const row = placed[flag.low ? "low" : "top"];
-    if (row.every((x) => Math.abs(x - flag.x) >= FLAG_GAP)) { row.push(flag.x); labelled.add(flag.name); }
+    if (row.every((x) => Math.abs(x - flag.x) >= gap)) { row.push(flag.x); labelled.add(flag.name); }
   }
   return flags.map((flag) => ({ ...flag, labelled: labelled.has(flag.name) }));
 }
 
 function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: number; maxT: number; scrub: number | null; identity: (id: LaneId) => LaneIdentity }) {
+  // The bar's width in px, so the label gap can be at least one label wide (see FLAG_LABEL_PX).
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [barPx, setBarPx] = useState(0);
+  useEffect(() => {
+    const bar = trackRef.current?.querySelector<HTMLElement>(`.${styles.trackBar}`);
+    if (!bar || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setBarPx(entry.contentRect.width));
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
+  const gap = barPx > 0 ? Math.max(FLAG_GAP, (FLAG_LABEL_PX / barPx) * 100) : FLAG_GAP;
   return (
-    <div className={styles.track} aria-hidden="true">
+    <div ref={trackRef} className={styles.track} aria-hidden="true">
       {LANES.map((id) => {
         const lane = state.lanes[id];
         const clock = scrub ?? laneClock(lane, now) ?? 0;
@@ -552,7 +566,7 @@ function Track({ state, now, maxT, scrub, identity }: { state: RaceState; now: n
             <span className={styles.trackName}>{who.role}</span>
             <div className={styles.trackBar}>
               <div className={styles.trackFill} style={{ width: `${Math.min(100, (clock / maxT) * 100)}%` }} />
-              {trackFlags(lane, maxT).map((flag) => (
+              {trackFlags(lane, maxT, gap).map((flag) => (
                 <span key={flag.name} className={`${styles.flag} ${flag.low ? styles.flagLow : ""} ${flag.x > 75 ? styles.flagEnd : ""}`} style={{ left: `${flag.x}%` }}><i />{flag.labelled ? flag.label : null}</span>
               ))}
             </div>
