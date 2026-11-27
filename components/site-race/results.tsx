@@ -104,7 +104,7 @@ export function RaceResults() {
         {/* The one action on this block, up where the eye lands first. */}
         <p className={styles.ctaWrap}>
           <span>Don&apos;t take our word for it.</span>
-          <a className={styles.cta} href="#race">Race it yourself <ArrowDown size={18} aria-hidden="true" /></a>
+          <a className={styles.cta} href="#race"><span className={styles.ctaGlow} aria-hidden="true" /><span className={styles.ctaLift} aria-hidden="true" /><span className={styles.ctaRing} aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></span><span className={styles.ctaFace} aria-hidden="true" />Race it yourself <ArrowDown size={18} aria-hidden="true" /></a>
         </p>
         <PauseOffscreen />
       </div>

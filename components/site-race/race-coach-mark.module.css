@@ -3,9 +3,22 @@
   position: fixed;
   border: 2px solid #d4ff76;
   border-radius: 20px;
-  box-shadow: 0 0 0 0 #d4ff7680;
-  animation: ring 1.6s ease-out infinite;
 }
+/* The pulse: the ring's outline grown 0 → 16 px outward while fading from #d4ff7680, as a box-shadow
+   spread did, built from parts the compositor moves (box-shadow keyframes repaint on the main thread
+   every frame): four strips sliding out and four corner discs of radius 20 + spread, under one fading
+   opacity, clipped (race-coach-mark.tsx) to outside the ring so the button inside stays clear. */
+.halo { position: absolute; inset: -18px; opacity: .502; pointer-events: none; animation: ring 1.6s ease-out infinite; }
+.halo i { position: absolute; background: #d4ff76; }
+.halo i:nth-child(1) { left: 0; width: 16px; top: 36px; bottom: 36px; transform: translateX(16px); animation: haloLeft 1.6s ease-out infinite; }
+.halo i:nth-child(2) { right: 0; width: 16px; top: 36px; bottom: 36px; transform: translateX(-16px); animation: haloRight 1.6s ease-out infinite; }
+.halo i:nth-child(3) { top: 0; height: 16px; left: 36px; right: 36px; transform: translateY(16px); animation: haloTop 1.6s ease-out infinite; }
+.halo i:nth-child(4) { bottom: 0; height: 16px; left: 36px; right: 36px; transform: translateY(-16px); animation: haloBottom 1.6s ease-out infinite; }
+.halo i:nth-child(n + 5) { width: 72px; height: 72px; border-radius: 50%; transform: scale(.555556); animation: haloCorner 1.6s ease-out infinite; }
+.halo i:nth-child(5) { top: 0; left: 0; }
+.halo i:nth-child(6) { top: 0; right: 0; }
+.halo i:nth-child(7) { bottom: 0; left: 0; }
+.halo i:nth-child(8) { bottom: 0; right: 0; }
 .card {
   position: fixed;
   width: min(340px, calc(100vw - 32px));
@@ -37,9 +50,14 @@
 .ok { min-height: 36px; padding: 6px 16px; color: #111; border-radius: 10px; background: #d4ff76; font-weight: 800; }
 .close { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 28px; height: 28px; color: #9a9d94; border-radius: 8px; background: transparent; }
 .close:hover { color: #f5f4ee; background: #ffffff12; }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 #d4ff7680; } 100% { box-shadow: 0 0 0 16px #d4ff7600; } }
+@keyframes ring { to { opacity: 0; } }
+@keyframes haloLeft { to { transform: translateX(0); } }
+@keyframes haloRight { to { transform: translateX(0); } }
+@keyframes haloTop { to { transform: translateY(0); } }
+@keyframes haloBottom { to { transform: translateY(0); } }
+@keyframes haloCorner { to { transform: scale(1); } }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.96); } }
-@media (prefers-reduced-motion: reduce) { .ring, .card { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } .halo { display: none; } }
 @media (max-width: 520px) { .card { left: 50% !important; } }
 
 /* Touch: the hint closes with a finger, not a fingertip. */

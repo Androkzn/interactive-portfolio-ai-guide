@@ -12,7 +12,7 @@ import styles from "./race-coach-mark.module.css";
 const SEEN_KEY = "site-race:coach-seen";
 const START = '#race button[class*="startButton"]';
 
-type Box = { top: number; left: number; width: number; height: number };
+type Box = { top: number; left: number; width: number; height: number; viewport: number };
 
 const seen = () => { try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return false; } };
 const markSeen = () => { try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode: fine */ } };
@@ -37,7 +37,7 @@ export function RaceCoachMark() {
     if (!button) { setOpen(false); return; }
     const place = () => {
       const r = button.getBoundingClientRect();
-      setBox({ top: r.top, left: r.left, width: r.width, height: r.height });
+      setBox({ top: r.top, left: r.left, width: r.width, height: r.height, viewport: window.innerHeight });
     };
     place();
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") dismiss(); };
@@ -58,9 +58,19 @@ export function RaceCoachMark() {
   }, [open, dismiss]);
 
   if (!open || !box) return null;
+  const w = box.width + 12;
+  const h = box.height + 12;
+  // The pulse's halo shows only outside the ring: its box (16 px bigger all round) minus the ring's own
+  // rounded box (radius 20), which sits at (16, 16) in it.
+  const outside = `path(evenodd, "M0 0H${w + 32}V${h + 32}H0Z M36 16H${w - 4}A20 20 0 0 1 ${w + 16} 36V${h - 4}A20 20 0 0 1 ${w - 4} ${h + 16}H36A20 20 0 0 1 16 ${h - 4}V36A20 20 0 0 1 36 16Z")`;
+  // Off screen (the button scrolled out of view) the pulse is not drawn: its loops would only be ticked
+  // on the main thread there. It starts again from its first frame when the button comes back.
+  const onScreen = box.top + box.height + 22 > 0 && box.top - 22 < box.viewport;
   return (
     <div className={styles.layer} aria-live="polite">
-      <span className={styles.ring} style={{ top: box.top - 6, left: box.left - 6, width: box.width + 12, height: box.height + 12 }} aria-hidden="true" />
+      <span className={styles.ring} style={{ top: box.top - 6, left: box.left - 6, width: w, height: h }} aria-hidden="true">
+        {onScreen ? <span className={styles.halo} style={{ clipPath: outside }}><i /><i /><i /><i /><i /><i /><i /><i /></span> : null}
+      </span>
       <div className={styles.card} role="dialog" aria-label="How to start the race" style={{ top: box.top + box.height + 18, left: box.left + Math.min(box.width / 2, 160) }}>
         <span className={styles.arrow} aria-hidden="true" />
         <button type="button" className={styles.close} onClick={dismiss} aria-label="Close hint"><X size={16} /></button>
