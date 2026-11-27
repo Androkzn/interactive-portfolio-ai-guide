@@ -85,14 +85,17 @@ describe("journey", () => {
       ["https://92ecff30.hr-concrete-pumps-next.pages.dev/", "tuned"],
       ["https://eeb1e9f7.hr-concrete-pumps-next.pages.dev/", "deferred"],
       ["https://124fd5ad.hr-concrete-pumps-next.pages.dev/", "compile"],
-      // The production alias (the "next" preset) moves with every deploy: it is the newest Pages build.
+      // The Pages production alias moves with every deploy: it is the newest Pages build.
+      ["https://hr-concrete-pumps-next.pages.dev/", "compile"],
+      // The race presets are the frozen logo-free snapshots of the original and the featured stage.
+      [RACE_PRESETS.astro.url, "original"],
       [RACE_PRESETS.next.url, "compile"],
       ["https://hr-concrete-pumps-next-edge.a-tekhtelev.workers.dev/", "edge"],
     ];
     for (const [url, id] of deployments) expect(stageForUrl(url)?.id, url).toBe(id);
   });
   it("races a stage's logo-free demo copy when it has one, and every other stage on its own deployment", () => {
-    const alias = new URL(RACE_PRESETS.next.url);
+    const alias = new URL("https://hr-concrete-pumps-next.pages.dev/");
     expect(featuredStage.id).toBe("compile");
     expect(latestStage.id).toBe("edge");
     // The default race, before and after, loads the demo copies.

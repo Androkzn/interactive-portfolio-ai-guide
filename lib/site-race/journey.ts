@@ -7,7 +7,6 @@
 // is not a stage of its own: it always belongs to the newest Pages stage, so a
 // new production deploy needs its own stage (and immutable URL) here.
 
-import { RACE_PRESETS } from "../../packages/contracts/src/site-race";
 import journeyData from "./journey-data.json";
 
 export type StageId = "original" | "port" | "images" | "javascript" | "lcp" | "html" | "prefetch" | "tuned" | "deferred" | "compile" | "edge";
@@ -24,8 +23,11 @@ export type Stage = {
    * The demo copy the race loads instead: the same build without the client's logo (no symbol in
    * the header, footer, scenes, documents or product renders), on the Pages branch alias "demo"
    * (branch demo/no-logo in the site's repo). Only the stages a default race loads have one.
+   * Since 2026-11-27 it is a frozen snapshot (repo site-race-snapshots) that no live deploy moves.
    */
   demoUrl?: string;
+  /** Hosts that served this stage's demo copy before, so saved reports and recordings still resolve. */
+  pastDemoUrls?: string[];
   commit: string;
   /** Which perf-report runs measured this stage. */
   report: { base: string; build?: string };
@@ -42,8 +44,10 @@ export const stages: Stage[] = [
     title: "The original site",
     build: "astro",
     url: "https://hrconcretepumps.pages.dev",
-    // Built from ccaaa8d, the commit the production alias served on 2026-11-24.
-    demoUrl: "https://demo.hrconcretepumps.pages.dev",
+    // Frozen logo-free snapshot of ccaaa8d, the commit the production alias served on
+    // 2026-11-24 (repo site-race-snapshots, astro-original). It never follows the live site.
+    demoUrl: "https://site-race-astro-original.a-tekhtelev.workers.dev",
+    pastDemoUrls: ["https://demo.hrconcretepumps.pages.dev"],
     commit: "7f66469",
     report: { base: "https://hrconcretepumps.pages.dev" },
     summary: "The site as it was first shipped, never tuned. Light on JavaScript, heavy on everything else.",
@@ -185,9 +189,10 @@ export const stages: Stage[] = [
     title: "Compile hints: start-up code compiled off the main thread",
     build: "next",
     url: "https://124fd5ad.hr-concrete-pumps-next.pages.dev",
-    // Built from e5f3d40 (a26f882 plus a navigation fix), the commit the production alias served
-    // on 2026-11-24. It does not follow later production deploys: rebuild the demo for those.
-    demoUrl: "https://demo.hr-concrete-pumps-next.pages.dev",
+    // Frozen logo-free snapshot of e5f3d40 (a26f882 plus a navigation fix), the commit the
+    // production alias served on 2026-11-24 (repo site-race-snapshots, next-optimized).
+    demoUrl: "https://site-race-next-optimized.a-tekhtelev.workers.dev",
+    pastDemoUrls: ["https://demo.hr-concrete-pumps-next.pages.dev"],
     commit: "a26f882",
     report: { base: "https://124fd5ad.hr-concrete-pumps-next.pages.dev", build: "a26f882" },
     summary: "Nearly all of the home page's blocking time was one boot task, and two thirds of it was V8 compiling functions on the main thread as each first ran. Chrome now compiles the start-up chunks in the background while they download.",
@@ -222,8 +227,8 @@ export const stages: Stage[] = [
 export const originalStage = stages[0];
 export const latestStage = stages[stages.length - 1];
 
-/** The Pages project's production alias (the race's "next" preset). It moves to every production deploy. */
-const production = new URL(RACE_PRESETS.next.url);
+/** The Next.js Pages project's production alias. It moves to every production deploy. */
+const production = new URL("https://hr-concrete-pumps-next.pages.dev/");
 const onPages = (stage: Stage) => new URL(stage.url).host.endsWith(`.${production.host}`);
 
 /**
@@ -237,15 +242,15 @@ export function stageById(id: StageId): Stage {
 }
 
 /**
- * Which stage a raced URL belongs to, by host: its own deployment or its demo copy. The
- * production alias belongs to the newest Pages stage.
+ * Which stage a raced URL belongs to, by host: its own deployment or its demo copy (current or
+ * past). The production alias belongs to the newest Pages stage.
  */
 export function stageForUrl(url: string | undefined | null): Stage | null {
   if (!url) return null;
   try {
     const host = new URL(url).host;
     if (host === production.host) return featuredStage;
-    return stages.find((stage) => [stage.url, stage.demoUrl].some((own) => own && new URL(own).host === host)) ?? null;
+    return stages.find((stage) => [stage.url, stage.demoUrl, ...(stage.pastDemoUrls ?? [])].some((own) => own && new URL(own).host === host)) ?? null;
   } catch {
     return null;
   }

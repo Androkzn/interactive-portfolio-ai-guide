@@ -20,8 +20,10 @@ describe("saved reports", () => {
 
   it("give a race against what the default stage loads to that stage", () => {
     const state = foldRaceLog(log("recorded-mobile-home"), "report");
-    // The recordings race what a default race loads: the stage's demo copy when it has one.
-    expect(new URL(state.lanes.b.info?.url ?? "").host).toBe(new URL(raceUrl(featuredStage.id)).host);
+    // The recordings raced the stage's demo copy as it was then (a past demo host); it still
+    // resolves to the stage, while a new default race loads the frozen snapshot.
+    expect(stageForUrl(state.lanes.b.info?.url)?.id).toBe(featuredStage.id);
+    expect(new URL(raceUrl(featuredStage.id)).host).toBe(new URL(RACE_PRESETS.next.url).host);
     expect(setupOf(state)).toEqual({ page: "home", stage: featuredStage.id, profile: "mobile" });
   });
 
