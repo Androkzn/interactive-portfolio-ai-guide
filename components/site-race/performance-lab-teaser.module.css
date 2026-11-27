@@ -2,7 +2,9 @@
 .section { padding: clamp(56px, 7vw, 100px) var(--gutter); }
 .card { display: grid; grid-template-columns: minmax(0, .86fr) minmax(520px, 1.14fr); gap: clamp(32px, 5vw, 76px); align-items: center; max-width: 1540px; margin: 0 auto; padding: clamp(26px, 4vw, 58px); color: #f5f4ee; border: 1px solid #272925; border-radius: 30px; overflow: hidden; background: radial-gradient(700px 360px at 0% 0%, #ff83471e, transparent 64%), radial-gradient(760px 360px at 100% 100%, #8071ff2c, transparent 62%), #151614; box-shadow: 0 28px 80px #1c1d1814; }
 .copy { position: relative; z-index: 1; }
-.kicker { display: flex; align-items: center; gap: 8px; width: fit-content; padding: 6px 8px 6px 10px; color: #d9dad4; border: 1px solid #4d5049; border-radius: 999px; background: #2a2c29; font-size: var(--text-caption); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+/* The label never breaks inside; on a narrow phone the version pill wraps under it, and the 17 px
+   radius keeps one row a full pill and two rows a rounded box. */
+.kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; width: fit-content; padding: 6px 8px 6px 10px; color: #d9dad4; border: 1px solid #4d5049; border-radius: 17px; background: #2a2c29; white-space: nowrap; font-size: var(--text-meta); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .kicker span { padding: 3px 8px; color: #111; border-radius: 999px; background: #fff; font: 800 var(--text-micro)/1.2 var(--font-code); letter-spacing: 0; text-transform: none; }
 .nextIdentity { display: flex; align-items: center; gap: 12px; margin: 24px 0 17px; color: #f8f8f4; }
 .nextLogo { display: grid; place-items: center; width: 48px; height: 48px; filter: drop-shadow(0 8px 18px #ffffff24); }
@@ -10,13 +12,14 @@
 .nextIdentity span:last-child { display: grid; gap: 2px; }
 .nextIdentity small { color: #93978e; font: 700 var(--text-micro)/1.2 var(--font-code); letter-spacing: .08em; text-transform: uppercase; }
 .nextIdentity strong { font-size: var(--text-body); }
-.copy h2 { margin: 0; font-size: clamp(42px, 4.4vw, 74px); line-height: .93; letter-spacing: -.055em; }
-.copy h2 span { color: #b9aeff; }
-.copy h2 em { color: #d4ff76; font-style: normal; }
-.copy p { max-width: 50ch; margin: 20px 0 0; color: #cfd1c8; font-size: clamp(16px, 1.25vw, 20px); line-height: 1.55; }
+/* The card's headline is one step under the section heading above the card (globals.css type scale). */
+.copy h3 { margin: 0; font-size: var(--text-feature); line-height: 1.04; letter-spacing: -.03em; }
+.copy h3 span { color: #b9aeff; }
+.copy h3 em { color: #d4ff76; font-style: normal; }
+.copy p { max-width: 50ch; margin: 20px 0 0; color: #cfd1c8; font-size: var(--text-lead); line-height: 1.5; }
 .proof { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .proof > span { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0 7px; min-width: 150px; padding: 10px 12px; border: 1px solid #393c36; border-radius: 12px; background: #20221f; }
-.proof svg { color: #d4ff76; }.proof b { font: 800 17px/1 var(--font-code); }.proof small { grid-column: 1 / -1; margin-top: 5px; color: #9ca096; font-size: 11px; }
+.proof svg { color: #d4ff76; }.proof b { font: 800 var(--text-lead)/1 var(--font-code); }.proof small { grid-column: 1 / -1; margin-top: 5px; color: #9ca096; font-size: var(--text-meta); }
 .cta { display: inline-flex; align-items: center; gap: 9px; min-height: 52px; margin-top: 24px; padding: 12px 22px; color: #111; border-radius: 14px; background: linear-gradient(135deg, #d4ff76, #a8f07a); font-weight: 800; box-shadow: 0 10px 30px #d4ff7630; transition: transform .2s ease, box-shadow .2s ease; }
 .cta:hover, .cta:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px #d4ff7644; }
 /* Crossed chequered flags; on hover each one swings out from the foot of its stick and settles. */
@@ -40,7 +43,7 @@
 .nextChip { display: flex; align-items: center; gap: 6px; padding: 5px 9px; color: #eee; border: 1px solid #45483f; border-radius: 999px; background: #222420; text-transform: none; }.nextChip svg { width: 19px; height: 19px; }
 .scoreboard { position: relative; display: grid; grid-template-columns: 1fr 38px 1fr; align-items: stretch; gap: 9px; }
 .scoreboard > div:not(.racePulse) { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 13px 14px; border: 1px solid #34372f; border-radius: 15px; background: #1c1e1b; }
-.scoreboard span { align-self: center; font-size: 12px; font-weight: 800; }.scoreboard strong { grid-row: span 2; align-self: center; font: 800 clamp(25px, 2.3vw, 37px)/1 var(--font-code); }.scoreboard small { color: #858980; font: 600 10px/1.2 var(--font-code); text-transform: uppercase; }
+.scoreboard span { align-self: center; font-size: var(--text-meta); font-weight: 800; }.scoreboard strong { grid-row: span 2; align-self: center; font: 800 clamp(25px, 2.3vw, 37px)/1 var(--font-code); }.scoreboard small { color: #858980; font: 600 var(--text-micro)/1.2 var(--font-code); text-transform: uppercase; }
 .scoreOriginal { color: #ff8a4c; }.scoreNext { color: #b9aeff; box-shadow: inset 0 0 34px #8172ff12; }.racePulse { display: grid; place-items: center; color: #d4ff76; }.racePulse > * { grid-area: 1 / 1; }.racePulse > svg { animation: racePulse 15s ease-in-out infinite; }
 /* The bolt's glow: the same bolt with its drop shadow, pulsed with the bolt. The copy is drawn 1000 px
    to the side with its shadow cast 1000 px back, so only the shadow lands here (the copy is clipped
@@ -48,7 +51,7 @@
 .pulseGlow { display: grid; opacity: 0; animation: racePulseGlow 15s ease-in-out infinite; }
 .pulseGlow svg { transform: translateX(-1000px); filter: drop-shadow(1000px 0 8px #d4ff76); }
 .chartGrid { display: grid; grid-template-columns: 1.18fr .82fr; gap: 12px; }.chartCard, .weightCard { min-width: 0; padding: 14px; border: 1px solid #34372f; border-radius: 15px; background: #191b18; }
-.chartTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #c8cbc2; font-size: 12px; font-weight: 800; }.chartTitle b { display: flex; align-items: center; gap: 3px; color: #d4ff76; font: 800 11px/1 var(--font-code); }
+.chartTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #c8cbc2; font-size: var(--text-meta); font-weight: 800; }.chartTitle b { display: flex; align-items: center; gap: 3px; color: #d4ff76; font: 800 var(--text-micro)/1 var(--font-code); }
 /* Inline-block, like the inline <svg> it replaces: with no in-flow content its baseline is its bottom
    edge, so the line box below the chart keeps the same descender gap and the card keeps its height. */
 .sparkline { position: relative; display: inline-block; width: 100%; height: 106px; margin-top: 4px; }
@@ -62,10 +65,10 @@
 .pen { opacity: 0; }.lineOriginal .pen { fill: #ff8a4c; }.lineNext .pen { fill: #a99cff; }
 .lineOriginal, .lineNext { animation: lineFade 4.8s .3s infinite linear; }.lineNext { filter: url(#race-next-glow); }
 .chartDot { fill: #d4ff76; opacity: 0; transform-box: fill-box; transform-origin: center; animation: dot 4.8s .3s infinite; filter: drop-shadow(0 0 5px #d4ff76); }
-.legend { display: flex; gap: 14px; color: #888c83; font: 600 10px/1 var(--font-code); }.legend span { display: flex; align-items: center; gap: 5px; }.legend i { width: 14px; height: 3px; border-radius: 3px; }.orange { background: #ff8a4c; }.purple { background: #a99cff; }
-.weightCard { display: grid; align-content: start; gap: 13px; }.weightRow { display: grid; grid-template-columns: 48px 1fr 40px; align-items: center; gap: 7px; color: #858980; font: 600 10px/1 var(--font-code); }.weightRow > div { height: 10px; border-radius: 999px; background: #292c27; overflow: hidden; }
+.legend { display: flex; gap: 14px; color: #888c83; font: 600 var(--text-micro)/1 var(--font-code); }.legend span { display: flex; align-items: center; gap: 5px; }.legend i { width: 14px; height: 3px; border-radius: 3px; }.orange { background: #ff8a4c; }.purple { background: #a99cff; }
+.weightCard { display: grid; align-content: start; gap: 13px; }.weightRow { display: grid; grid-template-columns: 8ch 1fr 6ch; align-items: center; gap: 7px; color: #858980; font: 600 var(--text-micro)/1 var(--font-code); }.weightRow > div { height: 10px; border-radius: 999px; background: #292c27; overflow: hidden; }
 .weightRow i { display: block; width: var(--finish); height: 100%; border-radius: inherit; transform-origin: left center; transform: scaleX(0); animation: weight 4.8s .3s infinite; }.weightBefore { --finish: 100%; background: linear-gradient(90deg, #a34f2b, #ff8a4c); }.weightAfter { --finish: 9%; background: linear-gradient(90deg, #796dca, #b9aeff); }.weightRow b { color: #c9ccc3; text-align: right; }
-.optimizations { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }.optimizations span { padding: 4px 6px; color: #aeb1a8; border: 1px solid #363933; border-radius: 6px; background: #21231f; font: 600 10px/1 var(--font-code); }
+.optimizations { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }.optimizations span { padding: 4px 6px; color: #aeb1a8; border: 1px solid #363933; border-radius: 6px; background: #21231f; font: 600 var(--text-micro)/1 var(--font-code); }
 /* The live dot's and the bolt's 1.8 s / 1.5 s breaths, ten per iteration (generated), so their composited
    animations reach an iteration boundary, which costs the main thread a style recalc, ten times less often. */
 @keyframes liveDot { 0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% { opacity: 1; } 5%, 15%, 25%, 35%, 45%, 55%, 65%, 75%, 85%, 95% { opacity: .45; } }
@@ -78,7 +81,7 @@
 /* Both bars grow from the start (12%) to their full size at the crossing (58%). */
 @keyframes weight { 0%, 12% { transform: scaleX(0); opacity: 1; animation-timing-function: cubic-bezier(.62, 0, .92, .5); } 58%, 94% { transform: scaleX(1); opacity: 1; } 99%, 100% { transform: scaleX(1); opacity: 0; } }
 @media (max-width: 1080px) { .card { grid-template-columns: 1fr; }.copy { max-width: 760px; } }
-@media (max-width: 620px) { .section { padding: 48px var(--gutter); }.card { padding: 22px 16px; border-radius: 22px; }.copy h2 { font-size: clamp(39px, 12vw, 56px); }.chartGrid { grid-template-columns: 1fr; }.scoreboard { grid-template-columns: 1fr; }.racePulse { position: absolute; z-index: 2; left: calc(50% - 15px); top: calc(50% - 15px); width: 30px; height: 30px; border-radius: 50%; background: #111; transform: rotate(90deg); }}
+@media (max-width: 620px) { .section { padding: 48px var(--gutter); }.card { padding: 22px 16px; border-radius: 22px; }.chartGrid { grid-template-columns: 1fr; }.scoreboard { grid-template-columns: 1fr; }.racePulse { position: absolute; z-index: 2; left: calc(50% - 15px); top: calc(50% - 15px); width: 30px; height: 30px; border-radius: 50%; background: #111; transform: rotate(90deg); }}
 @media (prefers-reduced-motion: reduce) { .visualHead > span:first-child i, .visualHead > span:first-child i b, .racePulse > svg, .pulseGlow, .lineOriginal, .lineNext, .chartDot, .weightRow i { animation: none; }.chartDot { opacity: 1; }.weightRow i { transform: none; } }
 .sectionHeading { max-width: 1540px; margin: 0 auto 24px; }
 
@@ -139,7 +142,7 @@
 .flagSvg { display: block; width: 100%; overflow: visible; filter: drop-shadow(0 3px 4px #0009); }
 .flagCloth { transform-box: view-box; transform-origin: 6px 5px; animation: flagTrail 4.8s .3s infinite ease-in-out; }
 .flagCol { --amp: calc(var(--i) * .55px + .2px); transform-box: view-box; animation: flagRipple 4.8s calc(.3s + var(--i) * 40ms) infinite ease-in-out; }
-.finishChip { position: absolute; right: calc(100cqw - var(--line-x) + 40px); top: 12px; padding: 4px 8px; color: #111; border-radius: 999px; background: #d4ff76; font: 800 10px/1 var(--font-code); letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 0 16px #d4ff7688; opacity: 0; animation: chip 4.8s .3s infinite; z-index: 2; }
+.finishChip { position: absolute; right: calc(100cqw - var(--line-x) + 40px); top: 12px; padding: 4px 8px; color: #111; border-radius: 999px; background: #d4ff76; font: 800 var(--text-micro)/1 var(--font-code); letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 0 16px #d4ff7688; opacity: 0; animation: chip 4.8s .3s infinite; z-index: 2; }
 
 /* Progress rail under the track: from the start of the lanes ("Page requested") to the centre of the
    finish line ("Product photo on screen"), filling in step with the F1 car. */
@@ -150,7 +153,7 @@
 .railHead::after { content: ""; position: absolute; left: -5px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: #f4ffd8; box-shadow: 0 0 0 3px #d4ff7640, 0 0 14px 2px #d4ff76; }
 /* A checkpoint is drawn twice, grey and lime, cross-faded with plus-lighter in its own isolated group:
    (1 − t)·grey + t·lime, which is the colour animation's every frame, marker glow included. */
-.checkpoint { position: absolute; top: 4px; isolation: isolate; font: 700 10px/1 var(--font-code); letter-spacing: .02em; white-space: nowrap; }
+.checkpoint { position: absolute; top: 4px; isolation: isolate; font: 700 var(--text-micro)/1 var(--font-code); letter-spacing: .02em; white-space: nowrap; }
 .checkpoint > span { display: grid; gap: 8px; justify-items: inherit; color: #6c7068; mix-blend-mode: plus-lighter; }
 .checkpoint > span + span { position: absolute; inset: 0; color: #d4ff76; opacity: 0; }
 .checkpoint i { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 50%; background: currentColor; box-shadow: inset 0 0 0 3px #151714, 0 0 10px color-mix(in srgb, currentColor 40%, transparent); }
@@ -159,6 +162,11 @@
 .checkpoint0 > span { animation: cp0Off 4.8s .3s infinite; } .checkpoint0 > span + span { animation-name: cp0On; }
 .checkpoint2 > span { animation: cp2Off 4.8s .3s infinite; } .checkpoint2 > span + span { animation-name: cp2On; }
 .checkpoint2 i { border-radius: 4px; background: repeating-conic-gradient(currentColor 0 25%, #151714 0 50%) 0 0 / 5px 5px; box-shadow: 0 0 10px color-mix(in srgb, currentColor 40%, transparent); }
+/* On a narrow card the two labels cannot share a row: measured in WebKit, their text rects come within
+   8 px of each other below a 330 px container (and overlap by 86 px at 202, a 320 px phone). There the
+   finish label steps down a row, still right-aligned under its marker. The margin is on the marker,
+   which both copies of the label hold, so the grey and the lime layer keep one layout. */
+@container (max-width: 359px) { .timeline { height: 61px; } .checkpoint2 i { margin-bottom: 17px; } }
 
 /* Travel: an ease-in run to the line (fastest as it crosses), then on at speed and out of frame. */
 @keyframes raceNext { 0%, 12% { transform: translateX(0); animation-timing-function: cubic-bezier(.62, 0, .92, .5); } 58% { transform: translateX(calc(var(--line-x) - 3px - var(--start) - var(--car-next))); animation-timing-function: linear; } 67%, 100% { transform: translateX(calc(100cqw + 24px)); } }

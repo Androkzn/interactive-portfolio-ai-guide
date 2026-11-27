@@ -94,7 +94,7 @@ export function PerformanceLabTeaser() {
         <div className={styles.copy}>
           <div className={styles.kicker}><Gauge size={15} />Live performance lab <span>Next.js 16</span></div>
           <div className={styles.nextIdentity}><span className={styles.nextLogo}><NextMark /></span><span><small>Performance rebuild</small><strong>Built and optimized with Next.js</strong></span></div>
-          <h2 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h2>
+          <h3 id="performance-lab-title">Original site.<br /><span>Next.js optimized.</span><br /><em>Race them live.</em></h3>
           <p>Same pages. Same content. On a phone, a product page whose photo {product.beforeCapped ? `did not appear within ${capSeconds} seconds` : `took ${seconds(product.before.lcp)} to appear`} now shows it in {seconds(productAfter)}.</p>
           <div className={styles.proof} aria-label="Measured mobile improvements">
             <span><TimerReset size={16} /><b>{productLcpX ? `${product.beforeCapped ? "> " : ""}${productLcpX}` : "Faster"}</b><small>faster product page</small></span>

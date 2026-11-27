@@ -90,11 +90,15 @@
 .spotCardText { grid-template-columns: minmax(0, 1fr); }
 .spotCardText .fileList { margin-bottom: 12px; }
 .spotCard .scoreWho { grid-column: 1 / -1; }
-.spotFrame { position: relative; align-self: start; aspect-ratio: 390 / 844; border-radius: 14px; overflow: hidden; background: #0b0b0a; box-shadow: 0 0 0 1px #4a4d46; }
+/* A size container, so the LCP label measures the frame (cqw), not the window. */
+.spotFrame { container-type: inline-size; position: relative; align-self: start; aspect-ratio: 390 / 844; border-radius: 14px; overflow: hidden; background: #0b0b0a; box-shadow: 0 0 0 1px #4a4d46; }
 .spotDesktop { aspect-ratio: 16 / 10; }
 .spotFrame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .spotBox { position: absolute; border: 2px solid var(--mark); border-radius: 4px; background: color-mix(in srgb, var(--mark) 14%, transparent); box-shadow: 0 0 0 9999px #00000070, 0 0 18px var(--mark); animation: spot-in .6s cubic-bezier(.2, 1.4, .4, 1); }
-.spotBox em { position: absolute; left: -2px; bottom: 100%; margin-bottom: 3px; padding: 2px 6px; color: #111; border-radius: 4px; background: #f5f4ee; font: 800 var(--text-micro)/1.2 var(--font-code); font-style: normal; text-transform: uppercase; white-space: nowrap; }
+/* One line while it fits between the outline's left edge (--l, % of the frame) and the frame's right
+   edge; on the 104 px phone frame "largest so far" wraps instead of running past the frame's clip.
+   The same rule as the challenge teaser's .spot b. */
+.spotBox em { position: absolute; left: -2px; bottom: 100%; width: max-content; max-width: calc((100 - var(--l, 0)) * 1cqw); margin-bottom: 3px; padding: 2px 6px; color: #111; border-radius: 4px; background: #f5f4ee; font: 800 var(--text-micro)/1.2 var(--font-code); font-style: normal; text-transform: uppercase; }
 @keyframes spot-in { from { opacity: 0; transform: scale(1.3); } to { opacity: 1; transform: none; } }
 .spotText { min-width: 0; color: var(--ink-2); font-size: var(--text-caption); }
 .spotText p { margin: 0 0 8px; }

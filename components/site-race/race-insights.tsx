@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { CheckCircle2, CircleAlert, CircleX, Gauge, Microscope, Table2 } from "lucide-react";
 import type { LaneId, LaneMetrics, RaceProfile, WaterfallEntry } from "@/packages/contracts/src/site-race";
 import type { LaneState, RaceState } from "@/lib/site-race/use-race";
@@ -335,7 +335,7 @@ function LcpSpotlight({ state, identity }: { state: RaceState; identity: (id: La
             <div className={`${styles.spotFrame} ${state.profile === "desktop" ? styles.spotDesktop : ""}`}>
               {frame && <img src={frame.src} alt={`${who.label}: the last frame, with the LCP element outlined`} />}
               {rect && (
-                <span className={styles.spotBox} style={{ left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%` }}>
+                <span className={styles.spotBox} style={{ left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%`, "--l": rect.left } as CSSProperties}>
                   <em>{censored ? "largest so far" : "LCP"}</em>
                 </span>
               )}
