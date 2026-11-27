@@ -92,22 +92,25 @@ export function HeroExplore({ onExplore, Logo }: Props) {
     onBlur: () => release(index),
   });
   const clock = (index: number) => <i className={styles.clock} data-clock={index} aria-hidden="true" />;
+  // The playing badge's shadow, first so the icon and its parts paint over it (see the CSS).
+  const lift = <i className={styles.lift} />;
 
   return (
     <div ref={rootRef} className={`hero-stats ${styles.root}`} data-paused={paused ? "" : undefined} onAnimationIteration={onLap}>
       <span className="section-eyebrow"><ArrowRight size={15} aria-hidden="true" />Explore my work</span>
       <a href="#performance-lab" className={styles.race} {...row(0)}>
-        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true"><GaugeIcon /></span>
+        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true">{lift}<GaugeIcon /></span>
         <span><strong>Watch a slow site get fast</strong><small>A real business site vs. my rebuild, racing side by side, live in your browser.</small></span>
         {clock(0)}
       </a>
       <a href="/work/technical-challenge/" className={styles.challenge} {...row(1)}>
-        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true"><StopwatchIcon /><span className={styles.done}><Check size={10} strokeWidth={3.6} /></span></span>
+        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true">{lift}<StopwatchIcon /><span className={styles.done}><Check size={10} strokeWidth={3.6} /></span></span>
         <span><strong>Ship an AI product in one hour</strong><small>A timed technical challenge, step by step: requirements, tests, code, proof — and every decision.</small></span>
         {clock(1)}
       </a>
       <button className={styles.projects} onClick={() => onExplore()} data-app={app ?? undefined} {...row(PROJECTS_ROW)}>
         <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true">
+          {lift}
           <span className={styles.phone}>
             <PhoneIcon />
             <span className={styles.screen}>{projects.map((item, i) => <span key={item.id} className={styles.app} data-shown={app === i ? "" : undefined} style={vars({ "--n": i })}><Logo id={item.id} /></span>)}</span>
@@ -125,7 +128,7 @@ export function HeroExplore({ onExplore, Logo }: Props) {
         ))}
       </nav>
       <a href="#engineering-work" className={styles.engineering} {...row(3)}>
-        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true"><CaseFileIcon /></span>
+        <span className={`stat-symbol ${styles.symbol}`} aria-hidden="true">{lift}<CaseFileIcon /></span>
         <span><strong>Explore engineering work</strong><small>Product, AI, and engineering-tooling case studies.</small></span>
         {clock(3)}
       </a>

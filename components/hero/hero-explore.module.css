@@ -23,7 +23,13 @@
 
 /* The playing row's badge grows a little, so the eye follows the tour down the column. */
 .root .symbol { position: relative; transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), background .25s ease, color .25s ease, box-shadow .25s ease; }
-.root [data-playing] > .symbol { transform: scale(1.12); background: #e7e2fb; box-shadow: 0 6px 16px #5142d921; }
+.root [data-playing] > .symbol { transform: scale(1.12); background: #e7e2fb; }
+/* The playing badge's lift shadow (0 6px 16px) fades in and out on a layer of its own: a box-shadow
+   transition repaints on the main thread every frame of each of the tour's switches. A hovered or focused
+   row keeps the hover shadow instead (globals.css), as before. */
+.lift { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 6px 16px #5142d921; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+.root [data-playing] > .symbol > .lift { opacity: 1; }
+.root > [data-playing]:is(:hover, :focus-visible) > .symbol > .lift { opacity: 0; }
 .icon { display: block; width: 24px; height: 24px; overflow: visible; }
 .needle, .hand, .crown, .sheet { transform-box: view-box; }
 
@@ -165,5 +171,5 @@
 
 /* ── Reduced motion: no scenes, and nothing eases into place. ── */
 @media (prefers-reduced-motion: reduce) {
-  .root .symbol, .phone { transition: none; }
+  .root .symbol, .phone, .lift { transition: none; }
 }
