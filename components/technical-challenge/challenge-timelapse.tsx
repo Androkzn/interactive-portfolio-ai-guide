@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -8,7 +8,7 @@ import {
   Pause, Play, RotateCcw, ShieldAlert, ShieldCheck, TriangleAlert, X,
 } from "lucide-react";
 import { board, chapterStarts, chapters, REQUIRED_IDS, screens, snapshot, TOTAL_SECONDS } from "@/lib/technical-challenge/story";
-import type { BoardItem, BrowserTab, ItemTier, Screen, TileState, TileStatus } from "@/lib/technical-challenge/story";
+import type { BoardItem, BrowserTab, Chapter, ItemTier, Screen, TileState, TileStatus } from "@/lib/technical-challenge/story";
 import styles from "./challenge-timelapse.module.css";
 
 const GROUPS: { tiers: ItemTier[]; title: string }[] = [
@@ -49,7 +49,13 @@ function tileText(tile: TileState): string | null {
   return null;
 }
 
-function Tile({ item, tile }: { item: BoardItem; tile: TileState }) {
+/* The player re-renders on every animation frame while it runs (the clock and the active chapter's
+   bar move every frame). The parts below change only at a step, so they are memoized and skipped
+   on the frames in between: a tile, the mini board, the chapter card and each chapter-bar segment. */
+const sameTile = (a: TileState, b: TileState) =>
+  a.status === b.status && a.note === b.note && a.score?.[0] === b.score?.[0] && a.score?.[1] === b.score?.[1];
+
+const Tile = memo(function Tile({ item, tile }: { item: BoardItem; tile: TileState }) {
   const { icon: Icon, label } = STATUS[tile.status];
   const text = tileText(tile);
   return (
@@ -63,7 +69,7 @@ function Tile({ item, tile }: { item: BoardItem; tile: TileState }) {
       <span className={styles.tileText}>{text}<span className="sr-only"> — {label}</span></span>
     </li>
   );
-}
+}, (prev, next) => prev.item === next.item && sameTile(prev.tile, next.tile));
 
 /** The moment everything is green: the tiles ripple and fold away under a stamp. */
 function Celebration() {
@@ -82,14 +88,67 @@ function Celebration() {
   );
 }
 
-function MiniBoard({ tiles, passing }: { tiles: Record<string, TileState>; passing: number }) {
+const MiniBoard = memo(function MiniBoard({ tiles, passing }: { tiles: Record<string, TileState>; passing: number }) {
   return (
     <div className={styles.mini}>
       <ol aria-hidden="true">{board.map((item) => <li key={item.id} data-status={tiles[item.id].status} />)}</ol>
       <span><b>{passing}</b>/{REQUIRED_IDS.length} required passing</span>
     </div>
   );
-}
+}, (prev, next) => prev.passing === next.passing && board.every((item) => prev.tiles[item.id].status === next.tiles[item.id].status));
+
+/** The current step: what was done, the decision and why, and its artifact. Keyed by chapter, so a new step replays its entrance. */
+const ChapterCard = memo(function ChapterCard({ chapter, step, steps }: { chapter: Chapter; step: number; steps: number }) {
+  return (
+    <article className={styles.card} data-kind={chapter.kind}>
+      <p className={styles.cardMeta}>
+        <span className={styles.kind}>{KIND_LABEL[chapter.kind]}</span>
+        {chapter.hour === 3 ? <>After the sprint · {step} of {steps}</> : <>{chapter.hour === 1 ? "Core challenge" : "Bonus hour"} · step {step} of {steps} · <b>≈ {chapter.minutes} min</b></>}
+      </p>
+      <h3 className={styles.cardTitle}>{chapter.title}</h3>
+      <p className={styles.did}>{chapter.did}</p>
+      <div className={styles.decision}>
+        <Lightbulb size={18} aria-hidden="true" />
+        <div>
+          <p className={styles.decisionLabel}>Decision</p>
+          <p className={styles.decisionText}>{chapter.decision}</p>
+          <p className={styles.why}><b>Why:</b> {chapter.why}</p>
+        </div>
+      </div>
+      <figure className={styles.artifact}>
+        <figcaption>{chapter.artifact.label}</figcaption>
+        <pre>{chapter.artifact.lines.join("\n")}</pre>
+      </figure>
+      {chapter.caught && (
+        <div className={styles.caught}>
+          <p><ShieldAlert size={15} aria-hidden="true" />Caught by a gate in this step</p>
+          <ul>{chapter.caught.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+      )}
+    </article>
+  );
+});
+
+/** One chapter on the chapter bar; only the current one's fill moves between steps. */
+const Segment = memo(function Segment({ item, i, state, fill, onJump }: { item: Chapter; i: number; state: "done" | "now" | "next"; fill: number; onJump: (target: number) => void }) {
+  return (
+    <li style={{ "--grow": item.minutes || 1 } as CSSProperties}>
+      <button
+        type="button"
+        className={styles.segment}
+        data-kind={item.kind}
+        data-state={state}
+        aria-current={state === "now" ? "step" : undefined}
+        aria-label={item.minutes ? `${item.title}, about ${item.minutes} minutes` : item.title}
+        title={item.minutes ? `${item.short} · ≈ ${item.minutes} min` : item.short}
+        onClick={() => onJump(i)}
+      >
+        <span className={styles.segmentFill} style={{ width: `${fill}%` }} />
+        <span className={styles.segmentLabel}>{item.short}<small>{item.minutes ? `≈${item.minutes}m` : "later"}</small></span>
+      </button>
+    </li>
+  );
+});
 
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
@@ -231,7 +290,7 @@ export function ChallengeTimelapse() {
   const inHour = chapters.filter((item) => item.hour === chapter.hour);
   const step = inHour.indexOf(chapter) + 1;
 
-  const jump = (target: number) => { touched.current = true; preload(); setPlaying(false); seek(chapterStarts[Math.max(0, Math.min(chapters.length - 1, target))]); };
+  const jump = useCallback((target: number) => { touched.current = true; preload(); setPlaying(false); seek(chapterStarts[Math.max(0, Math.min(chapters.length - 1, target))]); }, [preload, seek]);
   const toggle = () => {
     touched.current = true;
     if (!playing && ended) seek(0);
@@ -261,32 +320,7 @@ export function ChallengeTimelapse() {
       </header>
 
       <div className={styles.body}>
-        <article key={chapter.id} className={styles.card} data-kind={chapter.kind}>
-          <p className={styles.cardMeta}>
-            <span className={styles.kind}>{KIND_LABEL[chapter.kind]}</span>
-            {chapter.hour === 3 ? <>After the sprint · {step} of {inHour.length}</> : <>{chapter.hour === 1 ? "Core challenge" : "Bonus hour"} · step {step} of {inHour.length} · <b>≈ {chapter.minutes} min</b></>}
-          </p>
-          <h3 className={styles.cardTitle}>{chapter.title}</h3>
-          <p className={styles.did}>{chapter.did}</p>
-          <div className={styles.decision}>
-            <Lightbulb size={18} aria-hidden="true" />
-            <div>
-              <p className={styles.decisionLabel}>Decision</p>
-              <p className={styles.decisionText}>{chapter.decision}</p>
-              <p className={styles.why}><b>Why:</b> {chapter.why}</p>
-            </div>
-          </div>
-          <figure className={styles.artifact}>
-            <figcaption>{chapter.artifact.label}</figcaption>
-            <pre>{chapter.artifact.lines.join("\n")}</pre>
-          </figure>
-          {chapter.caught && (
-            <div className={styles.caught}>
-              <p><ShieldAlert size={15} aria-hidden="true" />Caught by a gate in this step</p>
-              <ul>{chapter.caught.map((item) => <li key={item}>{item}</li>)}</ul>
-            </div>
-          )}
-        </article>
+        <ChapterCard key={chapter.id} chapter={chapter} step={step} steps={inHour.length} />
 
         {snap.mode === "browser" && snap.screen ? (
           <div className={styles.browserWrap}>
@@ -320,21 +354,7 @@ export function ChallengeTimelapse() {
             <p className={styles.hourTitle}>{title} <span>{note}</span></p>
             <ol className={styles.segments}>
               {chapters.map((item, i) => item.hour !== hour ? null : (
-                <li key={item.id} style={{ "--grow": item.minutes || 1 } as CSSProperties}>
-                  <button
-                    type="button"
-                    className={styles.segment}
-                    data-kind={item.kind}
-                    data-state={i < index ? "done" : i === index ? "now" : "next"}
-                    aria-current={i === index ? "step" : undefined}
-                    aria-label={item.minutes ? `${item.title}, about ${item.minutes} minutes` : item.title}
-                    title={item.minutes ? `${item.short} · ≈ ${item.minutes} min` : item.short}
-                    onClick={() => jump(i)}
-                  >
-                    <span className={styles.segmentFill} style={{ width: `${i < index ? 100 : i === index ? snap.progress * 100 : 0}%` }} />
-                    <span className={styles.segmentLabel}>{item.short}<small>{item.minutes ? `≈${item.minutes}m` : "later"}</small></span>
-                  </button>
-                </li>
+                <Segment key={item.id} item={item} i={i} state={i < index ? "done" : i === index ? "now" : "next"} fill={i < index ? 100 : i === index ? snap.progress * 100 : 0} onJump={jump} />
               ))}
             </ol>
           </div>
